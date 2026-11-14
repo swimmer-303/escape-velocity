@@ -1,6 +1,6 @@
 # Written with AI assistance (Claude Code). See README "Use of AI tools".
-# Caddy gets and renews the HTTPS certificates automatically (Let's Encrypt, HTTP-01;
-# works behind Cloudflare's proxy with SSL mode "Full" or "Full (strict)").
+# Caddy gets and renews the HTTPS certificates automatically (Let's Encrypt).
+# DNS: Cloudflare, DNS-only (no proxy), A records -> the droplet.
 playescapevelocity.com {
 	encode zstd gzip
 
