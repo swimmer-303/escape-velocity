@@ -445,6 +445,7 @@ export class App {
             h('button', { class: 'btn', onclick: () => this.showTodaysBest(() => this.showTitle()) }, "Today's best"),
           ),
           h('button', { class: 'btn', onclick: () => this.openRoom() }, 'Class mission: Mission Control'),
+          h('button', { class: 'btn cyan', onclick: () => this.showRadar() }, 'Space weather radar'),
           h(
             'div',
             { class: 'menu-row' },
@@ -611,6 +612,16 @@ export class App {
     this.modal(renderCredits(), { wide: true, label: 'Credits', onClose: () => this.resume() });
   }
 
+  /** Space weather radar (loaded on demand): real DONKI CMEs flying past Earth and Mars. */
+  showRadar(replay = false) {
+    this.audio.sfx('click');
+    import('./radar/radar')
+      .then(({ renderRadar }) =>
+        this.modal(renderRadar({ feed: this.feed, replay, reducedMotion: this.settings.reducedMotion }), { wide: true, label: 'Space weather radar', onClose: () => this.resume() }),
+      )
+      .catch(() => undefined);
+  }
+
   showMenu() {
     if (this.phase === 'title') return;
     const s = this.settings;
@@ -673,6 +684,7 @@ export class App {
             : null,
           h('button', { class: 'btn', onclick: () => this.showHowTo(() => this.resume()) }, 'How to play'),
           h('button', { class: 'btn', onclick: () => this.showScienceLog() }, 'Science Log'),
+          h('button', { class: 'btn', onclick: () => this.showRadar(this.mode === 'history') }, 'Space weather radar'),
           h('button', { class: 'btn', onclick: () => this.showCredits() }, 'Credits'),
           h('button', { class: 'btn', onclick: () => this.showTitle() }, this.mode === 'campaign' ? 'Save and quit' : 'Quit to title'),
         ),
@@ -994,6 +1006,7 @@ export class App {
             : 'forecasters say the Sun looks quiet for now.',
           h('div', { class: 'title-foot', style: 'margin-top:4px' }, delay),
           this.mode === 'history' ? null : sunPanel(this.feed, { compact: true }),
+          h('button', { class: 'linkish', onclick: () => this.showRadar(this.mode === 'history') }, 'See it on the radar'),
         ),
       );
     }

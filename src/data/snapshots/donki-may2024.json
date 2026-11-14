@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-11-14T14:05:49.695Z",
+  "fetchedAt": "2026-11-14T18:11:44.339Z",
   "startDate": "2024-05-01",
   "endDate": "2024-05-31",
   "sourceUrl": "https://ccmc.gsfc.nasa.gov/DONKI/WS/get",
@@ -1853,1008 +1853,2436 @@
       "startTime": "2024-05-01T00:48Z",
       "speed": 643,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30376/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30376/-1",
+      "time21_5": "2024-05-01T06:02Z",
+      "longitude": null,
+      "latitude": -53,
+      "halfAngle": 21,
+      "enlil": null
     },
     {
       "id": "2024-05-01T06:36:00-CME-001",
       "startTime": "2024-05-01T06:36Z",
       "speed": 794,
       "sourceLocation": "S20W65",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30362/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30362/-1",
+      "time21_5": "2024-05-01T11:11Z",
+      "longitude": 65,
+      "latitude": -22,
+      "halfAngle": 42,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-01T19:33Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30374/-1",
+        "earth": {
+          "time": "2024-05-04T04:46Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-01T11:36:00-CME-001",
       "startTime": "2024-05-01T11:36Z",
       "speed": 569,
       "sourceLocation": "N25E28",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30369/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30369/-1",
+      "time21_5": "2024-05-01T17:41Z",
+      "longitude": -25,
+      "latitude": 59,
+      "halfAngle": 20,
+      "enlil": null
     },
     {
       "id": "2024-05-01T12:36:00-CME-001",
       "startTime": "2024-05-01T12:36Z",
       "speed": 524,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30371/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30371/-1",
+      "time21_5": "2024-05-01T19:27Z",
+      "longitude": null,
+      "latitude": -19,
+      "halfAngle": 28,
+      "enlil": null
     },
     {
       "id": "2024-05-01T17:36:00-CME-001",
       "startTime": "2024-05-01T17:36Z",
       "speed": 464,
       "sourceLocation": "N25E25",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30382/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30382/-1",
+      "time21_5": "2024-05-02T01:07Z",
+      "longitude": -25,
+      "latitude": 66,
+      "halfAngle": 21,
+      "enlil": null
     },
     {
       "id": "2024-05-01T23:16:00-CME-001",
       "startTime": "2024-05-01T23:16Z",
       "speed": 353,
       "sourceLocation": "N25E22",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30384/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30384/-1",
+      "time21_5": "2024-05-02T08:51Z",
+      "longitude": -22,
+      "latitude": 58,
+      "halfAngle": 16,
+      "enlil": null
     },
     {
       "id": "2024-05-02T03:12:00-CME-001",
       "startTime": "2024-05-02T03:12Z",
       "speed": 716,
       "sourceLocation": "N25E21",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30391/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30391/-1",
+      "time21_5": "2024-05-02T07:41Z",
+      "longitude": -21,
+      "latitude": 52,
+      "halfAngle": 14,
+      "enlil": null
     },
     {
       "id": "2024-05-02T05:12:00-CME-001",
       "startTime": "2024-05-02T05:12Z",
       "speed": 325,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30380/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30380/-1",
+      "time21_5": "2024-05-02T15:50Z",
+      "longitude": null,
+      "latitude": -2,
+      "halfAngle": 17,
+      "enlil": null
     },
     {
       "id": "2024-05-02T10:36:00-CME-001",
       "startTime": "2024-05-02T10:36Z",
       "speed": 474,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30393/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30393/-1",
+      "time21_5": "2024-05-02T19:13Z",
+      "longitude": 90,
+      "latitude": 5,
+      "halfAngle": 33,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-02T17:18Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30396/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-07T01:00Z",
+          "glancing": true,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-03T02:48:00-CME-001",
       "startTime": "2024-05-03T02:48Z",
       "speed": 841,
       "sourceLocation": "N26E05",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30409/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30409/-1",
+      "time21_5": "2024-05-03T06:52Z",
+      "longitude": -14,
+      "latitude": 29,
+      "halfAngle": 43,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-03T17:26Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30418/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-03T09:24:00-CME-001",
       "startTime": "2024-05-03T09:24Z",
       "speed": 652,
       "sourceLocation": "N26E05",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30415/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30415/-1",
+      "time21_5": "2024-05-03T14:10Z",
+      "longitude": -15,
+      "latitude": 31,
+      "halfAngle": 21,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-03T18:55Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30421/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-03T21:17:00-CME-001",
       "startTime": "2024-05-03T21:17Z",
       "speed": 548,
       "sourceLocation": "N09E33",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30443/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30443/-1",
+      "time21_5": "2024-05-04T03:25Z",
+      "longitude": -32,
+      "latitude": 14,
+      "halfAngle": 26,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-04T21:58Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30449/-1",
+        "earth": {
+          "time": "2024-05-06T19:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-03T21:28:00-CME-001",
       "startTime": "2024-05-03T21:28Z",
       "speed": 509,
       "sourceLocation": "N09E33",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30445/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30445/-1",
+      "time21_5": "2024-05-04T03:53Z",
+      "longitude": -32,
+      "latitude": -13,
+      "halfAngle": 18,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-04T21:58Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30449/-1",
+        "earth": {
+          "time": "2024-05-06T19:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-04T01:53:00-CME-001",
       "startTime": "2024-05-04T01:53Z",
       "speed": 446,
       "sourceLocation": "N26W03",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30434/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30434/-1",
+      "time21_5": "2024-05-04T07:34Z",
+      "longitude": -12,
+      "latitude": 47,
+      "halfAngle": 17,
+      "enlil": null
     },
     {
       "id": "2024-05-04T06:53:00-CME-001",
       "startTime": "2024-05-04T06:53Z",
       "speed": 804,
       "sourceLocation": "N26W09",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30437/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30437/-1",
+      "time21_5": "2024-05-04T10:19Z",
+      "longitude": -2,
+      "latitude": 29,
+      "halfAngle": 23,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-04T19:55Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30441/-1",
+        "earth": {
+          "time": "2024-05-06T21:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-04T13:12:00-CME-001",
       "startTime": "2024-05-04T13:12Z",
       "speed": 545,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30546/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30546/-1",
+      "time21_5": "2024-05-04T19:20Z",
+      "longitude": null,
+      "latitude": 52,
+      "halfAngle": 25,
+      "enlil": null
     },
     {
       "id": "2024-05-04T16:36:00-CME-001",
       "startTime": "2024-05-04T16:36Z",
       "speed": 428,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30544/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30544/-1",
+      "time21_5": "2024-05-05T01:01Z",
+      "longitude": null,
+      "latitude": 81,
+      "halfAngle": 13,
+      "enlil": null
     },
     {
       "id": "2024-05-05T02:09:00-CME-001",
       "startTime": "2024-05-05T02:09Z",
       "speed": 516,
       "sourceLocation": "N26W17",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30472/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30472/-1",
+      "time21_5": "2024-05-05T08:44Z",
+      "longitude": -9,
+      "latitude": 56,
+      "halfAngle": 19,
+      "enlil": null
     },
     {
       "id": "2024-05-05T03:38:00-CME-001",
       "startTime": "2024-05-05T03:38Z",
       "speed": 443,
       "sourceLocation": "N24W21",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30474/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30474/-1",
+      "time21_5": "2024-05-05T10:27Z",
+      "longitude": -14,
+      "latitude": 34,
+      "halfAngle": 17,
+      "enlil": null
     },
     {
       "id": "2024-05-05T06:38:00-CME-001",
       "startTime": "2024-05-05T06:38Z",
       "speed": 283,
       "sourceLocation": "N26W20",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30476/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30476/-1",
+      "time21_5": "2024-05-05T18:19Z",
+      "longitude": -16,
+      "latitude": 63,
+      "halfAngle": 16,
+      "enlil": null
     },
     {
       "id": "2024-05-05T08:09:00-CME-001",
       "startTime": "2024-05-05T08:09Z",
       "speed": 455,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30478/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30478/-1",
+      "time21_5": "2024-05-05T14:40Z",
+      "longitude": -11,
+      "latitude": 36,
+      "halfAngle": 18,
+      "enlil": null
     },
     {
       "id": "2024-05-05T13:24:00-CME-001",
       "startTime": "2024-05-05T13:24Z",
       "speed": 533,
       "sourceLocation": "N26W23",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30542/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30542/-1",
+      "time21_5": "2024-05-05T18:56Z",
+      "longitude": -4,
+      "latitude": 26,
+      "halfAngle": 10,
+      "enlil": null
     },
     {
       "id": "2024-05-05T15:48:00-CME-001",
       "startTime": "2024-05-05T15:48Z",
       "speed": 642,
       "sourceLocation": "S19E20",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30507/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30507/-1",
+      "time21_5": "2024-05-05T21:07Z",
+      "longitude": -32,
+      "latitude": -20,
+      "halfAngle": 32,
+      "enlil": null
     },
     {
       "id": "2024-05-05T17:00:00-CME-001",
       "startTime": "2024-05-05T17:00Z",
       "speed": 756,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30496/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30496/-1",
+      "time21_5": "2024-05-05T22:00Z",
+      "longitude": null,
+      "latitude": 24,
+      "halfAngle": 35,
+      "enlil": null
     },
     {
       "id": "2024-05-05T23:27:00-CME-001",
       "startTime": "2024-05-05T23:27Z",
       "speed": 344,
       "sourceLocation": "S45W15",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30505/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30505/-1",
+      "time21_5": "2024-05-06T09:29Z",
+      "longitude": 16,
+      "latitude": -40,
+      "halfAngle": 29,
+      "enlil": null
     },
     {
       "id": "2024-05-06T07:38:00-CME-001",
       "startTime": "2024-05-06T07:38Z",
       "speed": 510,
       "sourceLocation": "N26W35",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30491/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30491/-1",
+      "time21_5": "2024-05-06T13:53Z",
+      "longitude": 10,
+      "latitude": 40,
+      "halfAngle": 17,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-06T16:15Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30494/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-07T02:12:00-CME-001",
       "startTime": "2024-05-07T02:12Z",
       "speed": 628,
       "sourceLocation": "S12E75",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30528/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30528/-1",
+      "time21_5": "2024-05-07T07:40Z",
+      "longitude": -75,
+      "latitude": -31,
+      "halfAngle": 10,
+      "enlil": null
     },
     {
       "id": "2024-05-07T03:12:00-CME-001",
       "startTime": "2024-05-07T03:12Z",
       "speed": 381,
       "sourceLocation": "S23E15",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30510/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30510/-1",
+      "time21_5": "2024-05-07T11:21Z",
+      "longitude": -24,
+      "latitude": -24,
+      "halfAngle": 35,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-07T16:01Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30530/-1",
+        "earth": {
+          "time": "2024-05-10T14:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-07T05:24:00-CME-001",
       "startTime": "2024-05-07T05:24Z",
       "speed": 430,
       "sourceLocation": "S25E05",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30522/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30522/-1",
+      "time21_5": "2024-05-07T12:02Z",
+      "longitude": -2,
+      "latitude": -32,
+      "halfAngle": 21,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-07T16:01Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30530/-1",
+        "earth": {
+          "time": "2024-05-10T14:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-07T07:48:00-CME-001",
       "startTime": "2024-05-07T07:48Z",
       "speed": 423,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30526/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30526/-1",
+      "time21_5": "2024-05-07T16:29Z",
+      "longitude": -95,
+      "latitude": 33,
+      "halfAngle": 34,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-07T16:42Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30535/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-07T16:12:00-CME-001",
       "startTime": "2024-05-07T16:12Z",
       "speed": 306,
       "sourceLocation": "S19W06",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30580/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30580/-1",
+      "time21_5": "2024-05-08T03:27Z",
+      "longitude": 8,
+      "latitude": -30,
+      "halfAngle": 20,
+      "enlil": null
     },
     {
       "id": "2024-05-07T19:48:00-CME-001",
       "startTime": "2024-05-07T19:48Z",
       "speed": 282,
       "sourceLocation": "S19W08",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30583/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30583/-1",
+      "time21_5": "2024-05-08T04:55Z",
+      "longitude": 9,
+      "latitude": -29,
+      "halfAngle": 19,
+      "enlil": null
     },
     {
       "id": "2024-05-08T05:36:00-CME-001",
       "startTime": "2024-05-08T05:36Z",
       "speed": 870,
       "sourceLocation": "S22W10",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30589/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30589/-1",
+      "time21_5": "2024-05-08T09:30Z",
+      "longitude": 9,
+      "latitude": -7,
+      "halfAngle": 43,
+      "enlil": {
+        "runs": 5,
+        "completedAt": "2024-05-09T20:46Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30652/-1",
+        "earth": {
+          "time": "2024-05-10T12:50Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-08T12:24:00-CME-001",
       "startTime": "2024-05-08T12:24Z",
       "speed": 776,
       "sourceLocation": "S20W11",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30564/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30564/-1",
+      "time21_5": "2024-05-08T16:58Z",
+      "longitude": 3,
+      "latitude": -5,
+      "halfAngle": 45,
+      "enlil": {
+        "runs": 5,
+        "completedAt": "2024-05-09T20:46Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30652/-1",
+        "earth": {
+          "time": "2024-05-10T12:50Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-08T19:12:00-CME-001",
       "startTime": "2024-05-08T19:12Z",
       "speed": 828,
       "sourceLocation": "N10E20",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30612/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30612/-1",
+      "time21_5": "2024-05-08T23:27Z",
+      "longitude": -23,
+      "latitude": 3,
+      "halfAngle": 38,
+      "enlil": {
+        "runs": 4,
+        "completedAt": "2024-05-09T20:46Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30652/-1",
+        "earth": {
+          "time": "2024-05-10T12:50Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-08T22:24:00-CME-001",
       "startTime": "2024-05-08T22:24Z",
       "speed": 1257,
       "sourceLocation": "S20W17",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30640/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30640/-1",
+      "time21_5": "2024-05-09T00:51Z",
+      "longitude": 5,
+      "latitude": -6,
+      "halfAngle": 45,
+      "enlil": {
+        "runs": 6,
+        "completedAt": "2024-05-09T20:46Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30652/-1",
+        "earth": {
+          "time": "2024-05-10T12:50Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-09T09:24:00-CME-001",
       "startTime": "2024-05-09T09:24Z",
       "speed": 1330,
       "sourceLocation": "S20W25",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30619/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30619/-1",
+      "time21_5": "2024-05-09T11:56Z",
+      "longitude": 19,
+      "latitude": -6,
+      "halfAngle": 45,
+      "enlil": {
+        "runs": 6,
+        "completedAt": "2024-05-09T20:46Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30652/-1",
+        "earth": {
+          "time": "2024-05-10T12:50Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-09T18:23:00-CME-001",
       "startTime": "2024-05-09T18:23Z",
       "speed": 895,
       "sourceLocation": "S18W29",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30655/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30655/-1",
+      "time21_5": "2024-05-09T21:58Z",
+      "longitude": 30,
+      "latitude": -6,
+      "halfAngle": 44,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-10T20:02Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30698/-1",
+        "earth": {
+          "time": "2024-05-12T03:09Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-10T02:12:00-CME-001",
       "startTime": "2024-05-10T02:12Z",
       "speed": 232,
       "sourceLocation": "N30E90",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30788/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30788/-1",
+      "time21_5": "2024-05-10T22:51Z",
+      "longitude": -90,
+      "latitude": 44,
+      "halfAngle": 41,
+      "enlil": null
     },
     {
       "id": "2024-05-10T07:12:00-CME-001",
       "startTime": "2024-05-10T07:12Z",
       "speed": 1018,
       "sourceLocation": "S18W37",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30670/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30670/-1",
+      "time21_5": "2024-05-10T10:35Z",
+      "longitude": 31,
+      "latitude": -2,
+      "halfAngle": 41,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-10T20:02Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30698/-1",
+        "earth": {
+          "time": "2024-05-12T03:09Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-10T16:36:00-CME-001",
       "startTime": "2024-05-10T16:36Z",
       "speed": 393,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30786/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30786/-1",
+      "time21_5": "2024-05-11T02:02Z",
+      "longitude": null,
+      "latitude": -41,
+      "halfAngle": 45,
+      "enlil": null
     },
     {
       "id": "2024-05-10T21:17:00-CME-001",
       "startTime": "2024-05-10T21:17Z",
       "speed": 678,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30751/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30751/-1",
+      "time21_5": "2024-05-11T02:29Z",
+      "longitude": null,
+      "latitude": -76,
+      "halfAngle": 25,
+      "enlil": null
     },
     {
       "id": "2024-05-10T21:28:00-CME-001",
       "startTime": "2024-05-10T21:28Z",
       "speed": 717,
       "sourceLocation": "S35E01",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30753/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30753/-1",
+      "time21_5": "2024-05-11T02:27Z",
+      "longitude": 2,
+      "latitude": -42,
+      "halfAngle": 18,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-13T00:35Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30801/-1",
+        "earth": {
+          "time": "2024-05-13T12:23Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": {
+          "time": "2024-05-14T06:18Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-10T23:13:00-CME-001",
       "startTime": "2024-05-10T23:13Z",
       "speed": 445,
       "sourceLocation": "S35E01",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30784/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30784/-1",
+      "time21_5": "2024-05-11T06:00Z",
+      "longitude": 0,
+      "latitude": -22,
+      "halfAngle": 42,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-13T00:35Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30801/-1",
+        "earth": {
+          "time": "2024-05-13T12:23Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": {
+          "time": "2024-05-14T06:18Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-11T01:36:00-CME-001",
       "startTime": "2024-05-11T01:36Z",
       "speed": 1263,
       "sourceLocation": "S17W47",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30719/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30719/-1",
+      "time21_5": "2024-05-11T04:22Z",
+      "longitude": 51,
+      "latitude": 0,
+      "halfAngle": 51,
+      "enlil": {
+        "runs": 4,
+        "completedAt": "2024-05-13T00:35Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30801/-1",
+        "earth": {
+          "time": "2024-05-13T12:23Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": {
+          "time": "2024-05-14T06:18Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-11T02:36:00-CME-001",
       "startTime": "2024-05-11T02:36Z",
       "speed": 485,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30744/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30744/-1",
+      "time21_5": "2024-05-11T13:07Z",
+      "longitude": null,
+      "latitude": 13,
+      "halfAngle": 38,
+      "enlil": null
     },
     {
       "id": "2024-05-11T03:12:00-CME-002",
       "startTime": "2024-05-11T03:12Z",
       "speed": 1032,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30793/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30793/-1",
+      "time21_5": "2024-05-11T06:45Z",
+      "longitude": 50,
+      "latitude": 5,
+      "halfAngle": 38,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-13T00:35Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30801/-1",
+        "earth": {
+          "time": "2024-05-13T12:23Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": {
+          "time": "2024-05-14T06:18Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-11T16:24:00-CME-001",
       "startTime": "2024-05-11T16:24Z",
       "speed": 946,
       "sourceLocation": "S17W53",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30742/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30742/-1",
+      "time21_5": "2024-05-11T19:51Z",
+      "longitude": 53,
+      "latitude": -2,
+      "halfAngle": 25,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-12T16:22Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30763/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-11T18:00:00-CME-001",
       "startTime": "2024-05-11T18:00Z",
       "speed": 268,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30765/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30765/-1",
+      "time21_5": "2024-05-12T10:20Z",
+      "longitude": 90,
+      "latitude": -76,
+      "halfAngle": 34,
+      "enlil": null
     },
     {
       "id": "2024-05-12T02:00:00-CME-001",
       "startTime": "2024-05-12T02:00Z",
       "speed": 624,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30779/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30779/-1",
+      "time21_5": "2024-05-12T07:15Z",
+      "longitude": -147,
+      "latitude": -22,
+      "halfAngle": 35,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-12T18:54Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30781/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-12T03:48:00-CME-001",
       "startTime": "2024-05-12T03:48Z",
       "speed": 602,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30755/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30755/-1",
+      "time21_5": "2024-05-12T10:09Z",
+      "longitude": 137,
+      "latitude": -39,
+      "halfAngle": 47,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-12T13:14Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30757/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-15T22:00Z",
+          "glancing": true,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-12T13:00:00-CME-001",
       "startTime": "2024-05-12T13:00Z",
       "speed": 281,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30830/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30830/-1",
+      "time21_5": "2024-05-13T02:19Z",
+      "longitude": 70,
+      "latitude": 71,
+      "halfAngle": 19,
+      "enlil": null
     },
     {
       "id": "2024-05-13T09:12:00-CME-001",
       "startTime": "2024-05-13T09:12Z",
       "speed": 1456,
       "sourceLocation": "S25W75",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30814/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30814/-1",
+      "time21_5": "2024-05-13T11:53Z",
+      "longitude": 72,
+      "latitude": -36,
+      "halfAngle": 49,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-15T19:44Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30935/-1",
+        "earth": {
+          "time": "2024-05-14T21:36Z",
+          "glancing": false,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-14T02:24:00-CME-001",
       "startTime": "2024-05-14T02:24Z",
       "speed": 502,
       "sourceLocation": "S19W89",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30844/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30844/-1",
+      "time21_5": "2024-05-14T09:42Z",
+      "longitude": 95,
+      "latitude": 0,
+      "halfAngle": 34,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-14T16:14Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30847/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-18T09:34Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-14T04:48:00-CME-001",
       "startTime": "2024-05-14T04:48Z",
       "speed": 567,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30860/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30860/-1",
+      "time21_5": "2024-05-14T11:14Z",
+      "longitude": -90,
+      "latitude": -24,
+      "halfAngle": 38,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-14T19:57Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30864/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-14T10:09:00-CME-001",
       "startTime": "2024-05-14T10:09Z",
       "speed": 744,
       "sourceLocation": "N25E35",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30856/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30856/-1",
+      "time21_5": "2024-05-14T14:54Z",
+      "longitude": -34,
+      "latitude": 41,
+      "halfAngle": 34,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-14T18:45Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30858/-1",
+        "earth": {
+          "time": "2024-05-17T23:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-14T10:36:00-CME-001",
       "startTime": "2024-05-14T10:36Z",
       "speed": 763,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30915/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30915/-1",
+      "time21_5": "2024-05-14T15:39Z",
+      "longitude": 92,
+      "latitude": -29,
+      "halfAngle": 23,
+      "enlil": null
     },
     {
       "id": "2024-05-14T13:12:00-CME-001",
       "startTime": "2024-05-14T13:12Z",
       "speed": 676,
       "sourceLocation": "S19W94",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30841/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30841/-1",
+      "time21_5": "2024-05-14T18:20Z",
+      "longitude": 90,
+      "latitude": 3,
+      "halfAngle": 34,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-14T16:14Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30847/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-18T09:34Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-14T17:00:00-CME-001",
       "startTime": "2024-05-14T17:00Z",
       "speed": 2119,
       "sourceLocation": "S19W96",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30867/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30867/-1",
+      "time21_5": "2024-05-14T18:36Z",
+      "longitude": 96,
+      "latitude": 3,
+      "halfAngle": 37,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-15T00:18Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30877/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-16T19:08Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-14T17:30:00-CME-001",
       "startTime": "2024-05-14T17:30Z",
       "speed": 1199,
       "sourceLocation": "S19W96",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30873/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30873/-1",
+      "time21_5": "2024-05-14T19:35Z",
+      "longitude": 96,
+      "latitude": 2,
+      "halfAngle": 38,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-14T23:59Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30875/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-17T02:11Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-14T17:48:00-CME-001",
       "startTime": "2024-05-14T17:48Z",
       "speed": 1292,
       "sourceLocation": "N18E72",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30883/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30883/-1",
+      "time21_5": "2024-05-14T20:33Z",
+      "longitude": -72,
+      "latitude": 16,
+      "halfAngle": 43,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-15T13:15Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30886/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-15T08:36:00-CME-001",
       "startTime": "2024-05-15T08:36Z",
       "speed": 1766,
       "sourceLocation": "S15W90",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30891/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30891/-1",
+      "time21_5": "2024-05-15T10:33Z",
+      "longitude": 105,
+      "latitude": 2,
+      "halfAngle": 31,
+      "enlil": {
+        "runs": 4,
+        "completedAt": "2024-05-16T02:04Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30925/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-17T14:19Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-15T08:48:00-CME-001",
       "startTime": "2024-05-15T08:48Z",
       "speed": 1082,
       "sourceLocation": "S20W100",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30894/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30894/-1",
+      "time21_5": "2024-05-15T11:58Z",
+      "longitude": 114,
+      "latitude": -29,
+      "halfAngle": 24,
+      "enlil": {
+        "runs": 4,
+        "completedAt": "2024-05-16T02:04Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30925/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-17T14:19Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-15T10:00:00-CME-001",
       "startTime": "2024-05-15T10:00Z",
       "speed": 1205,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30913/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30913/-1",
+      "time21_5": "2024-05-15T12:36Z",
+      "longitude": 113,
+      "latitude": -6,
+      "halfAngle": 37,
+      "enlil": {
+        "runs": 4,
+        "completedAt": "2024-05-16T02:04Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30925/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-17T14:19Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-15T10:36:00-CME-001",
       "startTime": "2024-05-15T10:36Z",
       "speed": 805,
       "sourceLocation": "N35E35",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30940/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30940/-1",
+      "time21_5": "2024-05-15T15:08Z",
+      "longitude": -13,
+      "latitude": 46,
+      "halfAngle": 31,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-16T17:15Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30943/-1",
+        "earth": {
+          "time": "2024-05-19T04:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-15T10:48:00-CME-001",
       "startTime": "2024-05-15T10:48Z",
       "speed": 1162,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30920/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30920/-1",
+      "time21_5": "2024-05-15T14:05Z",
+      "longitude": 109,
+      "latitude": -16,
+      "halfAngle": 39,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-16T02:04Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30925/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-17T14:19Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-15T14:53:00-CME-001",
       "startTime": "2024-05-15T14:53Z",
       "speed": 1570,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30948/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30948/-1",
+      "time21_5": "2024-05-15T16:55Z",
+      "longitude": -92,
+      "latitude": -17,
+      "halfAngle": 42,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-16T19:15Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30952/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-15T17:36:00-CME-001",
       "startTime": "2024-05-15T17:36Z",
       "speed": 732,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30968/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30968/-1",
+      "time21_5": "2024-05-15T22:40Z",
+      "longitude": null,
+      "latitude": -9,
+      "halfAngle": 23,
+      "enlil": null
     },
     {
       "id": "2024-05-15T21:12:00-CME-001",
       "startTime": "2024-05-15T21:12Z",
       "speed": 1269,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30923/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30923/-1",
+      "time21_5": "2024-05-15T23:28Z",
+      "longitude": 110,
+      "latitude": 2,
+      "halfAngle": 29,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-16T02:04Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30925/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-17T14:19Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-16T01:25:00-CME-001",
       "startTime": "2024-05-16T01:25Z",
       "speed": 1103,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30955/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30955/-1",
+      "time21_5": "2024-05-16T04:34Z",
+      "longitude": 105,
+      "latitude": 0,
+      "halfAngle": 22,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-16T23:07Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30961/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-19T05:08Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-16T04:36:00-CME-001",
       "startTime": "2024-05-16T04:36Z",
       "speed": 773,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30957/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30957/-1",
+      "time21_5": "2024-05-16T08:43Z",
+      "longitude": 112,
+      "latitude": -6,
+      "halfAngle": 16,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-16T23:07Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30961/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-19T05:08Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-16T06:48:00-CME-001",
       "startTime": "2024-05-16T06:48Z",
       "speed": 1110,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30959/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30959/-1",
+      "time21_5": "2024-05-16T09:53Z",
+      "longitude": 109,
+      "latitude": -1,
+      "halfAngle": 21,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-16T23:07Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30961/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-19T05:08Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-16T08:12:00-CME-001",
       "startTime": "2024-05-16T08:12Z",
       "speed": 1298,
       "sourceLocation": "S15E70",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30970/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30970/-1",
+      "time21_5": "2024-05-16T10:49Z",
+      "longitude": -70,
+      "latitude": -5,
+      "halfAngle": 17,
+      "enlil": null
     },
     {
       "id": "2024-05-16T09:09:00-CME-001",
       "startTime": "2024-05-16T09:09Z",
       "speed": 374,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30972/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30972/-1",
+      "time21_5": "2024-05-16T18:35Z",
+      "longitude": 112,
+      "latitude": -22,
+      "halfAngle": 20,
+      "enlil": null
     },
     {
       "id": "2024-05-16T13:38:00-CME-001",
       "startTime": "2024-05-16T13:38Z",
       "speed": 1452,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30936/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30936/-1",
+      "time21_5": "2024-05-16T16:02Z",
+      "longitude": 120,
+      "latitude": -2,
+      "halfAngle": 27,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-17T13:08Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30963/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-19T09:15Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-16T18:00:00-CME-001",
       "startTime": "2024-05-16T18:00Z",
       "speed": 767,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31002/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31002/-1",
+      "time21_5": "2024-05-17T22:27Z",
+      "longitude": null,
+      "latitude": 59,
+      "halfAngle": 48,
+      "enlil": null
     },
     {
       "id": "2024-05-16T23:12:00-CME-001",
       "startTime": "2024-05-16T23:12Z",
       "speed": 569,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31000/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31000/-1",
+      "time21_5": "2024-05-17T05:04Z",
+      "longitude": null,
+      "latitude": 64,
+      "halfAngle": 17,
+      "enlil": null
     },
     {
       "id": "2024-05-17T00:12:00-CME-001",
       "startTime": "2024-05-17T00:12Z",
       "speed": 679,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30980/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30980/-1",
+      "time21_5": "2024-05-17T04:58Z",
+      "longitude": 128,
+      "latitude": -7,
+      "halfAngle": 20,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-17T18:06Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30979/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-20T07:52Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-17T03:12:00-CME-001",
       "startTime": "2024-05-17T03:12Z",
       "speed": 545,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30998/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30998/-1",
+      "time21_5": "2024-05-17T09:13Z",
+      "longitude": 9,
+      "latitude": -43,
+      "halfAngle": 20,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-17T20:05Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30997/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-17T04:17:00-CME-001",
       "startTime": "2024-05-17T04:17Z",
       "speed": 586,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30982/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30982/-1",
+      "time21_5": "2024-05-17T09:43Z",
+      "longitude": 130,
+      "latitude": -4,
+      "halfAngle": 17,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-17T18:06Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30979/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-20T07:52Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-17T04:28:00-CME-001",
       "startTime": "2024-05-17T04:28Z",
       "speed": 854,
       "sourceLocation": "S10E15",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30989/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30989/-1",
+      "time21_5": "2024-05-17T07:35Z",
+      "longitude": -20,
+      "latitude": -1,
+      "halfAngle": 10,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-17T19:44Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30988/-1",
+        "earth": {
+          "time": "2024-05-20T17:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-17T12:48:00-CME-001",
       "startTime": "2024-05-17T12:48Z",
       "speed": 1134,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30974/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30974/-1",
+      "time21_5": "2024-05-17T15:46Z",
+      "longitude": 136,
+      "latitude": 3,
+      "halfAngle": 44,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-17T18:06Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30979/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-20T07:52Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-17T13:25:00-CME-001",
       "startTime": "2024-05-17T13:25Z",
       "speed": 465,
       "sourceLocation": "N28E45",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30986/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/30986/-1",
+      "time21_5": "2024-05-17T20:46Z",
+      "longitude": -45,
+      "latitude": 10,
+      "halfAngle": 21,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-17T18:45Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/30985/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-17T18:48:00-CME-001",
       "startTime": "2024-05-17T18:48Z",
       "speed": 942,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31012/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31012/-1",
+      "time21_5": "2024-05-17T22:35Z",
+      "longitude": 110,
+      "latitude": -20,
+      "halfAngle": 24,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-18T20:10Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31015/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-21T18:00Z",
+          "glancing": true,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-17T21:24:00-CME-001",
       "startTime": "2024-05-17T21:24Z",
       "speed": 1129,
       "sourceLocation": "S11E65",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31005/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31005/-1",
+      "time21_5": "2024-05-18T00:23Z",
+      "longitude": -65,
+      "latitude": -13,
+      "halfAngle": 37,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-18T16:22Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31008/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-18T06:24:00-CME-001",
       "startTime": "2024-05-18T06:24Z",
       "speed": 341,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31010/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31010/-1",
+      "time21_5": "2024-05-18T17:57Z",
+      "longitude": 120,
+      "latitude": -71,
+      "halfAngle": 38,
+      "enlil": null
     },
     {
       "id": "2024-05-18T13:38:00-CME-001",
       "startTime": "2024-05-18T13:38Z",
       "speed": 1585,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31018/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31018/-1",
+      "time21_5": "2024-05-18T15:18Z",
+      "longitude": null,
+      "latitude": -2,
+      "halfAngle": 20,
+      "enlil": null
     },
     {
       "id": "2024-05-18T19:38:00-CME-001",
       "startTime": "2024-05-18T19:38Z",
       "speed": 375,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31028/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31028/-1",
+      "time21_5": "2024-05-19T05:05Z",
+      "longitude": null,
+      "latitude": 5,
+      "halfAngle": 18,
+      "enlil": null
     },
     {
       "id": "2024-05-19T01:23:00-CME-001",
       "startTime": "2024-05-19T01:23Z",
       "speed": 426,
       "sourceLocation": "S40E10",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31022/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31022/-1",
+      "time21_5": "2024-05-19T07:51Z",
+      "longitude": -5,
+      "latitude": -47,
+      "halfAngle": 25,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-19T18:13Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31024/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-19T03:36:00-CME-001",
       "startTime": "2024-05-19T03:36Z",
       "speed": 304,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31030/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31030/-1",
+      "time21_5": "2024-05-19T15:45Z",
+      "longitude": null,
+      "latitude": 5,
+      "halfAngle": 23,
+      "enlil": null
     },
     {
       "id": "2024-05-19T14:23:00-CME-001",
       "startTime": "2024-05-19T14:23Z",
       "speed": 524,
       "sourceLocation": "S10E35",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31032/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31032/-1",
+      "time21_5": "2024-05-19T20:40Z",
+      "longitude": -35,
+      "latitude": -6,
+      "halfAngle": 14,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-20T17:43Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31048/-1",
+        "earth": {
+          "time": "2024-05-22T23:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-19T16:23:00-CME-001",
       "startTime": "2024-05-19T16:23Z",
       "speed": 327,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31051/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31051/-1",
+      "time21_5": "2024-05-20T02:54Z",
+      "longitude": null,
+      "latitude": -25,
+      "halfAngle": 17,
+      "enlil": null
     },
     {
       "id": "2024-05-19T16:53:00-CME-001",
       "startTime": "2024-05-19T16:53Z",
       "speed": 456,
       "sourceLocation": "N33W25",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31044/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31044/-1",
+      "time21_5": "2024-05-20T00:17Z",
+      "longitude": 38,
+      "latitude": 42,
+      "halfAngle": 19,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-20T18:09Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31050/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-19T17:09:00-CME-001",
       "startTime": "2024-05-19T17:09Z",
       "speed": 317,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31046/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31046/-1",
+      "time21_5": "2024-05-20T04:05Z",
+      "longitude": null,
+      "latitude": -77,
+      "halfAngle": 26,
+      "enlil": null
     },
     {
       "id": "2024-05-19T19:09:00-CME-001",
       "startTime": "2024-05-19T19:09Z",
       "speed": 584,
       "sourceLocation": "S10E33",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31042/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31042/-1",
+      "time21_5": "2024-05-19T23:31Z",
+      "longitude": -32,
+      "latitude": -5,
+      "halfAngle": 15,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-20T17:43Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31048/-1",
+        "earth": {
+          "time": "2024-05-22T23:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-20T05:36:00-CME-001",
       "startTime": "2024-05-20T05:36Z",
       "speed": 2678,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31034/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31034/-1",
+      "time21_5": "2024-05-20T06:40Z",
+      "longitude": 172,
+      "latitude": 2,
+      "halfAngle": 45,
+      "enlil": {
+        "runs": 4,
+        "completedAt": "2024-05-20T16:23Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31041/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-20T20:12:00-CME-001",
       "startTime": "2024-05-20T20:12Z",
       "speed": 836,
       "sourceLocation": "S20E35",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31055/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31055/-1",
+      "time21_5": "2024-05-20T23:41Z",
+      "longitude": -38,
+      "latitude": -6,
+      "halfAngle": 17,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-21T18:22Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31062/-1",
+        "earth": {
+          "time": "2024-05-23T23:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-20T21:12:00-CME-001",
       "startTime": "2024-05-20T21:12Z",
       "speed": 654,
       "sourceLocation": "S28E33",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31060/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31060/-1",
+      "time21_5": "2024-05-21T01:48Z",
+      "longitude": -33,
+      "latitude": -18,
+      "halfAngle": 14,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-21T18:22Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31062/-1",
+        "earth": {
+          "time": "2024-05-23T23:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-21T08:00:00-CME-001",
       "startTime": "2024-05-21T08:00Z",
       "speed": 481,
       "sourceLocation": "S35W77",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31057/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31057/-1",
+      "time21_5": "2024-05-21T15:19Z",
+      "longitude": 77,
+      "latitude": -62,
+      "halfAngle": 30,
+      "enlil": null
     },
     {
       "id": "2024-05-21T13:36:00-CME-001",
       "startTime": "2024-05-21T13:36Z",
       "speed": 660,
       "sourceLocation": "S47E15",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31065/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31065/-1",
+      "time21_5": "2024-05-21T17:50Z",
+      "longitude": -5,
+      "latitude": -55,
+      "halfAngle": 15,
+      "enlil": null
     },
     {
       "id": "2024-05-21T14:36:00-CME-001",
       "startTime": "2024-05-21T14:36Z",
       "speed": 531,
       "sourceLocation": "S23W77",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31075/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31075/-1",
+      "time21_5": "2024-05-21T21:05Z",
+      "longitude": 50,
+      "latitude": -49,
+      "halfAngle": 10,
+      "enlil": null
     },
     {
       "id": "2024-05-21T20:12:00-CME-001",
       "startTime": "2024-05-21T20:12Z",
       "speed": 345,
       "sourceLocation": "S06W47",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31079/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31079/-1",
+      "time21_5": "2024-05-22T06:25Z",
+      "longitude": 47,
+      "latitude": 21,
+      "halfAngle": 14,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-22T17:23Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31081/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-21T20:24:00-CME-001",
       "startTime": "2024-05-21T20:24Z",
       "speed": 522,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31077/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31077/-1",
+      "time21_5": "2024-05-22T03:32Z",
+      "longitude": null,
+      "latitude": -84,
+      "halfAngle": 26,
+      "enlil": null
     },
     {
       "id": "2024-05-22T03:36:00-CME-001",
       "startTime": "2024-05-22T03:36Z",
       "speed": 306,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31141/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31141/-1",
+      "time21_5": "2024-05-22T14:46Z",
+      "longitude": 163,
+      "latitude": -51,
+      "halfAngle": 34,
+      "enlil": null
     },
     {
       "id": "2024-05-22T04:00:00-CME-001",
       "startTime": "2024-05-22T04:00Z",
       "speed": 429,
       "sourceLocation": "S06W52",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31082/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31082/-1",
+      "time21_5": "2024-05-22T12:06Z",
+      "longitude": 52,
+      "latitude": 20,
+      "halfAngle": 13,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-22T19:32Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31084/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-22T11:36:00-CME-001",
       "startTime": "2024-05-22T11:36Z",
       "speed": 488,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31086/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31086/-1",
+      "time21_5": "2024-05-22T18:37Z",
+      "longitude": null,
+      "latitude": 20,
+      "halfAngle": 27,
+      "enlil": null
     },
     {
       "id": "2024-05-22T17:24:00-CME-001",
       "startTime": "2024-05-22T17:24Z",
       "speed": 492,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31112/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31112/-1",
+      "time21_5": "2024-05-23T00:43Z",
+      "longitude": 176,
+      "latitude": -28,
+      "halfAngle": 43,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-23T20:10Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31114/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-23T01:25:00-CME-001",
       "startTime": "2024-05-23T01:25Z",
       "speed": 469,
       "sourceLocation": "S35E45",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31092/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31092/-1",
+      "time21_5": "2024-05-23T09:31Z",
+      "longitude": -39,
+      "latitude": -35,
+      "halfAngle": 29,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-23T17:19Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31102/-1",
+        "earth": {
+          "time": "2024-05-27T03:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-23T03:12:00-CME-001",
       "startTime": "2024-05-23T03:12Z",
       "speed": 455,
       "sourceLocation": "S09W60",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31143/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31143/-1",
+      "time21_5": "2024-05-23T09:52Z",
+      "longitude": 60,
+      "latitude": 16,
+      "halfAngle": 15,
+      "enlil": null
     },
     {
       "id": "2024-05-23T04:24:00-CME-001",
       "startTime": "2024-05-23T04:24Z",
       "speed": 507,
       "sourceLocation": "S10W62",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31104/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31104/-1",
+      "time21_5": "2024-05-23T11:24Z",
+      "longitude": 62,
+      "latitude": -26,
+      "halfAngle": 35,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-23T17:36Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31103/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-28T11:30Z",
+          "glancing": true,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-23T06:48:00-CME-001",
       "startTime": "2024-05-23T06:48Z",
       "speed": 649,
       "sourceLocation": "S32E18",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31100/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31100/-1",
+      "time21_5": "2024-05-23T11:39Z",
+      "longitude": -8,
+      "latitude": -37,
+      "halfAngle": 13,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-23T17:19Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31102/-1",
+        "earth": {
+          "time": "2024-05-27T03:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-23T07:12:00-CME-001",
       "startTime": "2024-05-23T07:12Z",
       "speed": 274,
       "sourceLocation": "S12E03",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31098/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31098/-1",
+      "time21_5": "2024-05-23T18:18Z",
+      "longitude": -18,
+      "latitude": -24,
+      "halfAngle": 25,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-23T17:19Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31102/-1",
+        "earth": {
+          "time": "2024-05-27T03:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-23T10:12:00-CME-001",
       "startTime": "2024-05-23T10:12Z",
       "speed": 337,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31106/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31106/-1",
+      "time21_5": "2024-05-23T20:20Z",
+      "longitude": 65,
+      "latitude": -31,
+      "halfAngle": 37,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-23T17:36Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31103/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-28T11:30Z",
+          "glancing": true,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-23T13:25:00-CME-001",
       "startTime": "2024-05-23T13:25Z",
       "speed": 512,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31108/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31108/-1",
+      "time21_5": "2024-05-23T20:18Z",
+      "longitude": 66,
+      "latitude": -24,
+      "halfAngle": 41,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-23T17:36Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31103/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-28T11:30Z",
+          "glancing": true,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-23T17:24:00-CME-001",
       "startTime": "2024-05-23T17:24Z",
       "speed": 342,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31135/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31135/-1",
+      "time21_5": "2024-05-24T02:38Z",
+      "longitude": -138,
+      "latitude": -7,
+      "halfAngle": 24,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-24T17:51Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31137/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-23T22:36:00-CME-001",
       "startTime": "2024-05-23T22:36Z",
       "speed": 943,
       "sourceLocation": "N19E80",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31133/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31133/-1",
+      "time21_5": "2024-05-24T02:09Z",
+      "longitude": -80,
+      "latitude": -5,
+      "halfAngle": 15,
+      "enlil": null
     },
     {
       "id": "2024-05-24T03:12:00-CME-001",
       "startTime": "2024-05-24T03:12Z",
       "speed": 521,
       "sourceLocation": "S12W78",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31131/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31131/-1",
+      "time21_5": "2024-05-24T08:53Z",
+      "longitude": 78,
+      "latitude": -28,
+      "halfAngle": 23,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-24T18:16Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31138/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-29T12:00Z",
+          "glancing": true,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-24T05:00:00-CME-001",
       "startTime": "2024-05-24T05:00Z",
       "speed": 463,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31125/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31125/-1",
+      "time21_5": "2024-05-24T12:32Z",
+      "longitude": -102,
+      "latitude": 5,
+      "halfAngle": 27,
+      "enlil": null
     },
     {
       "id": "2024-05-24T07:36:00-CME-001",
       "startTime": "2024-05-24T07:36Z",
       "speed": 360,
       "sourceLocation": "S14W67",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31127/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31127/-1",
+      "time21_5": "2024-05-24T17:07Z",
+      "longitude": 67,
+      "latitude": 13,
+      "halfAngle": 10,
+      "enlil": null
     },
     {
       "id": "2024-05-24T08:12:00-CME-001",
       "startTime": "2024-05-24T08:12Z",
       "speed": 374,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31129/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31129/-1",
+      "time21_5": "2024-05-24T17:54Z",
+      "longitude": -90,
+      "latitude": 32,
+      "halfAngle": 39,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-24T18:35Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31140/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-24T10:48:00-CME-001",
       "startTime": "2024-05-24T10:48Z",
       "speed": 289,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31123/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31123/-1",
+      "time21_5": "2024-05-24T23:09Z",
+      "longitude": null,
+      "latitude": 58,
+      "halfAngle": 31,
+      "enlil": null
     },
     {
       "id": "2024-05-24T12:12:00-CME-001",
       "startTime": "2024-05-24T12:12Z",
       "speed": 518,
       "sourceLocation": "N45W75",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31121/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31121/-1",
+      "time21_5": "2024-05-24T19:09Z",
+      "longitude": 97,
+      "latitude": 58,
+      "halfAngle": 39,
+      "enlil": null
     },
     {
       "id": "2024-05-24T13:25:00-CME-001",
       "startTime": "2024-05-24T13:25Z",
       "speed": 718,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31119/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31119/-1",
+      "time21_5": "2024-05-24T18:10Z",
+      "longitude": null,
+      "latitude": 5,
+      "halfAngle": 30,
+      "enlil": null
     },
     {
       "id": "2024-05-24T20:48:00-CME-001",
       "startTime": "2024-05-24T20:48Z",
       "speed": 854,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31147/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31147/-1",
+      "time21_5": "2024-05-25T01:00Z",
+      "longitude": 90,
+      "latitude": 4,
+      "halfAngle": 18,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-25T20:11Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31152/-1",
+        "earth": null,
+        "mars": {
+          "time": "2024-05-29T05:56Z",
+          "glancing": false,
+          "minor": false
+        }
+      }
     },
     {
       "id": "2024-05-25T17:24:00-CME-001",
       "startTime": "2024-05-25T17:24Z",
       "speed": 652,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31155/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31155/-1",
+      "time21_5": "2024-05-25T22:50Z",
+      "longitude": null,
+      "latitude": -43,
+      "halfAngle": 30,
+      "enlil": null
     },
     {
       "id": "2024-05-26T17:24:00-CME-001",
       "startTime": "2024-05-26T17:24Z",
       "speed": 435,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31170/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31170/-1",
+      "time21_5": "2024-05-27T01:57Z",
+      "longitude": 107,
+      "latitude": -47,
+      "halfAngle": 31,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-27T20:14Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31172/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-27T07:23:00-CME-001",
       "startTime": "2024-05-27T07:23Z",
       "speed": 1220,
       "sourceLocation": "S21E95",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31161/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31161/-1",
+      "time21_5": "2024-05-27T10:04Z",
+      "longitude": -99,
+      "latitude": -6,
+      "halfAngle": 40,
+      "enlil": {
+        "runs": 4,
+        "completedAt": "2024-05-27T18:12Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31168/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-27T20:12:00-CME-001",
       "startTime": "2024-05-27T20:12Z",
       "speed": 262,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31174/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31174/-1",
+      "time21_5": "2024-05-28T09:36Z",
+      "longitude": 127,
+      "latitude": -44,
+      "halfAngle": 31,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-28T17:37Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31173/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-28T05:36:00-CME-001",
       "startTime": "2024-05-28T05:36Z",
       "speed": 755,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31176/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31176/-1",
+      "time21_5": "2024-05-28T10:07Z",
+      "longitude": 135,
+      "latitude": -48,
+      "halfAngle": 43,
+      "enlil": {
+        "runs": 1,
+        "completedAt": "2024-05-28T17:37Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31173/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-28T19:48:00-CME-001",
       "startTime": "2024-05-28T19:48Z",
       "speed": 976,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31191/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31191/-1",
+      "time21_5": "2024-05-28T23:05Z",
+      "longitude": 141,
+      "latitude": -56,
+      "halfAngle": 28,
+      "enlil": null
     },
     {
       "id": "2024-05-28T23:12:00-CME-001",
       "startTime": "2024-05-28T23:12Z",
       "speed": 607,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31195/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31195/-1",
+      "time21_5": "2024-05-29T04:29Z",
+      "longitude": null,
+      "latitude": -62,
+      "halfAngle": 25,
+      "enlil": null
     },
     {
       "id": "2024-05-29T01:48:00-CME-001",
       "startTime": "2024-05-29T01:48Z",
       "speed": 853,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31204/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31204/-1",
+      "time21_5": "2024-05-29T05:36Z",
+      "longitude": 161,
+      "latitude": 31,
+      "halfAngle": 32,
+      "enlil": null
     },
     {
       "id": "2024-05-29T02:12:00-CME-001",
       "startTime": "2024-05-29T02:12Z",
       "speed": 791,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31210/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31210/-1",
+      "time21_5": "2024-05-29T05:44Z",
+      "longitude": -178,
+      "latitude": -6,
+      "halfAngle": 45,
+      "enlil": null
     },
     {
       "id": "2024-05-29T05:24:00-CME-001",
       "startTime": "2024-05-29T05:24Z",
       "speed": 310,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31189/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31189/-1",
+      "time21_5": "2024-05-29T16:56Z",
+      "longitude": -90,
+      "latitude": -8,
+      "halfAngle": 22,
+      "enlil": null
     },
     {
       "id": "2024-05-29T14:48:00-CME-001",
       "startTime": "2024-05-29T14:48Z",
       "speed": 1033,
       "sourceLocation": "S23E70",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31200/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31200/-1",
+      "time21_5": "2024-05-29T18:06Z",
+      "longitude": -129,
+      "latitude": 1,
+      "halfAngle": 45,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-29T21:16Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31209/-1",
+        "earth": {
+          "time": "2024-06-01T20:00Z",
+          "glancing": true,
+          "minor": false
+        },
+        "mars": null
+      }
     },
     {
       "id": "2024-05-29T17:36:00-CME-001",
       "startTime": "2024-05-29T17:36Z",
       "speed": 723,
       "sourceLocation": "S21E70",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31220/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31220/-1",
+      "time21_5": "2024-05-29T22:18Z",
+      "longitude": -73,
+      "latitude": -11,
+      "halfAngle": 30,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-30T14:47Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31223/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-29T18:48:00-CME-001",
       "startTime": "2024-05-29T18:48Z",
       "speed": 302,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31224/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31224/-1",
+      "time21_5": "2024-05-30T06:29Z",
+      "longitude": 109,
+      "latitude": -68,
+      "halfAngle": 10,
+      "enlil": null
     },
     {
       "id": "2024-05-29T21:12:00-CME-001",
       "startTime": "2024-05-29T21:12Z",
       "speed": 541,
       "sourceLocation": "S25E70",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31232/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31232/-1",
+      "time21_5": "2024-05-30T03:13Z",
+      "longitude": -70,
+      "latitude": -18,
+      "halfAngle": 12,
+      "enlil": null
     },
     {
       "id": "2024-05-29T23:24:00-CME-001",
       "startTime": "2024-05-29T23:24Z",
       "speed": 579,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31230/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31230/-1",
+      "time21_5": "2024-05-30T05:10Z",
+      "longitude": null,
+      "latitude": -15,
+      "halfAngle": 18,
+      "enlil": null
     },
     {
       "id": "2024-05-30T01:25:00-CME-001",
       "startTime": "2024-05-30T01:25Z",
       "speed": 332,
       "sourceLocation": "S40E90",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31228/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31228/-1",
+      "time21_5": "2024-05-30T11:53Z",
+      "longitude": -90,
+      "latitude": -44,
+      "halfAngle": 14,
+      "enlil": null
     },
     {
       "id": "2024-05-30T03:48:00-CME-001",
       "startTime": "2024-05-30T03:48Z",
       "speed": 561,
       "sourceLocation": "S22E60",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31226/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31226/-1",
+      "time21_5": "2024-05-30T09:33Z",
+      "longitude": -60,
+      "latitude": -2,
+      "halfAngle": 27,
+      "enlil": {
+        "runs": 2,
+        "completedAt": "2024-05-30T20:10Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31239/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-30T09:24:00-CME-001",
       "startTime": "2024-05-30T09:24Z",
       "speed": 750,
       "sourceLocation": "S10E80",
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31217/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31217/-1",
+      "time21_5": "2024-05-30T13:32Z",
+      "longitude": -78,
+      "latitude": -3,
+      "halfAngle": 25,
+      "enlil": {
+        "runs": 3,
+        "completedAt": "2024-05-30T20:10Z",
+        "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/WSA-ENLIL/31239/-1",
+        "earth": null,
+        "mars": null
+      }
     },
     {
       "id": "2024-05-30T21:12:00-CME-001",
       "startTime": "2024-05-30T21:12Z",
       "speed": 571,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31243/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31243/-1",
+      "time21_5": "2024-05-31T04:43Z",
+      "longitude": 145,
+      "latitude": -56,
+      "halfAngle": 33,
+      "enlil": null
     },
     {
       "id": "2024-05-31T04:17:00-CME-001",
       "startTime": "2024-05-31T04:17Z",
       "speed": 817,
       "sourceLocation": null,
-      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31245/-1"
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31245/-1",
+      "time21_5": "2024-05-31T07:49Z",
+      "longitude": -171,
+      "latitude": -61,
+      "halfAngle": 21,
+      "enlil": null
     }
   ],
   "gsts": [
@@ -2888,5 +4316,11 @@
       "maxKp": 6,
       "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/GST/30993/-1"
     }
+  ],
+  "included": [
+    "FLR",
+    "SEP",
+    "CME",
+    "GST"
   ]
 }
