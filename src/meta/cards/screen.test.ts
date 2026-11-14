@@ -180,6 +180,8 @@ describe('the Storm Cards screen', () => {
     expect(root.querySelector('.sc-new')).not.toBeNull();
     (root.querySelector('button.sc-card') as HTMLButtonElement).click();
     expect(root.querySelector('[aria-label="Storm Card: M1.2 solar flare"]')).not.toBeNull();
+    // Only one card: no Previous / Next.
+    expect(Array.from(root.querySelectorAll('button')).some((b) => b.textContent === 'Next card')).toBe(false);
     Array.from(root.querySelectorAll('button')).find((b) => b.textContent === 'Back to Storm Cards')!.click();
     expect(root.querySelector('[aria-label="Storm Cards"]')).not.toBeNull();
     Array.from(root.querySelectorAll('button')).find((b) => b.textContent === 'Back to the title screen')!.click();

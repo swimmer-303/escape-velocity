@@ -36,6 +36,8 @@ const view: { filter: Filter; sort: Sort; showMissing: boolean; allMissing: bool
   allMissing: false,
 };
 const MISSING_LIMIT = 48;
+/** The collected cards in the order the grid shows them (for Previous / Next in the detail view). */
+let shownOrder: string[] = [];
 
 const byDate = (a: CardFacts, b: CardFacts) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0);
 const byRarity = (a: CardFacts, b: CardFacts) =>
@@ -104,6 +106,7 @@ export function renderCollection(col: Collection, o: CollectionOpts): HTMLElemen
     clear(host);
     const cmp = view.sort === 'date' ? byDate : byRarity;
     const mine = owned.filter(pass).sort(cmp);
+    shownOrder = mine.map((c) => c.id);
     const missing = view.filter === 'new' ? [] : possible.missing.filter(pass).sort(cmp);
     host.append(
       h('h3', { class: 'sc-sub' }, `Your cards (${mine.length.toLocaleString('en-US')})`),
@@ -323,6 +326,8 @@ export interface DetailOpts {
   inSet?: boolean;
   onBack(): void;
   onTitle(): void;
+  onPrev?: () => void;
+  onNext?: () => void;
 }
 
 export function renderDetail(c: StoredCard, o: DetailOpts): HTMLElement {
@@ -387,6 +392,8 @@ export function renderDetail(c: StoredCard, o: DetailOpts): HTMLElement {
         'div',
         { class: 'actions' },
         h('button', { class: 'btn primary', type: 'button', onclick: o.onBack }, 'Back to Storm Cards'),
+        o.onPrev ? h('button', { class: 'btn small', type: 'button', onclick: o.onPrev }, 'Previous card') : null,
+        o.onNext ? h('button', { class: 'btn small', type: 'button', onclick: o.onNext }, 'Next card') : null,
         h('button', { class: 'btn small', type: 'button', onclick: o.onTitle }, 'Title screen'),
       ),
     ),
@@ -438,11 +445,23 @@ function showCard(col: Collection, id: string): void {
   const c = col.cards[id];
   if (!ctx || !c) return;
   const back = () => showGrid(col, id);
-  ctx.modal(renderDetail(c, { inSet: may2024Ids().has(id), onBack: back, onTitle: () => ctx.showTitle() }), {
-    label: `Storm Card: ${cardTitle(c)}`,
-    wide: true,
-    onClose: back,
-  });
+  const i = shownOrder.indexOf(id);
+  const prev = i > 0 ? shownOrder[i - 1] : null;
+  const next = i >= 0 && i < shownOrder.length - 1 ? shownOrder[i + 1] : null;
+  ctx.modal(
+    renderDetail(c, {
+      inSet: may2024Ids().has(id),
+      onBack: back,
+      onTitle: () => ctx.showTitle(),
+      onPrev: prev ? () => showCard(col, prev) : undefined,
+      onNext: next ? () => showCard(col, next) : undefined,
+    }),
+    {
+      label: `Storm Card: ${cardTitle(c)}`,
+      wide: true,
+      onClose: back,
+    },
+  );
 }
 
 // ------------------------------------------------------------------ title screen row
