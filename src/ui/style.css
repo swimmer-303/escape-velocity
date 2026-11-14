@@ -1069,3 +1069,8 @@ html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, 
 }
 /* Phones and tablets: 100vh includes the browser's toolbar, so size dialogs to the visible screen. */
 .modal { max-height: calc(100dvh - 32px); }
+
+/* ---------- GitHub link on the title screen ---------- */
+.title-screen .btn.github { background: var(--ink); color: #15122b; text-decoration: none; }
+.btn .gh-mark { display: inline-flex; line-height: 0; flex: none; }
+html.ev-contrast .title-screen .btn.github { background: #fff; color: #000; }
