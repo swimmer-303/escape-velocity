@@ -5,7 +5,7 @@ NASA Space Apps Challenge 2026, Charlotte, NC · Team Sendy1 (Spencer Hedges and
 
 > Build a base in Gale Crater on Mars, crew after crew. Keep each crew breathing, fed and safe from solar storms, make enough oxygen to fill the rocket that flies them home, and leave the base better for the next crew. Fill the tank and you hit **escape velocity**.
 
-**Play it:** https://escape-velocity-seven.vercel.app · no download, no account, works on Chromebooks, desktops and tablets.
+**Play it:** https://143-110-195-117.sslip.io (backup: https://escape-velocity-seven.vercel.app) · no download, no account, works on Chromebooks, desktops and tablets.
 
 ## The challenge
 
@@ -82,7 +82,8 @@ src/sim/      Pure, deterministic, seeded simulation. No rendering imports. The 
 src/data/     DONKI loader (proxy -> direct -> snapshot), light-time calculator, OSDR + RadLab snapshots, Real Science facts
 src/render/   Stage interface (3D diorama plugs in here)
 src/ui/       HUD, power-budget dock (drag and drop, tap, keyboard), briefing, debrief, Science Log, credits, audio
-api/          spaceweather.ts: Vercel Function that proxies DONKI and lets the CDN cache it for an hour
+api/          spaceweather.ts: the DONKI proxy handler (used by the droplet server and by Vercel)
+deploy/       droplet server (server.ts), Caddyfile, systemd service, one-time setup script
 scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark)
 ```
 
@@ -96,7 +97,11 @@ npm run fetch-data   # refresh NASA data snapshots in src/data/snapshots/
 npm run build        # typecheck + production build into dist/
 ```
 
-Deployment: Vercel (Vite preset). Optional environment variable `NASA_API_KEY` lets the proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
+### Deployment
+
+Every push to `main` runs the tests, builds the game, and deploys it to our DigitalOcean droplet through GitHub Actions (`.github/workflows/deploy.yml`), so any teammate with push access can ship. On the droplet, **Caddy** serves the static game with automatic HTTPS and forwards `/api/spaceweather` to a tiny Node service (`deploy/server.ts`) that fetches NASA DONKI and caches it for an hour. One-time server setup lives in `deploy/setup.sh`; the GitHub secrets it needs are `DEPLOY_HOST`, `DEPLOY_URL`, `DEPLOY_SSH_KEY` (a deploy-only key) and `DEPLOY_KNOWN_HOSTS`. To use a real domain, point its DNS at the droplet and change `SITE_HOST` in `/etc/default/caddy`, then `systemctl restart caddy`.
+
+A Vercel deployment (`api/spaceweather.ts` as a Vercel Function) is kept as a backup. Optional environment variable `NASA_API_KEY` lets either proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
 
 ### Tests
 
