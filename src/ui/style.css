@@ -306,3 +306,21 @@ table.log th { font-family: var(--font-px); font-weight: 400; font-size: 12px; c
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { animation: none !important; transition: none !important; }
+
+/* ---------- Sun panel ---------- */
+.sun-panel { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; text-align: left; }
+.sun-panel.card { max-width: 420px; margin: 16px auto 0; }
+.sun-panel.compact { flex-wrap: nowrap; margin-top: 8px; padding-top: 8px; border-top: 2px dashed var(--line); }
+.sun-panel[hidden], .sun-panel [hidden] { display: none; }
+.sun-img { flex: none; width: 96px; height: 96px; background: #000; border: 3px solid #000; box-shadow: 0 0 0 2px var(--line); }
+.sun-panel.compact .sun-img { width: 56px; height: 56px; }
+.sun-img img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.sun-body { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.35; }
+.sun-title { font-family: var(--font-px); font-weight: 400; font-size: 13px; color: var(--amber); }
+.sun-panel.card .sun-title { display: block; margin-bottom: 2px; }
+.sun-about p { margin: 0 0 4px; }
+.sun-why { color: var(--muted); }
+.sun-credit { font-size: 12px; }
+@media (max-width: 420px) {
+  .sun-panel.card .sun-img { width: 72px; height: 72px; }
+}

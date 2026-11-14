@@ -50,6 +50,7 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 |---|---|---|
 | **NASA DONKI** solar flares (FLR) and particle storms (SEP) | Every radiation storm in a mission is a real event. Flare class sets storm size (C small, M medium, X big). Event cards show the real class, date, sunspot region and a link to the DONKI record. | **LIVE** (last 30 days, through our cached server or directly from NASA), with a stored snapshot as **ARCHIVE** fallback. The badge always says which. |
 | **NASA DONKI** May 2024 (FLR, SEP, CME, GST) | Replay History mode: AR 13664's X-class flares, the Kp 9 storm at Earth on May 10, and the 2,678 km/s far-side CME of May 20. | ARCHIVE |
+| **NASA SDO** (Solar Dynamics Observatory) AIA 171 picture | "The Sun right now" on the title screen and in each briefing, next to the latest real DONKI flare. Real NASA imagery (Image: NASA/SDO), not AI. | **LIVE** (through our server, cached 10 minutes, or directly from NASA); shows when it was taken only when that time is known |
 | **JPL Solar System Dynamics** orbital elements | Earth to Mars light time for the comm-delay mechanic, calculated live in the browser. Checked against JPL Horizons: 11.01 min on Nov 14, 2026 (exact to 2 decimals). | Calculated now |
 | **Curiosity RAD** (Hassler et al. 2014; NASA/JPL 2024) | The steady background dose on every sol (0.67 mSv/sol, the real Gale Crater average) and the model for a "big" storm (8,100 µGy on May 20, 2024). | Published figures |
 | **NASA OSDR RadLab** (ISS DOSTEL dosimetry) | "Mars vs. ISS" radiation comparison. | ARCHIVE (RadLab's ISS series ends in late 2024) |
@@ -99,7 +100,7 @@ npm run build        # typecheck + production build into dist/
 
 ### Deployment
 
-Every push to `main` runs the tests, builds the game, and deploys it to our DigitalOcean droplet through GitHub Actions (`.github/workflows/deploy.yml`), so any teammate with push access can ship. On the droplet, **Caddy** serves the static game with automatic HTTPS and forwards `/api/spaceweather` to a tiny Node service (`deploy/server.ts`) that fetches NASA DONKI and caches it for an hour. One-time server setup lives in `deploy/setup.sh`; the GitHub secrets it needs are `DEPLOY_HOST`, `DEPLOY_URL`, `DEPLOY_SSH_KEY` (a deploy-only key) and `DEPLOY_KNOWN_HOSTS`. To use a real domain, point its DNS at the droplet and change `SITE_HOST` in `/etc/default/caddy`, then `systemctl restart caddy`.
+Every push to `main` runs the tests, builds the game, and deploys it to our DigitalOcean droplet through GitHub Actions (`.github/workflows/deploy.yml`), so any teammate with push access can ship. On the droplet, **Caddy** serves the static game with automatic HTTPS and forwards `/api/*` to a tiny Node service (`deploy/server.ts`) that fetches NASA DONKI (`/api/spaceweather`, cached for an hour) and NASA SDO's newest picture of the Sun (`/api/sun`, cached for 10 minutes). One-time server setup lives in `deploy/setup.sh`; the GitHub secrets it needs are `DEPLOY_HOST`, `DEPLOY_URL`, `DEPLOY_SSH_KEY` (a deploy-only key) and `DEPLOY_KNOWN_HOSTS`. To use a real domain, point its DNS at the droplet and change `SITE_HOST` in `/etc/default/caddy`, then `systemctl restart caddy`.
 
 Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to let the proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
 
@@ -115,7 +116,7 @@ Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to
 We used AI tools, and here is exactly where and how:
 
 - **Code:** written with AI assistance (Claude Code by Anthropic), directed and reviewed by our team. Every source file has a header comment saying so.
-- **Images:** every illustration (title art, event cards, Real Science art) was generated with **Higgsfield** (GPT Image 2.6), then downscaled and palette-reduced for the retro look. **Every image carries a visible "AI-generated" watermark**, baked into the image file.
+- **Images:** every illustration (title art, event cards, Real Science art) was generated with **Higgsfield** (GPT Image 2.6), then downscaled and palette-reduced for the retro look. **Every image carries a visible "AI-generated" watermark**, baked into the image file. The one exception is the live picture of the Sun, which is real NASA/SDO imagery loaded from NASA and credited as such.
 - **Music:** generated with **Higgsfield** (ElevenLabs Music v2.5); credited here, in the in-game Credits screen, and in each MP3's metadata. Sound effects are synthesized in code.
 - **Data:** all data comes from NASA sources. AI-assisted scripts fetch and reformat it, but never invent or change values.
 - **Disclosure in the product:** an `ai-assistance` meta tag in `index.html`, an "AI tools" section in the in-game Credits, watermarks on all images, and [`ASSETS.md`](ASSETS.md), which lists every generated asset with its tool, model and full prompt.

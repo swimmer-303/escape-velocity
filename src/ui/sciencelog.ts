@@ -52,6 +52,14 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
       [link('https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31034/-1', 'May 20, 2024 CME record')],
     ],
     [
+      'NASA Solar Dynamics Observatory (SDO): the Sun right now',
+      [
+        "The picture of the Sun on the title screen and in each morning briefing is real NASA imagery, not AI-generated. It comes from SDO's AIA camera at 171 angstroms: extreme ultraviolet light our eyes cannot see, which NASA colors gold. It shows glowing loops over busy sunspot regions, where flares come from. NASA adds a new picture about every 10 minutes. Next to it: the latest flare in the DONKI data above.",
+      ],
+      [tag('live', 'LIVE'), " Loaded from NASA when you open the game, through our server (which keeps a copy for up to 10 minutes) or straight from NASA. When our server knows the time SDO took the picture, the game shows it. If the picture can't be loaded, the game hides it."],
+      [link('https://sdo.gsfc.nasa.gov/', 'sdo.gsfc.nasa.gov'), ' · ', link('https://svs.gsfc.nasa.gov/3980', 'NASA SVS: what 171 angstroms shows')],
+    ],
+    [
       'JPL planetary orbital elements: message delay',
       [
         `Messages from Earth take about ${light.oneWayMinutes.toFixed(1)} minutes to reach Mars today (distance ${light.distanceAU.toFixed(2)} AU, ${Math.round(light.distanceKm / 1e6)} million km). We calculate this in your browser from JPL's published orbital elements, so it is approximate. Checked against JPL Horizons on Nov 14, 2026: 11.01 min, an exact match to 2 decimals.`,
