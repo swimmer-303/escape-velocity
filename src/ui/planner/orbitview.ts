@@ -126,8 +126,9 @@ export function orbitView(reducedMotion: boolean): OrbitView {
   const tick = (now: number) => {
     raf = 0;
     if (!svg.isConnected || !playing) return;
-    const t = (now - t0) % (LOOP_MS + HOLD_MS);
-    draw(Math.min(FRAMES, Math.floor((t / LOOP_MS) * FRAMES)));
+    // A frame can be stamped slightly before t0 (browsers stamp frames with their start time), so never go below 0.
+    const t = Math.max(0, now - t0) % (LOOP_MS + HOLD_MS);
+    draw(Math.max(0, Math.min(FRAMES, Math.floor((t / LOOP_MS) * FRAMES))));
     raf = requestAnimationFrame(tick);
   };
   const start = () => {
