@@ -126,7 +126,8 @@ export class Diorama {
     this.group.add(this.buildGreenhouse(SPOT.greenhouse, 1.8));
     this.group.add(this.buildShelter());
     this.group.add(this.buildWorkshop());
-    const { rocket, bar } = this.buildRocket();
+    const { pad, rocket, bar } = this.buildRocket();
+    this.group.add(pad);
     this.rocket = rocket;
     this.fuelBar = bar;
     this.group.add(rocket);
@@ -361,9 +362,16 @@ export class Diorama {
   }
 
   private buildRocket() {
-    const g = new THREE.Group();
     const [x, z] = SPOT.rocket;
-    g.add(mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.35, 10), mat(C.dark), 0, 0.17, 0));
+    // The launch pad and tower stay on the ground; only the rocket (group g) flies.
+    const pad = new THREE.Group();
+    pad.name = 'launch-pad';
+    pad.add(mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.35, 10), mat(C.dark), 0, 0.17, 0));
+    pad.add(mesh(new THREE.BoxGeometry(0.3, 5.4, 0.3), mat(C.metal), -1.4, 2.7, 0));
+    pad.add(mesh(new THREE.BoxGeometry(0.9, 0.12, 0.12), mat(C.metal), -0.95, 4.2, 0));
+    pad.position.set(x, this.height(x, z), z);
+    const g = new THREE.Group();
+    g.name = 'rocket';
     const body = mesh(new THREE.CylinderGeometry(0.55, 0.62, 4.4, 10), mat(C.white), 0, 2.6, 0);
     g.add(body);
     g.add(mesh(new THREE.ConeGeometry(0.55, 1.3, 10), mat(C.white), 0, 5.45, 0));
@@ -381,10 +389,8 @@ export class Diorama {
     bar.geometry.translate(0, 1.7, 0);
     bar.castShadow = false;
     g.add(bar);
-    // Launch tower.
-    g.add(mesh(new THREE.BoxGeometry(0.3, 5.4, 0.3), mat(C.metal), -1.4, 2.7, 0));
     g.position.set(x, this.height(x, z), z);
-    return { rocket: g, bar };
+    return { pad, rocket: g, bar };
   }
 
   private buildMonitor() {

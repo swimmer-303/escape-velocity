@@ -28,8 +28,13 @@ describe('diorama', () => {
     d.storm(1);
     d.tick(0.016, 5, true);
     expect(d.stormLevel).toBeGreaterThan(0);
+    const pad = d.group.getObjectByName('launch-pad')!;
+    const padY = pad.position.y;
     for (let k = 0; k <= 1; k += 0.1) d.launchStep(k);
     expect(d.rocketPosition().y).toBeGreaterThan(50);
+    // Only the rocket flies: the launch pad and tower stay on the ground.
+    expect(pad.position.y).toBe(padY);
+    expect(pad.parent).toBe(d.group);
     d.resetLaunch();
     expect(d.rocketPosition().y).toBeLessThan(5);
   });
