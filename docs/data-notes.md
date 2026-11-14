@@ -209,3 +209,14 @@ Not verified:
 8. **OSD-714 is Moon gravity, not Mars gravity.** OSD-581 and OSD-479 are ground studies.
 9. **O2 per person is ~0.9 kg/day in current NASA BVAD**, not 0.82-0.84.
 10. **"Moon 2.6x ISS"** is true only against the ISS cosmic-ray component. Against the ISS total it is ~1.9x.
+
+## 6. SDO: "The Sun right now" picture
+
+The title screen and the morning briefing show NASA Solar Dynamics Observatory's newest picture of the Sun (real NASA imagery, credited "Image: NASA/SDO", no AI watermark).
+
+- **Camera:** AIA 171 Å (extreme ultraviolet, Fe IX, about 600,000 K). It shows the quiet corona and coronal loops; the bright, loopy spots sit over active (sunspot) regions, where flares come from. Source: https://svs.gsfc.nasa.gov/3980 and the channel table at https://sdo.gsfc.nasa.gov/data/channels.php. The gold color is NASA's false color: our eyes can't see this light.
+- **Latest file:** `https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg` (512x512 JPEG, ~58 KB). Headers seen on 2026-11-14 at 15:55 UTC: `Content-Type: image/jpeg`, `Last-Modified: Sat, 14 Nov 2026 15:52:07 GMT`, `Cache-Control: no-cache, no-store, must-revalidate`, `Expires: 0`, an `ETag`, and **no CORS headers** (so the browser can show it in an `<img>` but can't read its headers or time). Sizes 256, 512 and 1024 exist, and 0193, 0304, 0131, HMIIC, HMIIF and 211193171 at 512 also answered 200.
+- **Observation time:** `Last-Modified` is when NASA posted the file, a few minutes after the picture was taken (15:52:07 vs. 15:47:46 for that file). The real time is burned into the picture and is in the file name in SDO's browse archive: `https://sdo.gsfc.nasa.gov/assets/img/browse/YYYY/MM/DD/YYYYMMDD_HHMMSS_512_0171.jpg` (UTC). The newest browse file was byte-identical to the latest file both times we checked.
+- **Listing size:** the full browse folder listing is about 1 MB; Apache's pattern filter `?C=M;O=D;P=*_512_0171.jpg` cuts it to about 14 KB.
+- **Cadence:** on 2026-11-14 (00:06 to 15:47 UTC) there were 94 AIA 171 pictures in the browse folder, a median of 10 minutes apart (8.4 to 19 minutes). The game says "about every 10 minutes".
+- **How the game loads it:** `/api/sun` on our server (`api/sun.ts`, cached 10 minutes in `deploy/server.ts`) serves the newest browse picture with `x-sun-taken-at` (from the file name), `last-modified` (NASA's), `x-sun-fetched-at` and `x-sun-source`, falling back to the latest file with no taken time. The browser tries `/api/sun` first, then NASA's latest file directly (also what the Vite dev server uses), and hides the picture if both fail. "Taken about N minutes ago" is shown only when the time came from the file name and the device clock agrees with the server's `Date`; otherwise the panel says NASA adds a new picture about every 10 minutes.

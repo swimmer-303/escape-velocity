@@ -34,6 +34,7 @@ import type { Stage } from '../render/stage';
 import { renderScienceLog } from './sciencelog';
 import { renderCredits } from './credits';
 import { meetCrew, crewSays } from './crew';
+import { sunPanel } from './sunpanel';
 import { Coach, type CoachPhase } from './tutorial';
 import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange } from './views';
 import { ClassCodes, classCodeLine } from './classcode';
@@ -382,6 +383,7 @@ export class App {
             h('button', { class: 'btn small', onclick: () => this.showCredits() }, 'Credits and AI use'),
           ),
         ),
+        sunPanel(this.feed),
         h(
           'p',
           { class: 'title-foot' },
@@ -786,6 +788,7 @@ export class App {
             ? `forecasters say the Sun is active${region ? ` (sunspot region ${region} is busy)` : ''}. A solar storm could come in the next few sols.${b.hasMonitor ? ' Power your monitor tonight?' : ''}`
             : 'forecasters say the Sun looks quiet for now.',
           h('div', { class: 'title-foot', style: 'margin-top:4px' }, delay),
+          this.mode === 'history' ? null : sunPanel(this.feed, { compact: true }),
         ),
       );
     }
