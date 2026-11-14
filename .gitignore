@@ -6,3 +6,6 @@ dist
 *.log
 .env*
 dist-server
+
+# Agent worktrees (local only)
+.claude/worktrees/
