@@ -6,6 +6,7 @@
 import { EXPEDITIONS, PREFILL_MAX_PCT, PREFILL_PCT_PER_CELL, TUNING, type Difficulty } from './constants';
 import { REACTOR_CELLS, UPGRADE_BOOST } from './sim';
 import { freshBase, type BaseState, type UpgradeId } from './upgrades';
+import { isMissionSeries, missionSeries, type MissionSeries } from './series';
 import type { LoseReason, MissionConfig, MissionState, SpaceWeatherEvent } from './types';
 
 export type StarId = 'launch' | 'safe' | 'builder';
@@ -25,6 +26,8 @@ export interface ExpeditionResult {
   doseBudget: number;
   stars: StarId[];
   built: UpgradeId[];
+  /** Sol-by-sol history for the finale chart. Optional: saves from before charts existed don't have it. */
+  series?: MissionSeries;
 }
 
 export interface Campaign {
@@ -89,6 +92,7 @@ export function resultFor(end: MissionState): ExpeditionResult {
     doseBudget: end.doseBudget,
     stars: starsFor(end),
     built: end.builtThisExpedition,
+    series: missionSeries(end),
   };
 }
 
@@ -125,6 +129,8 @@ export function deserialize(raw: string | null): Campaign | null {
   try {
     const c = JSON.parse(raw) as Campaign;
     if (c?.version !== 1 || typeof c.expedition !== 'number' || !c.base?.levels) return null;
+    // A damaged chart history only loses the chart, never the save.
+    if (Array.isArray(c.results)) c.results = c.results.map((r) => (r.series === undefined || isMissionSeries(r.series) ? r : { ...r, series: undefined }));
     return c;
   } catch {
     return null;
