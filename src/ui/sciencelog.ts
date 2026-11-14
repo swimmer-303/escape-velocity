@@ -42,6 +42,8 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
   const { feed, light } = ctx;
   const t = TUNING[ctx.difficulty];
   const counts = feed.snapshot ? countByClass(feed.snapshot) : null;
+  // CMEs with a measured direction in the current feed (only when the feed really fetched CMEs).
+  const cmeDirections = feed.snapshot?.included?.includes('CME') ? feed.snapshot.cmes.filter((c) => c.longitude != null).length : 0;
   const donkiStatus =
     feed.status === 'live'
       ? [tag('live', 'LIVE'), ` Fetched ${day(feed.fetchedAt)} (${feed.via === 'proxy' ? 'through our cached server' : 'directly from NASA'}).`]
@@ -67,6 +69,18 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
       ],
       MAY2024_SNAPSHOT ? [tag('archive', 'ARCHIVE'), ` Snapshot taken ${day(MAY2024_SNAPSHOT.fetchedAt)}.`] : ['Not available'],
       [link('https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31034/-1', 'May 20, 2024 CME record')],
+    ],
+    [
+      'NASA DONKI: CME analyses and the WSA-ENLIL model (Space weather radar)',
+      [
+        "The Space weather radar flies every real CME (coronal mass ejection) from the last 30 days, or from May 2024, out from the Sun past Earth and Mars. Each CME's speed, direction and cone width come from DONKI's most accurate analysis of it; Earth and Mars sit at their real places from JPL's orbital elements. ",
+        'Our simple model moves each CME at a constant speed from 21.5 solar radii (DONKI\'s time21_5), so when it says a CME reached Mars\' distance, that is an estimate. Next to it, the radar shows NASA\'s own WSA-ENLIL model predictions for Earth and Mars, copied from DONKI. ',
+        cmeDirections ? `This window: ${feed.snapshot!.cmes.length} CMEs, ${cmeDirections} with a measured direction.` : '',
+      ],
+      cmeDirections && feed.status === 'live'
+        ? [tag('live', 'LIVE'), ' CMEs fetched with the flares above.']
+        : [tag('archive', 'ARCHIVE'), ' The radar shows the stored snapshot unless it can fetch CMEs from NASA when you open it; its badge always says which. May 2024 is always ARCHIVE.'],
+      [link('https://ccmc.gsfc.nasa.gov/DONKI/search/', 'DONKI search'), ' · ', link('https://ccmc.gsfc.nasa.gov/models/ENLIL~2.8f/', 'CCMC: the ENLIL model')],
     ],
     [
       'NASA Solar Dynamics Observatory (SDO): the Sun right now',
@@ -205,6 +219,10 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
     ['Time between crews', 'Earth and Mars line up for a short trip about every 26 months, so each new crew arrives 26 months after the last one left. That timing is real; the game skips straight to it.'],
     ['Upgrades', 'Upgrade costs and effects are game values. Each upgrade is based on a real technology: more solar panels, battery banks, regolith shielding, LED greenhouses, a scaled-up MOXIE, and NASA\'s Fission Surface Power reactor project.'],
     ['Radiation budget', `Your crew's budget is ${t.doseBudget} mSv for the whole mission. That is much stricter than NASA's real career limit (600 mSv), so radiation choices matter in a short game. Background dose (${REAL.marsSurfaceMsvPerDay} mSv per sol) is the real Gale Crater value.`],
+    [
+      'Space weather radar',
+      'Distances from the Sun are to scale; the Sun and planets are drawn much bigger than real, and orbits are drawn flat. DONKI gives CME directions from the Sun-Earth line (0 = toward Earth, west = ahead of Earth in its orbit), so we turn them into directions in space using where Earth was at that moment. Each CME keeps one speed the whole way (our simple model); real CMEs speed up or slow down, so its arrival times are estimates. NASA\'s ENLIL model is a full physics model and is shown as NASA\'s prediction.',
+    ],
     ['Storm sizes', `Game doses for a storm caught outside: small ${STORM_DOSE.minor}, medium ${STORM_DOSE.moderate}, big ${STORM_DOSE.major} mSv. The big one is modeled on the May 2024 event. In real life not every big flare sends particles to Mars; in the game, every X-class flare does.`],
     ['Warnings', 'In May 2024, particles reached Mars in tens of minutes (NASA/JPL). Big storms send the fastest particles, so in the game an X-class storm always beats Earth\'s warning to Mars. Medium storms build more slowly, so Earth\'s warning arrives in time. A powered radiation monitor warns you the next morning either way.'],
     ['Shelter', 'A storm shelter with 2 cells blocks 90% of a storm; 1 cell blocks half. Shelters mostly help against solar storms, not the steady background radiation, and the game models it that way.'],

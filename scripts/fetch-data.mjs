@@ -156,6 +156,45 @@ function normCme(r) {
     speed,
     sourceLocation: r.sourceLocation || null,
     link: r.link ?? null,
+    ...cmeAnalysisFields(r),
+  };
+}
+
+// Direction, size and NASA's model predictions for the Space weather radar. Mirrors cmeAnalysisFields() in
+// src/data/donki-normalize.ts (keep the two in step): the first analysis flagged isMostAccurate gives
+// time21_5 (front at 21.5 solar radii), longitude/latitude (Stonyhurst, + = west of the Sun-Earth line) and
+// halfAngle. ENLIL: the newest WSA-ENLIL run (by modelCompletionTime) under any most-accurate analysis;
+// Earth = estimatedShockArrivalTime, Mars = the impactList entry with location "Mars". An arrival listed
+// before the CME started is a typo in DONKI (one 2026 run lists a 2016 date) and is left out.
+function cmeAnalysisFields(r) {
+  const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+  const str = (x) => (typeof x === 'string' && x.trim() ? x : null);
+  const flagged = (Array.isArray(r.cmeAnalyses) ? r.cmeAnalyses : []).filter((a) => a?.isMostAccurate === true);
+  const best = flagged[0];
+  const runs = flagged.flatMap((a) => (Array.isArray(a.enlilList) ? a.enlilList : [])).filter(Boolean);
+  let enlil = null;
+  if (runs.length) {
+    const t = (run) => Date.parse(run.modelCompletionTime ?? '') || 0;
+    const newest = runs.reduce((a, b) => (t(b) > t(a) ? b : a));
+    const start = Date.parse(r.startTime ?? '') || -Infinity;
+    const valid = (time) => !!str(time) && Date.parse(time) >= start;
+    const mars = (Array.isArray(newest.impactList) ? newest.impactList : []).find((i) => i?.location === 'Mars' && valid(i.arrivalTime));
+    enlil = {
+      runs: runs.length,
+      completedAt: str(newest.modelCompletionTime),
+      link: str(newest.link),
+      earth: valid(newest.estimatedShockArrivalTime)
+        ? { time: newest.estimatedShockArrivalTime, glancing: newest.isEarthGB === true, minor: newest.isEarthMinorImpact === true }
+        : null,
+      mars: mars ? { time: mars.arrivalTime, glancing: mars.isGlancingBlow === true, minor: mars.isMinorImpact === true } : null,
+    };
+  }
+  return {
+    time21_5: str(best?.time21_5),
+    longitude: num(best?.longitude),
+    latitude: num(best?.latitude),
+    halfAngle: num(best?.halfAngle),
+    enlil,
   };
 }
 
@@ -203,6 +242,7 @@ async function fetchDonkiWindow(startDate, endDate) {
       for (const [type, { out }] of Object.entries(DONKI_TYPES)) {
         snap[out] = raw[type].map(NORMALIZERS[type]);
       }
+      snap.included = Object.keys(DONKI_TYPES); // every type was fetched, so an empty list really means "none"
       return snap;
     } catch (err) {
       errors.push(`${host.base}: ${err.message}`);
@@ -213,13 +253,15 @@ async function fetchDonkiWindow(startDate, endDate) {
 }
 
 function summarizeDonki(s) {
+  const withDir = s.cmes.filter((c) => c.longitude != null).length;
+  const enlilMars = s.cmes.filter((c) => c.enlil?.mars).length;
   const byClass = {};
   for (const f of s.flares) {
     const c = (f.classType || '?')[0];
     byClass[c] = (byClass[c] || 0) + 1;
   }
   const maxKp = s.gsts.reduce((m, g) => (g.maxKp != null && g.maxKp > m ? g.maxKp : m), -Infinity);
-  return `flares ${s.flares.length} ${JSON.stringify(byClass)}, SEPs ${s.seps.length}, CMEs ${s.cmes.length}, storms ${s.gsts.length}${s.gsts.length ? ` (max Kp ${maxKp})` : ''}`;
+  return `flares ${s.flares.length} ${JSON.stringify(byClass)}, SEPs ${s.seps.length}, CMEs ${s.cmes.length} (${withDir} with a direction, ${enlilMars} with an ENLIL Mars arrival), storms ${s.gsts.length}${s.gsts.length ? ` (max Kp ${maxKp})` : ''}`;
 }
 
 async function runDonki() {

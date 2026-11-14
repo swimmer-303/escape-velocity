@@ -32,6 +32,28 @@ function position(el: Elements, centuries: number): [number, number] {
   return [x * Math.cos(w) - y * Math.sin(w), x * Math.sin(w) + y * Math.cos(w)];
 }
 
+export type Planet = 'earth' | 'mars';
+const PLANETS: Record<Planet, Elements> = { earth: EARTH, mars: MARS };
+/** Days for one trip around the Sun (from the mean-longitude rates above). */
+export const ORBIT_DAYS: Record<Planet, number> = { earth: (360 / EARTH.Ldot) * 36525, mars: (360 / MARS.Ldot) * 36525 };
+
+export interface HelioPosition {
+  /** Heliocentric ecliptic coordinates in AU (x toward the March equinox, y 90 degrees ahead, J2000), orbits flattened. */
+  x: number;
+  y: number;
+  /** Distance from the Sun, AU. */
+  rAU: number;
+  /** Heliocentric ecliptic longitude, degrees 0-360. */
+  lonDeg: number;
+}
+
+/** Where Earth or Mars is around the Sun at a moment (same approximate JPL elements as the light-time calculation). */
+export function heliocentric(planet: Planet, date: Date | number): HelioPosition {
+  const ms = typeof date === 'number' ? date : date.getTime();
+  const [x, y] = position(PLANETS[planet], (ms - J2000_MS) / (86_400_000 * 36525));
+  return { x, y, rAU: Math.hypot(x, y), lonDeg: ((Math.atan2(y, x) / DEG) % 360 + 360) % 360 };
+}
+
 export interface LightTime {
   date: Date;
   distanceAU: number;

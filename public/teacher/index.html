@@ -144,6 +144,16 @@
         <li>If a student's page reloads, it rejoins the same seat automatically. If their device restarts, they can join again with a slightly different name (for example "Ava 2"); greyed-out players are not connected and never hold up the class.</li>
       </ul>
 
+      <h2>Activity: the Space weather radar (15 to 20 minutes)</h2>
+      <p>Press <b>Space weather radar</b> on the title screen (or <b>See it on the radar</b> in a morning briefing). It is a top-down map of the inner solar system: the Sun in the middle, Earth and Mars at their real positions, and every real <b>coronal mass ejection (CME)</b> from the last 30 days flying out as an arc, from NASA's DONKI database. Press <b>Play</b> to watch a month go by in 30 seconds. A green <b>LIVE</b> badge means the data was fetched from NASA just now; <b>ARCHIVE</b> means a stored copy. If the Sun was quiet this month, press <b>Replay: May 2024</b>: the month of Earth's strongest geomagnetic storm in more than 20 years.</p>
+      <ul>
+        <li><b>Two models, side by side.</b> For each CME the list shows what <i>our simple model</i> says (it moves the cloud at one constant speed, so its answers are labeled "estimate") and what <b>NASA's ENLIL model</b> predicted (a full computer model of the solar wind that NASA's forecasters run). Ask: find a CME where the two models agree, and one where they disagree. Why might a simple model and a big model give different answers? (Hint: slow CMEs get pushed faster by the solar wind, and fast ones get slowed down.)</li>
+        <li><b>Where is Mars?</b> CME directions are measured from the line between the Sun and Earth: "west of Earth" means ahead of Earth on its path around the Sun. Look at where Mars is on the radar today. How many degrees west of Earth would a CME need to be aimed to hit Mars?</li>
+        <li><b>Math:</b> a CME travels at 1,000 km/s. Mars is about 228 million km from the Sun. About how many days does the CME take to get there? (228,000,000 ÷ 1,000 = 228,000 seconds, about 2.6 days.)</li>
+        <li><b>May 20, 2024:</b> in the replay, follow the 2,678 km/s CME from the far side of the Sun. Both models say its cloud passed beside Mars, yet the Curiosity rover measured a big jump in radiation that day. Why? (The fastest particles race along the Sun's magnetic field, so they can reach places the cloud itself misses.)</li>
+        <li><b>Accessibility:</b> everything on the radar is also written out in words: a summary at the top, and a list with one sentence per CME. The timeline works with the arrow keys (6 hours per press), Page Up and Page Down (1 day), and the Space bar to play or pause.</li>
+      </ul>
+
       <h2>How the game works (for you)</h2>
       <ul>
         <li><b>One turn = one sol</b> (a Mars day, 24 hours 39 minutes). Each sol, students get a number of power cells from the solar panels and must place every cell.</li>
@@ -158,6 +168,7 @@
       <table>
         <tr><td><b>Sol</b></td><td>A day on Mars: 24 hours and 39 minutes.</td></tr>
         <tr><td><b>Solar flare</b></td><td>A sudden burst of energy from the Sun. Classes go from small to big: C, M, X.</td></tr>
+        <tr><td><b>CME (coronal mass ejection)</b></td><td>A giant cloud of hot gas and magnetic field that the Sun throws into space. Fast ones can cross the 228 million km to Mars in 1 to 3 days.</td></tr>
         <tr><td><b>Radiation dose</b></td><td>How much radiation a person's body absorbs. Measured in sieverts (Sv) or millisieverts (mSv).</td></tr>
         <tr><td><b>Solar conjunction</b></td><td>When the Sun is between Earth and Mars and blocks radio messages for a couple of weeks.</td></tr>
         <tr><td><b>Light time</b></td><td>How long a message takes to travel at the speed of light. Earth to Mars: about 3 to 22 minutes. Earth to the Moon: about 1.3 seconds.</td></tr>
@@ -170,6 +181,7 @@
       <h2>The real science and data</h2>
       <ul>
         <li><b>Solar storms:</b> real flares and particle storms from NASA DONKI (<a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/">ccmc.gsfc.nasa.gov/tools/DONKI</a>), fetched live when possible and labeled LIVE or ARCHIVE in the game.</li>
+        <li><b>Space weather radar:</b> real CMEs from NASA DONKI (speed, direction and width from DONKI's most accurate analysis), NASA's WSA-ENLIL model predictions as listed in DONKI, and Earth and Mars placed with JPL's orbital elements. Our own constant-speed model is always labeled as an estimate.</li>
         <li><b>Message delay:</b> calculated from JPL's orbital elements for today's date; it matches JPL Horizons.</li>
         <li><b>Radiation:</b> Curiosity rover measurements on Mars, Chang'e 4 lander measurements on the Moon (Zhang et al., <i>Science Advances</i>, 2020), and ISS measurements from NASA's RadLab database.</li>
         <li><b>Moon facts:</b> the NASA Moon Fact Sheet (<a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html">nssdc.gsfc.nasa.gov</a>), ESA (oxygen in regolith) and NASA's 2023 Carbothermal Reduction Demonstration.</li>

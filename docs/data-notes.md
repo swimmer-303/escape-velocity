@@ -62,6 +62,10 @@ How the snapshots are normalized:
 - `flares[]`: `{id (=flrID), classType, beginTime, peakTime, sourceLocation, activeRegionNum, link}`
 - `seps[]`: `{id, eventTime, instruments[], linkedEvents[], link}`
 - `cmes[]`: `{id (=activityID), startTime, speed, sourceLocation, link}`. `speed` comes from the first `cmeAnalyses` entry with `isMostAccurate: true`, or `null` if there isn't one.
+  - Optional radar fields (added 2026-11-14; older snapshots and stored pools may lack them), from the same first most-accurate analysis: `time21_5` (front at 21.5 solar radii), `longitude` and `latitude` (Stonyhurst degrees: 0 = toward Earth, + = west), `halfAngle` (degrees), and `enlil`: `{runs, completedAt, link, earth, mars}` summarizing the **newest** WSA-ENLIL run (by `modelCompletionTime`) under any most-accurate analysis. `earth` = `estimatedShockArrivalTime` + `isEarthGB` / `isEarthMinorImpact`; `mars` = the `impactList` entry with `location: "Mars"`; each is `{time, glancing, minor}` or `null` (no arrival predicted). `enlil` is `null` when DONKI lists no run.
+  - An ENLIL arrival dated before the CME started is dropped: it is a typo in DONKI (the 2026-10-25T03:12 CME's run lists Parker Solar Probe on **2016**-10-28).
+  - Plane-of-sky analyses (`measurementTechnique: "Plane-of-sky"`) have `longitude: null`: DONKI has a speed but no direction for them, so the radar lists them but cannot draw them.
+- Every snapshot also has `included: ["FLR","SEP","CME","GST"]`: the record types actually fetched. An empty `cmes` list means "no CMEs" only when `included` has `"CME"` (the proxy leaves it out if the CME request failed; the browser's direct fallback fetches only FLR and SEP).
 - `gsts[]`: `{id, startTime, maxKp (max of allKpIndex), link}`
 - An empty `sourceLocation` ("") is turned into `null`.
 
@@ -69,7 +73,7 @@ How the snapshots are normalized:
 
 | Window | Flares (X / M / C) | SEP entries | CMEs | Storms (GST) |
 |---|---|---|---|---|
-| Recent: 2026-10-15 to 2026-11-14 | 13 (**0 X / 10 M / 3 C**); biggest M3.5 on 2026-11-05 from AR 14566 | **0** | 86 (fastest 1048 km/s) | 1: 2026-10-31, max Kp 6 (G2), linked to a high-speed stream |
+| Recent: 2026-10-15 to 2026-11-14 | 13 (**0 X / 10 M / 3 C**); biggest M3.5 on 2026-11-05 from AR 14566 | **0** | 89 at 18:11 UTC (fastest 1048 km/s) | 1: 2026-10-31, max Kp 6 (G2), linked to a high-speed stream |
 | May 2024 | 181 (**21 X / 155 M / 5 C**); biggest X8.7 on 2024-05-14 from AR 13664 | 14 | 144 (fastest 2678 km/s) | 5, max Kp 9.0 on 2024-05-10 (G5) |
 
 Things to know about these counts:
@@ -90,6 +94,15 @@ Things to know about these counts:
   - So the game must not say "DONKI predicted the May 20 storm would hit Mars". The particles that reached Mars are documented by NASA/JPL (see fact table), not in DONKI's SEP or ENLIL records.
 
 ---
+
+### Space weather radar: CMEs, coordinates and NASA's ENLIL model
+
+- **Proxy:** `/api/spaceweather` now fetches `CME` for the same 30-day window, in parallel with FLR and SEP (CCMC answered a month of CMEs in about 1 s, 162 KB raw; the normalized response is about 32 KB). If the CME request fails, the answer still has flares and SEPs, without `"CME"` in `included`. The radar then tries `ccmc.gsfc.nasa.gov/DONKI/WS/get/CME` directly from the browser (CORS allowed), and otherwise falls back to the stored snapshot, labeled ARCHIVE.
+- **Coordinates:** DONKI gives CME directions in **Stonyhurst heliographic** coordinates: longitude 0 is the solar meridian facing Earth, positive is **west** (the Sun's right-hand limb as seen from Earth), which faces the way Earth moves around the Sun. So W90 points 90° *ahead* of Earth and W180 is the far side. `src/radar/geometry.ts` rebuilds the Stonyhurst axes in heliocentric ecliptic space at the CME's `time21_5` (Earth's position from the JPL elements; solar equator tilted 7.25° with ascending node from Meeus ch. 29) and converts the analysis direction. The tilt shifts longitudes by at most ~0.5° but also tells us how far above or below the planets' plane a CME is aimed.
+- **Checks** (`src/radar/geometry.test.ts`): Earth and Mars positions match JPL Horizons (heliocentric ecliptic J2000 vectors for 2026-11-14 and 2024-05-20) within 0.5° and 0.01 AU; Stonyhurst 0/W90/E90/180 land at Earth's longitude, +90°, -90° and the far side; and in both snapshots at least 80% of the CMEs that NASA's ENLIL runs predicted at Mars point within (half-angle + 30°) of Mars, against under 20% with west and east swapped.
+- **Simple model (labeled "estimate" everywhere):** each CME is a cone along that direction with DONKI's half-angle; its front is at 21.5 solar radii at `time21_5` and keeps DONKI's speed. It "reached" a planet if the planet is inside the cone when the front reaches the planet's distance from the Sun. Real CMEs speed up or slow down in the solar wind: slow CMEs in our model arrive later than ENLIL predicts (e.g. 2026-10-25T19:24, 275 km/s: model Nov 4, ENLIL Nov 1), while mid-speed ones match well (2026-11-09T18:15, 726 km/s: model Nov 13 11:57 UTC, ENLIL Nov 13 12:00 UTC).
+- **Counts (2026-10-15 to 2026-11-14):** 89 CMEs, 58 with a direction. Our model: **7 reached Mars' distance with Mars inside the cone**, 1 reached Earth's. ENLIL: 10 predicted at Mars, 3 at Earth. All 7 of our Mars hits are also ENLIL Mars predictions. **May 2024:** 144 CMEs, 120 with a direction; our model 15 at Mars (all 15 also ENLIL Mars predictions), ENLIL 28 at Mars.
+- **May 20, 2024** (W172, half-angle 45°, 2,678 km/s): both our model and DONKI's ENLIL runs say the cloud passed beside Mars (Mars was about 104° west of Earth, 67° from the cone's center). The particles Curiosity measured are not in DONKI's SEP or ENLIL records (see above); the radar says so instead of claiming a CME hit.
 
 ## 2. RadLab (OSDR radiation dosimetry)
 

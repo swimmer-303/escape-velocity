@@ -1,7 +1,10 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // GET /api/spaceweather?days=30 (run by deploy/server.ts on our droplet)
-// Fetches real solar flares (FLR) and particle storms (SEP) from NASA DONKI, normalizes them,
-// and marks the answer cacheable; the server caches it for an hour so players never hit NASA rate limits.
+// Fetches real solar flares (FLR), particle storms (SEP) and coronal mass ejections (CME, for the
+// Space weather radar) from NASA DONKI, normalizes and trims them to the fields the game uses, and marks
+// the answer cacheable; the server caches it for an hour so players never hit NASA rate limits.
+// CMEs are optional: if that one request fails, the answer still has the flares and SEPs, and its
+// `included` list leaves out 'CME' so nobody mistakes "not fetched" for "no CMEs".
 // Uses the keyless CCMC DONKI host (ccmc.gsfc.nasa.gov); if NASA_API_KEY is set, api.nasa.gov is used as a backup.
 
 import { normalizeDonki } from '../src/data/donki-normalize.js';
@@ -11,8 +14,8 @@ declare const process: { env: Record<string, string | undefined> };
 const CCMC = 'https://ccmc.gsfc.nasa.gov/DONKI/WS/get';
 const NASA = 'https://api.nasa.gov/DONKI';
 
-async function getJson(url: string): Promise<unknown> {
-  const res = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+async function getJson(url: string, timeoutMs = 8000): Promise<unknown> {
+  const res = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`${res.status} from ${new URL(url).host}`);
   const text = await res.text();
   return text.trim() ? JSON.parse(text) : [];
@@ -20,8 +23,14 @@ async function getJson(url: string): Promise<unknown> {
 
 async function fetchFrom(base: string, startDate: string, endDate: string, key?: string) {
   const q = `startDate=${startDate}&endDate=${endDate}${key ? `&api_key=${encodeURIComponent(key)}` : ''}`;
+  // A month of CME records is ~160 KB raw (about 1 s from CCMC); the normalizer trims it to ~30 KB.
+  const cme = getJson(`${base}/CME?${q}`, 7000).catch(() => undefined);
   const [FLR, SEP] = await Promise.all([getJson(`${base}/FLR?${q}`), getJson(`${base}/SEP?${q}`)]);
-  return normalizeDonki({ FLR, SEP }, { startDate, endDate, sourceUrl: base });
+  // Never hold the flares (which game storms and Mission Control rooms need) more than 3 s for the CMEs.
+  let grace: ReturnType<typeof setTimeout> | undefined;
+  const CME = await Promise.race([cme, new Promise<undefined>((resolve) => (grace = setTimeout(resolve, 3000, undefined)))]);
+  clearTimeout(grace);
+  return normalizeDonki(Array.isArray(CME) ? { FLR, SEP, CME } : { FLR, SEP }, { startDate, endDate, sourceUrl: base });
 }
 
 export async function GET(request: Request): Promise<Response> {
