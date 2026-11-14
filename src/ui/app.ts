@@ -38,7 +38,7 @@ import { renderCredits } from './credits';
 import { meetCrew, crewSays } from './crew';
 import { sunPanel } from './sunpanel';
 import { Coach, type CoachPhase } from './tutorial';
-import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange, planWarnings, adviceLines, todayBanner } from './views';
+import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange, planWarnings, adviceLines, todayBanner, earthCard } from './views';
 import { advise } from '../sim/advisor';
 import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
@@ -173,7 +173,11 @@ export class App {
     });
     this.feedReady = loadSpaceWeather().then((f) => {
       this.feed = f;
-      if (this.phase === 'title') this.showTitle();
+      // Refresh the title screen with the new data only if it is the dialog on screen right now:
+      // never redraw over the difficulty/site chooser (or any other dialog) the player opened.
+      const onTitle = this.modalRoot.querySelector('[aria-label="Escape Velocity title screen"]');
+      if (this.phase === 'title' && onTitle) this.showTitle();
+      else this.refreshHud();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
     // A Mission Control join link (?room=CODE) goes straight to the class room.
@@ -1259,6 +1263,7 @@ export class App {
           : null,
         h('div', { class: 'card' }, h('b', null, won ? 'Next challenge: ' : 'Try this next time: '), end.tip),
         compareCard(m),
+        earthCard(m),
         end.badges.length ? [h('h3', null, 'Badges'), h('div', { class: 'badges' }, end.badges.map((b) => h('div', { class: 'badge' }, h('b', null, b.name), h('span', null, b.why))))] : null,
         h(
           'div',

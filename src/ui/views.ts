@@ -8,6 +8,7 @@ import { REAL, SUN_EARTH_LIGHT_MIN, EARTH_PROCESSING_MIN } from '../sim/constant
 import type { Allocation, Briefing, MissionState, SolReport, SpaceWeatherEvent } from '../sim/types';
 import type { ScienceFact } from '../data/science';
 import { RADLAB_ISS, RADLAB_ISS_MAY2024 } from '../data/radlab';
+import { EARTH_LINKS } from '../data/earth';
 import { windowSol } from '../sim/sim';
 import { siteText, type Site } from '../sim/site';
 
@@ -318,4 +319,27 @@ export function todayBanner(m: MissionState, b: Briefing): HTMLElement {
   else if (m.air / m.crew < 1.5 || m.food / m.crew < 1.5) [tone, text, ic] = ['bad', 'Supplies are low: make air and food first.', 'air'];
   else if (b.outlook === 'active') [tone, text, ic] = ['event', 'The Sun is active: a storm could come soon.', 'sun'];
   return h('div', { class: `today today-${tone}`, role: 'status' }, icon(ic, 28), h('div', null, h('span', { class: 'kicker' }, 'Today'), h('b', null, text)));
+}
+
+/**
+ * "From Mars to Earth": links what this crew did to NASA technology that already helps people
+ * and the environment on Earth (water recycling, indoor farming, clean-power storage).
+ */
+export function earthCard(m: MissionState): HTMLElement {
+  const grew = m.log.some((r) => r.alloc.greenhouse > 0);
+  const stored = m.log.some((r) => r.alloc.battery > 0) || m.base.levels.battery > 0 || m.base.levels.panel > 0;
+  const picks = EARTH_LINKS.filter((l) => l.id === 'water' || (l.id === 'farm' && grew) || (l.id === 'battery' && stored));
+  return h(
+    'div',
+    { class: 'card earth-card' },
+    h('div', { class: 'kicker' }, 'From Mars to Earth'),
+    h('p', { style: 'margin:4px 0 8px' }, 'Living within limits on Mars teaches us how to take care of Earth. These space ideas already help people here:'),
+    h(
+      'ul',
+      { class: 'clean' },
+      picks.map((l) =>
+        h('li', null, h('b', null, l.mars), ' ', l.earth, ' ', h('a', { href: l.url, target: '_blank', rel: 'noopener', class: 'title-foot' }, l.source)),
+      ),
+    ),
+  );
 }

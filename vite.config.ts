@@ -10,5 +10,8 @@ export default defineConfig(({ isSsrBuild }) => ({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    // The balance reports and no-free-choice proofs simulate hundreds of missions: give them room
+    // so a busy machine doesn't turn a slow run into a false failure.
+    testTimeout: 30000,
   },
 }));

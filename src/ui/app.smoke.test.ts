@@ -203,3 +203,15 @@ describe('UI smoke test', () => {
     expect(m.log.some((r) => r.storm?.event.kind === 'cme' || r.storm?.event.classType?.startsWith('X'))).toBe(true);
   }, 30000);
 });
+
+describe('title screen data refresh', () => {
+  it('does not wipe out the chooser when NASA data arrives late', async () => {
+    // Every data request fails a moment later, after the player has already opened the chooser.
+    vi.stubGlobal('fetch', () => new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('slow and offline')), 40)));
+    new App(new CssStage());
+    (await waitFor(() => button(/New campaign/))).click();
+    expect(button(/Cadet/)).not.toBeNull();
+    await sleep(300); // the data arrives (falls back to the snapshot) while the chooser is open
+    expect(button(/Cadet/)).not.toBeNull();
+  });
+});

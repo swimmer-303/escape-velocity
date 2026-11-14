@@ -21,6 +21,10 @@ The same machine makes the **air your crew breathes** and the **oxygen your rock
 
 A **campaign** follows three crews (4, then 5, then 6 astronauts) and takes about 35 minutes, with built-in "Talk about it" breaks between crews. Each crew must fill its rocket and launch before the window closes. Then the base sits empty for **26 months** (the real gap between Earth-Mars launch windows) while the robot O2 plant pre-fills the next crew's rocket, just like real Mars propellant plans. Everything a crew builds stays with the base, so every crew builds for the next one. The game saves after every sol, so a class can stop and continue later. A printable **Teacher Guide** (`/teacher/`) has a 45 to 55 minute lesson plan, NGSS connections, vocabulary, discussion questions and a student worksheet.
 
+## From Mars to Earth
+
+Running a Mars base means living within limits: a tiny power budget, no water to waste, food grown under lights. At the end of every mission the game links what the crew did to NASA technology that already improves lives and protects the environment on Earth (space-station water recycling, NASA's first vertical farm and today's indoor farming, NASA-invented flow batteries storing solar power for communities), each with its NASA Spinoff source (`src/data/earth.ts`).
+
 ## How to play
 
 One turn is one **sol** (a Mars day, 24 h 39 min).

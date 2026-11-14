@@ -569,3 +569,8 @@ table.mc-players td { vertical-align: middle; }
 /* ---------- AI disclosure (title screen footer) ---------- */
 .ai-disclosure { font-size: 13px; color: var(--muted); margin: 14px auto 0; max-width: 640px; line-height: 1.4; border-top: 2px dashed var(--line); padding-top: 10px; }
 .linklike { background: none; border: none; padding: 0; color: var(--cyan); text-decoration: underline; cursor: pointer; font: inherit; }
+
+/* ---------- From Mars to Earth ---------- */
+.earth-card { box-shadow: inset 0 0 0 2px var(--green); }
+.earth-card .kicker { color: var(--green); }
+.earth-card li { margin: 8px 0; }
