@@ -444,3 +444,106 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
   .mchart svg text { fill: CanvasText; }
   .mchart .mc-ref, .mchart .mc-label { stroke: Canvas; }
 }
+
+/* ---------- Mission Control ---------- */
+/* Class team play (src/ui/room). Each station has a color, always shown with its name too. */
+.st-o2 { --st: var(--cyan); }
+.st-green { --st: var(--green); }
+.st-rad { --st: var(--violet); }
+.st-shop { --st: var(--amber); }
+.mc-tag { display: inline-block; font-family: var(--font-px); font-size: 11px; padding: 2px 6px; border: 2px solid #000; background: var(--st, var(--muted)); color: #000; vertical-align: middle; }
+.mc-room-chip { font-family: var(--font-px); font-size: 13px; background: var(--panel); border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--shadow); padding: 8px 10px; white-space: nowrap; color: var(--amber); letter-spacing: 0.06em; }
+.mc-room-chip.lost { color: var(--red); border-color: var(--red); }
+span.data-badge { cursor: default; }
+.mc-wait { color: var(--muted); font-size: 16px; margin: 12px 0 0; }
+.mc-modal .crates .crate[disabled] { cursor: default; opacity: 0.8; }
+
+/* Join and teacher screens */
+.mc-join .cc-input { display: block; width: 100%; margin-top: 4px; }
+.mc-join .mc-name-input { font-family: var(--font-body); font-size: 20px; letter-spacing: 0; text-transform: none; }
+.mc-join .actions { margin-top: 8px; }
+.mc-teacher-start { margin-top: 14px; }
+.mc-teacher-start .actions { margin-top: 8px; }
+.mc-join-how { font-size: 18px; text-align: center; margin: 4px 0 0; }
+.mc-code { margin-bottom: 8px; }
+
+/* Who is at which station */
+.mc-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.mc-station { background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--st); padding: 8px; min-width: 0; }
+.mc-station-head { display: flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 13px; color: var(--st); line-height: 1.15; }
+.mc-station-head span { flex: 1 1 auto; min-width: 0; }
+.mc-count { font-weight: 400; color: var(--ink); background: #000; padding: 1px 6px; }
+.mc-names { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.mc-name { display: flex; align-items: center; gap: 6px; font-size: 17px; min-width: 0; overflow-wrap: anywhere; }
+.mc-name.me { font-weight: 700; color: var(--amber); }
+.mc-name.away { color: var(--muted); opacity: 0.7; }
+.mc-dot { flex: none; width: 10px; height: 10px; border: 2px solid #000; background: var(--green); }
+.mc-name.away .mc-dot { background: #3a3150; }
+.mc-name.thinking .mc-dot { background: var(--amber); }
+.mc-ready-tag { font-family: var(--font-px); font-size: 10px; color: #000; background: var(--green); padding: 1px 4px; margin-left: auto; }
+.mc-empty { margin: 6px 0 0; color: var(--red); font-size: 14px; }
+.mc-board.compact { grid-template-columns: 1fr 1fr; gap: 4px; margin: 6px 0 0; }
+.mc-board.compact .mc-station { padding: 4px 6px; }
+.mc-board.compact .mc-station-head { font-size: 11px; }
+.mc-board.compact .mc-name { font-size: 14px; }
+.mc-board.compact .mc-station-head .icon { display: none; }
+.mc-my-station { box-shadow: inset 0 0 0 3px var(--st); }
+.mc-my-name { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
+.mc-my-chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 18px; color: var(--st); }
+.mc-my-station p { margin: 4px 0 0; }
+
+/* The plan dock */
+#app.mc .slot-box[disabled] { cursor: default; }
+#app.mc-teacher .tray-hint, #app.mc-teacher .cell-token { cursor: default; }
+#app.mc-teacher .tray-hint { visibility: hidden; }
+#app.mc .slot-boxes { flex-wrap: wrap; }
+#app.mc-student .module.mine { order: -1; box-shadow: inset 0 0 0 3px var(--amber); }
+#app.mc-student .module.locked { opacity: 0.55; filter: grayscale(0.5); }
+#app.mc-student .modules, #app.mc-teacher .modules { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+#app.mc .dock-right { max-width: 320px; }
+.mc-side-station { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--st); background: var(--panel-2); }
+.mc-side-station .kicker { margin: 0; }
+.mc-side-station b { font-family: var(--font-px); font-weight: 400; color: var(--st); font-size: 14px; }
+.mc-pingpad { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.mc-pingpad .btn.small { font-size: 11px; padding: 6px; min-height: 40px; text-transform: none; line-height: 1.15; }
+.mc-pingpad .p-storm { background: #5a2a7a; }
+.mc-pingpad .p-ready { background: #2f8f4a; }
+.mc-modal .mc-pingpad { grid-template-columns: repeat(3, 1fr); }
+.mc-run, .mc-ready { width: 100%; }
+.mc-ready[aria-pressed='true'] { box-shadow: inset 0 0 0 3px var(--green), 4px 4px 0 var(--shadow); }
+.mc-teacher-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; justify-content: center; }
+.mc-teacher-tools .btn[aria-pressed='true'] { box-shadow: inset 0 0 0 3px var(--green), 4px 4px 0 var(--shadow); }
+.mc-summary ul.clean { margin: 4px 0 0; }
+
+/* The teacher's player list */
+.mc-table-wrap { overflow-x: auto; }
+table.mc-players td { vertical-align: middle; }
+.mc-assign { display: flex; flex-wrap: wrap; gap: 4px; }
+.mc-assign .btn.small { font-size: 11px; min-height: 36px; padding: 4px 8px; background: var(--panel-2); text-transform: none; }
+.mc-assign .btn[aria-pressed='true'] { background: var(--st); color: #000; }
+
+/* Pings: preset messages, shown for a few seconds on every screen */
+.mc-toasts { position: fixed; z-index: 80; left: 50%; top: 8px; transform: translateX(-50%); width: min(560px, calc(100vw - 16px)); display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.mc-ping { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; background: var(--panel); border: 3px solid #000; box-shadow: inset 6px 0 0 var(--st, var(--line)), 6px 6px 0 var(--shadow); padding: 8px 12px 8px 18px; animation: mcPingIn 0.25s steps(3) both; }
+.mc-ping b { font-family: var(--font-px); font-weight: 400; color: var(--st, var(--ink)); }
+.mc-ping-st { font-size: 13px; color: var(--muted); }
+.mc-ping-text { flex-basis: 100%; font-size: 19px; font-weight: 700; }
+.mc-note .mc-ping-text { font-size: 16px; font-weight: 400; }
+.mc-note.error { box-shadow: inset 6px 0 0 var(--red), 6px 6px 0 var(--shadow); }
+.mc-toasts.mc-teacher .mc-ping-text { font-size: 26px; }
+@keyframes mcPingIn { from { transform: translateY(-10px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (max-width: 900px) {
+  #app.mc-student { grid-template-rows: auto minmax(120px, 22vh) auto; }
+  .mc-board { grid-template-columns: 1fr 1fr; }
+  #app.mc .dock-right { max-width: none; }
+  .mc-modal .mc-pingpad { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  #app.mc-student .modules { grid-template-columns: 1fr; }
+  #app.mc-student .module.locked .module-desc { display: none; }
+  #app.mc .modules .module.o2 { grid-column: auto; }
+  .mc-name { font-size: 15px; }
+  .mc-room-chip { font-size: 11px; padding: 6px 8px; }
+  .mc-ping-text { font-size: 17px; }
+}

@@ -5,7 +5,12 @@ playescapevelocity.com {
 	encode zstd gzip
 
 	handle /api/* {
-		reverse_proxy 127.0.0.1:3001
+		# Mission Control's live room updates are Server-Sent Events (text/event-stream):
+		# flush every write straight to the browser, never buffer. The API also marks them
+		# Cache-Control: no-transform, so `encode` above does not compress (or hold) them.
+		reverse_proxy 127.0.0.1:3001 {
+			flush_interval -1
+		}
 	}
 
 	handle {

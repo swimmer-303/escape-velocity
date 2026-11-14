@@ -73,6 +73,10 @@ export interface BudgetCallbacks {
   onRun(): void;
   onOpenWorkshop(): void;
   sfx?(name: 'place' | 'remove' | 'deny'): void;
+  /** Mission Control: may this player move cells in this module? Others are shown locked. Default: every module. */
+  canEdit?(id: ModuleId): boolean;
+  /** Mission Control: what goes under the side panel instead of the Run button (e.g. a Ready button). */
+  actions?(left: number): HTMLElement[];
 }
 
 export class BudgetDock {
@@ -110,8 +114,12 @@ export class BudgetDock {
     return moduleCap(this.state, id);
   }
 
+  private editable(id: ModuleId) {
+    return this.cb.canEdit ? this.cb.canEdit(id) : true;
+  }
+
   add(id: ModuleId) {
-    if (this.left() <= 0 || this.alloc[id] >= this.cap(id)) {
+    if (!this.editable(id) || this.left() <= 0 || this.alloc[id] >= this.cap(id)) {
       this.cb.sfx?.('deny');
       return false;
     }
@@ -122,7 +130,7 @@ export class BudgetDock {
   }
 
   remove(id: ModuleId) {
-    if (this.alloc[id] <= 0) return false;
+    if (!this.editable(id) || this.alloc[id] <= 0) return false;
     this.alloc = { ...this.alloc, [id]: this.alloc[id] - 1 };
     this.cb.sfx?.('remove');
     this.cb.onChange(this.alloc);
@@ -131,7 +139,7 @@ export class BudgetDock {
 
   move(from: ModuleId, to: ModuleId) {
     if (from === to) return;
-    if (this.alloc[to] >= this.cap(to)) {
+    if (!this.editable(from) || !this.editable(to) || this.alloc[to] >= this.cap(to)) {
       this.cb.sfx?.('deny');
       return;
     }
@@ -221,7 +229,8 @@ export class BudgetDock {
             { class: 'tray-cells' },
             Array.from({ length: left }, () => {
               const el = h('div', { class: 'cell-token', role: 'img', 'aria-label': 'Power cell' });
-              el.addEventListener('pointerdown', (e) => this.startDrag(e, 'tray', el));
+              if (!this.cb.canEdit || MODULES.some((m) => m.slots.some((s) => this.editable(s.id))))
+                el.addEventListener('pointerdown', (e) => this.startDrag(e, 'tray', el));
               return el;
             }),
           )
@@ -237,9 +246,11 @@ export class BudgetDock {
         const short = m.key === 'heaters' && this.alloc.heaters < this.briefing.heaterNeed;
         const isBuild = m.key === 'build';
         const project = this.state.base.project;
+        const mine = m.slots.some((s) => this.editable(s.id));
+        const lock = this.cb.canEdit ? (mine ? 'mine' : 'locked') : '';
         return h(
           'section',
-          { class: `module ${m.key} ${short ? 'short' : ''}`, 'data-drop': m.slots[0].id, 'aria-label': m.name },
+          { class: `module ${m.key} ${short ? 'short' : ''} ${lock}`, 'data-drop': m.slots[0].id, 'aria-label': m.name },
           h('div', { class: 'module-head' }, icon(m.icon, 22), m.name.toUpperCase()),
           isBuild
             ? h(
@@ -248,7 +259,7 @@ export class BudgetDock {
                 project ? h('b', null, UPGRADES[project].name) : 'All projects done',
                 project ? h('div', null, UPGRADES[project].effect) : null,
                 project ? this.progressBar() : null,
-                h('button', { class: 'btn small', style: 'margin-top:6px', onclick: () => this.cb.onOpenWorkshop() }, 'Choose project'),
+                mine ? h('button', { class: 'btn small', style: 'margin-top:6px', onclick: () => this.cb.onOpenWorkshop() }, 'Choose project') : null,
               )
             : h('div', { class: 'module-desc' }, m.desc),
           m.slots.map((s) => this.slotRow(s, m.slots.length > 1)),
@@ -269,7 +280,7 @@ export class BudgetDock {
         'div',
         { class: 'dock' },
         h('div', { class: 'dock-left' }, tray, modules),
-        h('div', { class: 'dock-right' }, h('div', { class: 'brief-mini' }, this.side), h('div', null, run, hint)),
+        h('div', { class: 'dock-right' }, h('div', { class: 'brief-mini' }, this.side), h('div', null, this.cb.actions ? this.cb.actions(left) : [run, hint])),
       ),
     );
   }
@@ -293,6 +304,7 @@ export class BudgetDock {
     const a = this.alloc[s.id];
     const need = s.id === 'heaters' ? this.briefing.heaterNeed : 0;
     const eff = this.effectFor(s.id);
+    const editable = this.editable(s.id);
     const boxes = h(
       'div',
       { class: 'slot-boxes' },
@@ -300,10 +312,16 @@ export class BudgetDock {
         const filled = i < a;
         const box = h('button', {
           class: `slot-box ${filled ? 'filled' : ''} ${!filled && i < need ? 'need' : ''}`,
-          'aria-label': filled ? `Remove a cell from ${MODULE_LABEL[s.id]}` : `Add a cell to ${MODULE_LABEL[s.id]}`,
+          'aria-label': editable
+            ? filled
+              ? `Remove a cell from ${MODULE_LABEL[s.id]}`
+              : `Add a cell to ${MODULE_LABEL[s.id]}`
+            : `${MODULE_LABEL[s.id]}: ${filled ? 'cell placed' : 'empty'} (another station)`,
           'data-drop': s.id,
+          disabled: editable ? undefined : true,
         });
-        if (filled) {
+        // Another station's module (Mission Control) is shown, but has no controls.
+        if (editable && filled) {
           box.addEventListener('pointerdown', (e) => this.startDrag(e, s.id, box));
           box.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -311,7 +329,7 @@ export class BudgetDock {
               this.remove(s.id);
             }
           });
-        } else {
+        } else if (editable) {
           box.addEventListener('click', () => this.add(s.id));
         }
         return box;

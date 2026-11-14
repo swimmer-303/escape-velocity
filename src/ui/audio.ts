@@ -36,6 +36,12 @@ export class GameAudio {
     else if (this.current) this.playMusic(this.current, true);
   }
 
+  /** Stop the music (Mission Control student screens stay quiet: the projector plays it). */
+  stopMusic() {
+    this.current = undefined;
+    this.music?.pause();
+  }
+
   playMusic(track: Track, force = false) {
     if (this.current === track && !force && this.music && !this.music.paused) return;
     this.current = track;

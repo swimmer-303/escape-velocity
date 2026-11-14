@@ -44,6 +44,8 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 
 **Modes:** a 3-crew **campaign** (Cadet or Commander), a **Quick mission** (one crew, about 10 minutes), and **Replay History: May 2024**, where the real storms of May 2024 hit your outpost on their real dates, ending with the far-side eruption of May 20, 2024 that Curiosity measured at Gale Crater.
 
+**Class mission: Mission Control** (team play): the whole class runs one base together. The teacher opens a room on the projector and students join from their own devices with a room code and a first name. The modules are split between 4 stations (O2 Plant; Greenhouse and Heat; Radiation; Workshop and Battery), several students can share a station, and everyone sees the whole plan, but each student can only move cells in their own station. The power cells are one shared pool, so stations have to agree who gets them. No chat: only preset "pings" like "I need more cells!" or "Storm warning: shelter!". The teacher runs each sol; the server holds the real mission, using the same simulation and the same real DONKI storms.
+
 ## NASA data (and how each piece is used)
 
 | Data | Used for | Live or archive |
@@ -83,6 +85,8 @@ src/sim/      Pure, deterministic, seeded simulation. No rendering imports. The 
 src/data/     DONKI loader (proxy -> direct -> snapshot), light-time calculator, OSDR + RadLab snapshots, Real Science facts
 src/render/   Stage interface (3D diorama plugs in here)
 src/ui/       HUD, power-budget dock (drag and drop, tap, keyboard), briefing, debrief, Science Log, credits, audio
+src/room/     Mission Control: shared protocol, pure room rules (stations, legal moves, running a sol), the in-memory room store and its HTTP + SSE API
+src/ui/room/  Mission Control screens: join/create, the teacher's projector view and the student's station view
 api/          spaceweather.ts: the DONKI proxy handler (run by the droplet's server)
 deploy/       droplet server (server.ts), Caddyfile, systemd service, one-time setup script
 scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark), process-portraits.py (crew portrait sheets + watermark)
@@ -102,6 +106,8 @@ npm run build        # typecheck + production build into dist/
 
 Every push to `main` runs the tests, builds the game, and deploys it to our DigitalOcean droplet through GitHub Actions (`.github/workflows/deploy.yml`), so any teammate with push access can ship. On the droplet, **Caddy** serves the static game with automatic HTTPS and forwards `/api/*` to a tiny Node service (`deploy/server.ts`) that fetches NASA DONKI (`/api/spaceweather`, cached for an hour) and NASA SDO's newest picture of the Sun (`/api/sun`, cached for 10 minutes). One-time server setup lives in `deploy/setup.sh`; the GitHub secrets it needs are `DEPLOY_HOST`, `DEPLOY_URL`, `DEPLOY_SSH_KEY` (a deploy-only key) and `DEPLOY_KNOWN_HOSTS`. The site is served at **playescapevelocity.com** (DNS on Cloudflare, DNS-only, pointing straight at the droplet); `www` and the droplet's old `sslip.io` address redirect there. Caddy's config is `deploy/Caddyfile`: copy it to `/etc/caddy/Caddyfile` and `systemctl reload caddy` after changing it.
 
+**Mission Control rooms** (`/api/rooms`, `src/room/http.ts`) live only in the Node process's memory: nothing is written to disk, and a restart (every deploy) closes open rooms. Routes: `POST /api/rooms` (teacher: returns the code and a secret teacher token), `GET /api/rooms/:code` (no names), `POST /api/rooms/:code/join` (`{name}` or `{token}` to rejoin), `POST /api/rooms/:code/action` (place, remove, move, project, crate, ready, ping, leave), `POST /api/rooms/:code/teacher` (start, plan, run, next, restart, assign, autoAssign, autoRun, kick, end) and `GET /api/rooms/:code/events?token=` (or `?teacher=`): Server-Sent Events with the full public room state on every change and a heartbeat every 20 s. Limits: 200 rooms, 40 players per room, names of up to 12 letters and numbers through a small blocklist, rooms expire after 3 h idle, per-address rate limits on making and joining rooms, 2 KB request bodies. Caddy passes the event stream straight through (`flush_interval -1`, and the stream is `no-transform`).
+
 Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to let the proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
 
 ### Tests
@@ -110,6 +116,7 @@ Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to
 - **Balance:** a player who builds up the base wins every Cadet expedition; never building makes the last crew's mission much harder (the generational lesson); pure greed (all power to fuel) always loses. Run `npm run balance` for the full report.
 - **Campaign:** the base and Workshop progress pass to the next crew, even after an early return; saves round-trip.
 - **Headless UI test:** boots the real interface and clicks through a whole 3-crew campaign, a save-and-resume, and the May 2024 scenario, offline.
+- **Mission Control:** the room rules (joining, names, stations, illegal moves, running a sol only when every cell is placed, reconnecting, expiry, limits), an integration test that starts the real server on a random port, joins 4 students, places cells over HTTP and reads the live event stream, and headless teacher and student screens.
 
 ## Use of AI tools
 
