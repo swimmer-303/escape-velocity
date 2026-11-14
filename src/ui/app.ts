@@ -44,6 +44,7 @@ import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
 import { missionChartFor, crewCharts } from './charts';
 import { roomParam } from '../room/protocol';
+import { tripHomeLine } from './planner/tiein';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room';
 type Mode = 'campaign' | 'quick' | 'history';
@@ -173,7 +174,8 @@ export class App {
     });
     this.feedReady = loadSpaceWeather().then((f) => {
       this.feed = f;
-      if (this.phase === 'title') this.showTitle();
+      // Refresh the title screen's NASA numbers, but never pull the player out of a dialog opened from it (e.g. the Trip planner).
+      if (this.phase === 'title' && this.modalRoot.querySelector('.title-screen')) this.showTitle();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
     // A Mission Control join link (?room=CODE) goes straight to the class room.
@@ -405,6 +407,7 @@ export class App {
             h('button', { class: 'btn cyan', onclick: () => this.startHistory(), disabled: MAY2024_SNAPSHOT ? undefined : true }, 'May 2024 storms'),
           ),
           h('button', { class: 'btn', onclick: () => this.openRoom() }, 'Class mission: Mission Control'),
+          h('button', { class: 'btn cyan', onclick: () => this.showPlanner(() => this.showTitle()) }, 'Trip planner: the way home'),
           h(
             'div',
             { class: 'menu-row' },
@@ -555,6 +558,14 @@ export class App {
 
   showCredits() {
     this.modal(renderCredits(), { wide: true, label: 'Credits', onClose: () => this.resume() });
+  }
+
+  /** The Trip planner (real Mars-to-Earth trajectories), loaded only when opened. */
+  showPlanner(back: () => void) {
+    this.audio.sfx('click');
+    import('./planner/planner')
+      .then(({ renderPlanner }) => this.modal(renderPlanner({ reducedMotion: this.settings.reducedMotion, back }).el, { wide: true, label: 'Trip planner', onClose: back }))
+      .catch(() => back());
   }
 
   showMenu() {
@@ -1236,6 +1247,7 @@ export class App {
                 : `Mars' escape velocity is about ${REAL.marsEscapeKms.toFixed(1)} km/s: the speed your rocket needs to break free of Mars' gravity.`,
             )
           : null,
+        won && siteOf(m.config) !== 'moon' && this.mode !== 'history' ? tripHomeLine(this.mode === 'campaign' ? m.config.expedition : 1) : null,
         crewSays(m.config.expedition, won),
         this.mode !== 'history' ? starRow(stars) : null,
         this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
@@ -1312,6 +1324,7 @@ export class App {
               'Earth and Mars line up for a quick trip only about every 26 months, so that is how long the base sits empty between crews. ',
               `By ${future.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, messages from Earth will take about ${Math.round(lt.oneWayMinutes)} minutes to arrive (calculated from JPL orbit data).`,
             ),
+        moon ? null : h('button', { class: 'btn small cyan', onclick: () => this.showPlanner(() => this.showInterlude()) }, 'Why 26 months? Open the trip planner'),
         h(
           'div',
           { class: 'card good' },

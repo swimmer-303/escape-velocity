@@ -85,6 +85,23 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
       [link('https://ssd.jpl.nasa.gov/planets/approx_pos.html', 'ssd.jpl.nasa.gov approximate positions'), ' · ', link('https://ssd.jpl.nasa.gov/horizons/', 'JPL Horizons')],
     ],
     [
+      'Trip planner: real paths from Mars to Earth',
+      [
+        "The Trip planner works out about 38,000 trips home. Where Mars and Earth are on each date (with their real, tilted orbits) comes from the same JPL orbital elements; our test checks them against JPL Horizons. The path for each pair of dates is the answer to Lambert's problem, solved with Izzo's 2015 method and checked on textbook examples (Curtis Example 5.2, Vallado Example 7-5). Speed changes use the NASA Mars and Earth Fact Sheets. ",
+        "Checked against NASA mission design handbooks: launch energy (C3) for the 2005, 2026, 2028 and 2031 Earth-to-Mars windows matches NASA's numbers within 0.1% at their dates, and Mars-to-Earth return speeds within 2%. The cheapest trips home come on average every 778 days, within 0.3% of the 779.94-day synodic period on NASA's Mars Fact Sheet.",
+      ],
+      [tag('live', 'CALCULATED NOW')],
+      [
+        link('https://doi.org/10.1007/s10569-014-9587-y', 'Izzo 2015'),
+        ' · ',
+        link('https://ntrs.nasa.gov/citations/20100037210', 'NASA/TM-2010-216764'),
+        ' · ',
+        link('https://ntrs.nasa.gov/citations/19980210557', 'NASA/TM-1998-208533'),
+        ' · ',
+        link('https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html', 'Mars Fact Sheet'),
+      ],
+    ],
+    [
       'Curiosity RAD: radiation on Mars',
       [
         `Every sol adds ${REAL.marsSurfaceMsvPerDay} mSv to your crew's dose: the real average Curiosity measured at Gale Crater. The May 20, 2024 storm (${REAL.may2024EventUgy.toLocaleString('en-US')} micrograys, about ${REAL.may2024EventChestXrays} chest X-rays) is the model for a "big" storm.`,
@@ -203,6 +220,10 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
     ['Rocket fuel', `Crews of ${EXPEDITIONS.map((e) => e.crew).join(', ')} need ${EXPEDITIONS.map((e) => e.fuelNeeded).join(', ')} fuel cells to fill their (bigger and bigger) rockets. A real crewed rocket home would need about 25 to 31 tonnes of oxygen, made by a 25 to 30 kW plant (MOXIE scaled up about 200 times) running for about 16 months before the crew arrives. Between crews, the game's robot O2 plant pre-fills up to ${PREFILL_MAX_PCT}% of the next tank.`],
     ['Air and food', `1 cell on AIR = 1 day of air for ${RATES.airPerCell} people (about ${(RATES.airPerCell * REAL.o2PerCrewKgPerDay).toFixed(1)} kg of oxygen). Grow lights are power-hungry: 1 greenhouse cell = food for ${RATES.foodPerGreenhouseCell} people for a day, plus a little air. Water is assumed to be recycled (the ISS recovers about 98%).`],
     ['Time between crews', 'Earth and Mars line up for a short trip about every 26 months, so each new crew arrives 26 months after the last one left. That timing is real; the game skips straight to it.'],
+    [
+      'Trip planner',
+      "Simplified the way mission designers start: one push to leave a low circular orbit 300 km above Mars and one to slow into a low orbit 400 km above Earth, coasting in between (no mid-course burns, no flybys). \"From the ground\" speeds are ideal: they leave out air drag, gravity losses and the help from Mars' spin, so a real rocket needs more. Earth's air starts at 122 km (400,000 feet) for the entry speed.",
+    ],
     ['Upgrades', 'Upgrade costs and effects are game values. Each upgrade is based on a real technology: more solar panels, battery banks, regolith shielding, LED greenhouses, a scaled-up MOXIE, and NASA\'s Fission Surface Power reactor project.'],
     ['Radiation budget', `Your crew's budget is ${t.doseBudget} mSv for the whole mission. That is much stricter than NASA's real career limit (600 mSv), so radiation choices matter in a short game. Background dose (${REAL.marsSurfaceMsvPerDay} mSv per sol) is the real Gale Crater value.`],
     ['Storm sizes', `Game doses for a storm caught outside: small ${STORM_DOSE.minor}, medium ${STORM_DOSE.moderate}, big ${STORM_DOSE.major} mSv. The big one is modeled on the May 2024 event. In real life not every big flare sends particles to Mars; in the game, every X-class flare does.`],

@@ -54,6 +54,7 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 | **NASA DONKI** May 2024 (FLR, SEP, CME, GST) | Replay History mode: AR 13664's X-class flares, the Kp 9 storm at Earth on May 10, and the 2,678 km/s far-side CME of May 20. | ARCHIVE |
 | **NASA SDO** (Solar Dynamics Observatory) AIA 171 picture | "The Sun right now" on the title screen and in each briefing, next to the latest real DONKI flare. Real NASA imagery (Image: NASA/SDO), not AI. | **LIVE** (through our server, cached 10 minutes, or directly from NASA); shows when it was taken only when that time is known |
 | **JPL Solar System Dynamics** orbital elements | Earth to Mars light time for the comm-delay mechanic, calculated live in the browser. Checked against JPL Horizons: 11.01 min on Nov 14, 2026 (exact to 2 decimals). | Calculated now |
+| **JPL orbital elements** (all six, in 3D) + **Lambert's problem** (Izzo 2015) | The **Trip planner**: a porkchop plot of about 38,000 real trips from Mars to Earth, showing why launch windows come about every 26 months. Checked against NASA mission design handbooks (NASA/TM-2010-216764, NASA/TM-1998-208533): Earth-to-Mars C3 within 0.1%, Mars-to-Earth v-infinity within 2%; planet positions against JPL Horizons. | Calculated now |
 | **Curiosity RAD** (Hassler et al. 2014; NASA/JPL 2024) | The steady background dose on every sol (0.67 mSv/sol, the real Gale Crater average) and the model for a "big" storm (8,100 µGy on May 20, 2024). | Published figures |
 | **NASA OSDR RadLab** (ISS DOSTEL dosimetry) | "Mars vs. ISS" radiation comparison. | ARCHIVE (RadLab's ISS series ends in late 2024) |
 | **NASA OSDR** study search | 10 Real Science cards with real study IDs (OSD-###), tied to the greenhouse, shelter and crew. | ARCHIVE (curated at build time) |
@@ -83,10 +84,12 @@ src/sim/      Pure, deterministic, seeded simulation. No rendering imports. The 
   explain.ts    plain-language debriefs, endings, badges
   strategies.ts scripted players used by the balance tests
 src/data/     DONKI loader (proxy -> direct -> snapshot), light-time calculator, OSDR + RadLab snapshots, Real Science facts
+src/orbits/   Trip planner math: 3D planet states from JPL elements, Izzo's Lambert solver, universal-variable propagation, porkchop grids
 src/render/   Stage interface (3D diorama plugs in here)
 src/ui/       HUD, power-budget dock (drag and drop, tap, keyboard), briefing, debrief, Science Log, credits, audio
 src/room/     Mission Control: shared protocol, pure room rules (stations, legal moves, running a sol), the in-memory room store and its HTTP + SSE API
 src/ui/room/  Mission Control screens: join/create, the teacher's projector view and the student's station view
+src/ui/planner/ Trip planner screen (loaded only when opened): porkchop plot, animated orbit view, end-screen line
 api/          spaceweather.ts: the DONKI proxy handler (run by the droplet's server)
 deploy/       droplet server (server.ts), Caddyfile, systemd service, one-time setup script
 scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark), process-portraits.py (crew portrait sheets + watermark)
@@ -116,6 +119,7 @@ Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to
 - **Balance:** a player who builds up the base wins every Cadet expedition; never building makes the last crew's mission much harder (the generational lesson); pure greed (all power to fuel) always loses. Run `npm run balance` for the full report.
 - **Campaign:** the base and Workshop progress pass to the next crew, even after an early return; saves round-trip.
 - **Headless UI test:** boots the real interface and clicks through a whole 3-crew campaign, a save-and-resume, and the May 2024 scenario, offline.
+- **Trip planner:** the Lambert solver against Curtis Example 5.2 and Vallado Example 7-5 (plus energy and angular momentum checks on 60 random cases); planet positions against JPL Horizons; Earth-to-Mars C3 at the NASA handbook minima for 2005, 2026, 2028 and 2031; Mars-to-Earth returns from NASA/TM-1998-208533; launch windows 2018-2048 averaging the 779.94-day synodic period.
 - **Mission Control:** the room rules (joining, names, stations, illegal moves, running a sol only when every cell is placed, reconnecting, expiry, limits), an integration test that starts the real server on a random port, joins 4 students, places cells over HTTP and reads the live event stream, and headless teacher and student screens.
 
 ## Use of AI tools

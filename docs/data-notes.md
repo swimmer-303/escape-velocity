@@ -230,3 +230,28 @@ The title screen and the morning briefing show NASA Solar Dynamics Observatory's
 - **Snapshot:** `npm run fetch-terrain` (scripts/fetch-terrain.mjs) writes `src/data/snapshots/gale-terrain.json`: an 81 x 81 grid, about 3 km spacing, about 240 km across, centered on Bradbury Landing (Curiosity's landing site, 4.5895°S 137.4417°E). Heights range from -4,557 m (crater floor) to +954 m (Mount Sharp's upper slopes); the landing site reads -4,501 m.
 - **In the game:** 1 scene unit = 1 km for the landscape (the outpost's buildings are not to scale), heights exaggerated x1.5, and the real terrain fades in beyond the flat base pad. Stated in the Science Log.
 - **Caveat:** the landing-site coordinates come from Wikipedia's Bradbury Landing article; we did not find a NASA page listing them.
+
+---
+
+## 8. Trip planner: Mars-to-Earth trajectories (added 2026-11-14)
+
+- **Planet positions and velocities:** JPL SSD "Approximate Positions of the Planets", Table 1 (1800-2050), all six elements and rates for the Earth-Moon barycenter and Mars, so the orbits are tilted correctly in 3D (`src/orbits/ephemeris.ts`). Velocity is the time derivative of the same model. https://ssd.jpl.nasa.gov/planets/approx_pos.html
+- **Paths:** Lambert's problem, zero revolutions, prograde, solved with D. Izzo, "Revisiting Lambert's problem", Celest. Mech. Dyn. Astr. 121 (2015), https://doi.org/10.1007/s10569-014-9587-y (`src/orbits/lambert.ts`). Checked by flying each answer forward with a universal-variable (Stumpff function) propagator (`src/orbits/kepler.ts`).
+- **Constants:** Mars GM 42,828 km³/s², mean radius 3,389.5 km (escape 5.03 km/s) and synodic period 779.94 days from the NASA Mars Fact Sheet; Earth GM 398,600.4 km³/s² and radius 6,378.137 km from the Earth Fact Sheet; Sun GM 1.32712440018e11 km³/s². Model choices (not data): parking orbits 300 km above Mars and 400 km above Earth; Earth entry interface 121.92 km (400,000 ft).
+- **What "speed change" means:** one impulsive burn from the Mars parking orbit plus one into the Earth parking orbit (patched conics). "From the ground" = sqrt(v_esc² + v∞²), ideal (no drag, gravity losses or planet spin). "Hits Earth's air" = sqrt(v∞² + 2μ/r_entry).
+
+### Validation (all in `src/orbits/*.test.ts`)
+
+| Check | Published | Ours | Source |
+|---|---|---|---|
+| Lambert, Curtis Example 5.2 | v1 = (-5.9925, 1.9254, 3.2456), v2 = (-3.3125, -4.1966, -0.38529) km/s | (-5.99249, 1.92536, 3.24564), (-3.31246, -4.19662, -0.385288) | Curtis, *Orbital Mechanics for Engineering Students* |
+| Lambert, Vallado Example 7-5 | v1 = (2.058925, 2.915956), v2 = (-3.451569, 0.910301) km/s | (2.058913, 2.915965), (-3.451567, 0.910314) | Vallado, as reproduced in the poliastro docs |
+| Mars position, 2026-2033 (4 dates) | JPL Horizons DE441 | within 57,000 km (0.02% of its distance from the Sun) and 3.8 m/s | https://ssd.jpl.nasa.gov/api/horizons.api |
+| Earth-Moon barycenter, 2026-2033 | JPL Horizons DE441 | within 7,000 km and 1.7 m/s | same |
+| Earth-to-Mars C3 at the handbook's minimum dates | 2026: 11.11 (I), 9.144 (II); 2028: 9.048, 8.928; 2031: 9.00, 8.237; 2005: 15.883, 15.445 km²/s² | 11.116, 9.145; 9.049, 8.930; 9.001, 8.239; 15.893, 15.450 (all within 0.07%) | NASA/TM-2010-216764 Tables 2-4 and 13 |
+| Mars-to-Earth returns, v∞ at Mars / at Earth / entry speed | 2016-01-07 to 2016-07-05: 2.989 / 7.342 / 13.285 km/s (and 3 more) | 2.990 / 7.466 / 13.356 (all v∞ within 1.7%, entry within 0.6%) | NASA/TM-1998-208533 Tables 9 and 11 |
+| Entry speed formula | Table 4: v∞ 3.50 -> 11.61, 9.35 -> 14.49 km/s | 11.61, 14.49 | NASA/TM-1998-208533 Table 4 |
+| Return windows 2018-2048 | synodic period 779.94 days | 15 windows, 735 to 898 days apart, mean 778 days | NASA Mars Fact Sheet |
+
+- **One mismatch, left visible:** for the 2026 Earth-to-Mars Type I opportunity our search finds a lower C3 (10.48 on Nov 12, 2026, right beside the 180° ridge) than the handbook's 11.11; at the handbook's own dates we agree (11.116). That test checks the published dates only.
+- **Fast returns are date-sensitive:** the 1998 handbook gives dates to the day only; for 154-180 day trips half a day moves v∞ by about 1%, which is why those tolerances are 2%.

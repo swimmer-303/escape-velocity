@@ -61,6 +61,7 @@
         <tr><td>3-5-ETS1-1, 3-5-ETS1-2, MS-ETS1-1, MS-ETS1-2</td><td>Defining a problem with criteria and constraints (fill the rocket, keep the crew safe) and comparing solutions (how to split the power).</td></tr>
         <tr><td>3-5-ETS1-3, MS-ETS1-3, MS-ETS1-4</td><td>Testing, failing safely, and improving: each sol gives feedback; a crew that heads home early shows what happened and what to try next.</td></tr>
         <tr><td>MS-ESS1-3</td><td>Scale of the solar system: messages from Earth take minutes to reach Mars, and the delay changes as the planets move.</td></tr>
+        <tr><td>MS-ESS1-2</td><td>Gravity and orbits: the <b>Trip planner</b> shows why a ship can only fly home cheaply when Earth and Mars line up, about every 26 months.</td></tr>
         <tr><td>MS-PS3 (energy)</td><td>Energy as a limited budget: solar power, storage in batteries, and the cost of heat.</td></tr>
         <tr><td>MS-ESS1-1 (Moon option)</td><td>The Earth-Sun-Moon system: the Moon's 29.5-day cycle of sunlight and darkness, and why its night lasts about two weeks.</td></tr>
       </table>
@@ -165,17 +166,31 @@
         <tr><td><b>Propellant / oxidizer</b></td><td>What a rocket burns. Most of a Mars rocket's propellant would be oxygen.</td></tr>
         <tr><td><b>Regolith</b></td><td>The loose soil and dust on Mars or the Moon. Piled up thick, it blocks radiation. Moon regolith is 40 to 45% oxygen by weight.</td></tr>
         <tr><td><b>Escape velocity</b></td><td>The speed needed to break free of a planet's or moon's gravity. Mars: about 5 km/s. The Moon: about 2.4 km/s.</td></tr>
+        <tr><td><b>Launch window</b></td><td>The stretch of days when a trip between two planets takes the least fuel. Between Earth and Mars, one comes about every 26 months.</td></tr>
+        <tr><td><b>Porkchop plot</b></td><td>A chart of every possible trip between two planets: leave date across, trip length up, and color for how much speed (fuel) it takes. The cheap trips make shapes that look a bit like pork chops.</td></tr>
       </table>
 
       <h2>The real science and data</h2>
       <ul>
         <li><b>Solar storms:</b> real flares and particle storms from NASA DONKI (<a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/">ccmc.gsfc.nasa.gov/tools/DONKI</a>), fetched live when possible and labeled LIVE or ARCHIVE in the game.</li>
         <li><b>Message delay:</b> calculated from JPL's orbital elements for today's date; it matches JPL Horizons.</li>
+        <li><b>Trip planner:</b> real Earth and Mars positions from the same JPL orbital elements, and each path solved as "Lambert's problem" (the method mission designers use). We checked it against NASA's mission design handbooks (NASA/TM-2010-216764 and NASA/TM-1998-208533): launch energies match within 0.1% and return speeds within 2%. Speeds are ideal: a real rocket also loses some to air and gravity.</li>
         <li><b>Radiation:</b> Curiosity rover measurements on Mars, Chang'e 4 lander measurements on the Moon (Zhang et al., <i>Science Advances</i>, 2020), and ISS measurements from NASA's RadLab database.</li>
         <li><b>Moon facts:</b> the NASA Moon Fact Sheet (<a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html">nssdc.gsfc.nasa.gov</a>), ESA (oxygen in regolith) and NASA's 2023 Carbothermal Reduction Demonstration.</li>
         <li><b>Space biology:</b> Real Science cards link to real NASA OSDR studies (plants, radiation, bone and muscle).</li>
         <li><b>What we simplified:</b> the game speeds up time, uses smaller amounts of fuel, and uses a much stricter radiation budget than NASA's real limit, so that choices matter in a short game. The in-game Science Log lists every simplification.</li>
       </ul>
+
+      <h2>Extension: plan the trip home (Trip planner, 15 minutes)</h2>
+      <p>Open the game and press <b>Trip planner</b> on the title screen (between crews, the <b>Why 26 months?</b> button opens it too). The chart is a real "porkchop plot", the kind NASA mission designers use: each spot is one possible trip from Mars to Earth. Left to right is the day the crew leaves Mars, bottom to top is how long the trip takes, and the color is the speed change the ship needs (brighter is cheaper). Every spot is worked out from JPL's orbit data for Earth and Mars. Students can drag, tap, or use the arrow keys, and a small map shows the ship's path around the Sun.</p>
+      <ol>
+        <li><b>Find the bright spots.</b> On what dates do they appear? Count the months between them. (They come in launch windows; the gaps differ a little, but average about 26 months.)</li>
+        <li><b>Press Best trip.</b> Write down the day you leave Mars, the day you reach Earth, the trip length, and the speed change.</li>
+        <li><b>Hurry home.</b> Move the crosshair down to a shorter trip in the same window. How much more speed does it need? A shorter trip means less time in deep space radiation (NASA's Curiosity rover measured about 1.8 mSv per day on its way to Mars), but more fuel. Which would you choose?</li>
+        <li><b>Watch the map.</b> On launch day, where is Mars compared to Earth? (In the best trips, Mars is ahead of Earth around the Sun.)</li>
+        <li><b>Math (older students):</b> Earth goes around the Sun in 365 days and Mars in 687 days. Earth gains on Mars a little every day, and laps it once every 1 &divide; (1/365 &minus; 1/687) &asymp; 779 days. How many months is that? Why does the game make each new crew wait 26 months?</li>
+      </ol>
+      <p><b>Talk about it:</b> Why can't the crew just leave whenever they are ready? What happens to the base while it waits for the next window? Real missions plan years ahead around these windows: when is the next one?</p>
 
       <h2>Extension ideas</h2>
       <ul>
