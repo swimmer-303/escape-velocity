@@ -33,6 +33,7 @@ import { factFor, FACTS } from '../data/science';
 import type { Stage } from '../render/stage';
 import { renderScienceLog } from './sciencelog';
 import { renderCredits } from './credits';
+import { meetCrew, crewSays } from './crew';
 import { Coach, type CoachPhase } from './tutorial';
 import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange } from './views';
 
@@ -630,6 +631,7 @@ export class App {
         h('h2', null, spec.name),
         h('div', { class: 'art' }, h('img', { src: c.expedition === 1 ? '/art/title.png' : '/art/event-resupply.png', alt: 'The Mars outpost (AI-generated art)' })),
         h('p', null, spec.blurb),
+        meetCrew(c.expedition),
         h(
           'div',
           { class: 'card' },
@@ -1086,6 +1088,7 @@ export class App {
         h('div', { class: 'kicker' }, won ? `${this.hudLabel(m)} · Mission complete` : `${this.hudLabel(m)} · Heading home early`),
         h('h2', { class: won ? 'tone-good' : '' }, end.title),
         won ? h('p', null, `Mars' escape velocity is about ${REAL.marsEscapeKms.toFixed(1)} km/s: the speed your rocket needs to break free of Mars' gravity.`) : null,
+        crewSays(m.config.expedition, won),
         this.mode !== 'history' ? starRow(stars) : null,
         h('h3', null, 'What happened'),
         h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),

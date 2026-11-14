@@ -306,3 +306,20 @@ table.log th { font-family: var(--font-px); font-weight: 400; font-size: 12px; c
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { animation: none !important; transition: none !important; }
+
+/* ---------- Crew ---------- */
+.crew { margin: 6px 0 10px; }
+.crew-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 12px 8px; }
+.crew-card { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.crew-face {
+  width: min(100%, 112px); aspect-ratio: 1; flex: none; margin-bottom: 4px;
+  background-color: var(--sky); background-repeat: no-repeat; image-rendering: pixelated;
+  border: 3px solid #000; box-shadow: 3px 3px 0 var(--shadow);
+}
+.crew-name { font-family: var(--font-px); font-weight: 400; font-size: 15px; color: var(--amber); }
+.crew-role { font-size: 14px; line-height: 1.2; color: var(--cyan); }
+.crew-fact { font-size: 13px; line-height: 1.25; color: var(--muted); overflow-wrap: break-word; }
+.crew-note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.crew-says { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.crew-says .crew-face { width: 96px; margin: 0; }
+.crew-says p { margin: 0; flex: 1 1 auto; min-width: 0; }

@@ -84,7 +84,7 @@ src/render/   Stage interface (3D diorama plugs in here)
 src/ui/       HUD, power-budget dock (drag and drop, tap, keyboard), briefing, debrief, Science Log, credits, audio
 api/          spaceweather.ts: the DONKI proxy handler (run by the droplet's server)
 deploy/       droplet server (server.ts), Caddyfile, systemd service, one-time setup script
-scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark)
+scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark), process-portraits.py (crew portrait sheets + watermark)
 ```
 
 ## Run it
@@ -115,7 +115,7 @@ Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to
 We used AI tools, and here is exactly where and how:
 
 - **Code:** written with AI assistance (Claude Code by Anthropic), directed and reviewed by our team. Every source file has a header comment saying so.
-- **Images:** every illustration (title art, event cards, Real Science art) was generated with **Higgsfield** (GPT Image 2.6), then downscaled and palette-reduced for the retro look. **Every image carries a visible "AI-generated" watermark**, baked into the image file.
+- **Images:** every illustration (title art, event cards, Real Science art, crew portraits) was generated with **Higgsfield** (GPT Image 2.6), then downscaled and palette-reduced for the retro look. **Every image carries a visible "AI-generated" watermark**, baked into the image file. Crew portraits come in one sprite sheet per crew: each face has a baked-in "AI" tag and each sheet a full "AI-generated" label. The crew members are fictional.
 - **Music:** generated with **Higgsfield** (ElevenLabs Music v2.5); credited here, in the in-game Credits screen, and in each MP3's metadata. Sound effects are synthesized in code.
 - **Data:** all data comes from NASA sources. AI-assisted scripts fetch and reformat it, but never invent or change values.
 - **Disclosure in the product:** an `ai-assistance` meta tag in `index.html`, an "AI tools" section in the in-game Credits, watermarks on all images, and [`ASSETS.md`](ASSETS.md), which lists every generated asset with its tool, model and full prompt.
