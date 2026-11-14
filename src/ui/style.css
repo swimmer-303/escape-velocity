@@ -710,3 +710,129 @@ table.daily-table tr.gap td { color: var(--muted); padding: 2px 8px; border-bott
 .landing-card .landing-effects { margin: 8px 0; }
 .landing-card .landing-effects li { margin: 4px 0; }
 @media (max-width: 900px) { .landing-pick .crates { grid-template-columns: 1fr; } }
+/* ---------- Access ---------- */
+/* Reading and display help (src/ui/access.ts, voice.ts, certificate.ts). The display options are classes on <html>:
+   ev-large-text, ev-contrast and ev-dyslexia, saved in 'ev-settings'. */
+
+/* Every control shows where keyboard focus is (zero specificity: the rules above still win where they exist). */
+:where(button, a[href], summary, input, select, textarea, [tabindex]):focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+/* "Read to me" */
+.read-bar { display: flex; justify-content: flex-end; gap: 6px; margin: -8px -8px 8px 0; }
+.modal > .close-x + .read-bar { margin-right: 48px; }
+.speak-btn .stop-sq { display: inline-block; width: 12px; height: 12px; background: currentColor; }
+.speak-btn.on { background: #1f6f6a; box-shadow: inset 0 0 0 3px var(--cyan), 4px 4px 0 var(--shadow); }
+.coach-head .speak-btn { margin-left: auto; }
+.hud-right .speak-btn { white-space: nowrap; }
+/* The sentence being read, and the card or paragraph it is in. */
+::highlight(ev-reading) { background-color: var(--amber); color: #0b0a18; }
+.ev-reading-block { outline: 3px dashed var(--amber); outline-offset: 3px; }
+@media (max-width: 900px) { .hud-right { flex-wrap: wrap; } }
+
+/* Settings panel (pause menu, and "Text and voice" on the title screen) */
+.access-panel { margin: 14px 0 0; padding: 10px 12px; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); text-align: left; }
+.access-panel h3 { margin: 0 0 8px; }
+.access-panel .toggle-row + .toggle-row { margin-top: 8px; }
+.access-panel .title-foot { margin: 8px 0 0; }
+.voice-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.voice-pick label { font-family: var(--font-px); font-size: 13px; text-transform: uppercase; color: var(--muted); }
+.voice-select {
+  flex: 1 1 200px; min-width: 0; max-width: 100%; min-height: 44px; padding: 6px 10px;
+  font: 16px var(--font-body); background: var(--bg); color: var(--ink); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line);
+}
+
+/* Larger text: about 1.25x everywhere text lives. (Each :is() list takes its most specific member, so the
+   small-button rule outranks the plain .btn rule, and Mission Control's tiny buttons outrank both.) */
+:root { --ts: 1; }
+html.ev-large-text { --ts: 1.25; }
+html.ev-large-text body { font-size: calc(17px * var(--ts)); }
+html.ev-large-text :is(.sol-chip small, .card .tag, .mc-tag, .mc-pingpad .btn.small, .mc-assign .btn.small) { font-size: calc(11px * var(--ts)); }
+html.ev-large-text :is(.mini-bars, .data-badge, .slot-label, table.log th, .coach-head, .sun-credit) { font-size: calc(12px * var(--ts)); }
+html.ev-large-text :is(.meter-head, .meter-sub, .btn.small, .tray-label, .module-head, .split-note, .run-hint, .kicker, .science .src, .star, .upgrade-head .cost, .badge span, .crew-fact, .crew-note, .sun-title, .mchart-table summary, .voice-pick label) { font-size: calc(13px * var(--ts)); }
+html.ev-large-text .brief-mini .line.advice ul { font-size: calc(13px * var(--ts)); }
+html.ev-large-text :is(.sol-chip, .tray-hint, .module-desc, .effect, .brief-mini, .crate span, .title-foot, .crew-role, .sun-body, .mchart-legend) { font-size: calc(14px * var(--ts)); }
+html.ev-large-text :is(.meter-value, .tray-empty, .run-log, table.log, .crew-name, .cc-msg, .mchart-readout) { font-size: calc(15px * var(--ts)); }
+html.ev-large-text :is(.btn, .modal h3, .cc-note, .voice-select) { font-size: calc(16px * var(--ts)); }
+html.ev-large-text .coach-bubble { font-size: calc(17px * var(--ts)); width: min(420px, calc(100vw - 16px)); }
+html.ev-large-text .mchart-takeaway { font-size: calc(18px * var(--ts)); }
+html.ev-large-text .title-screen .tagline { font-size: calc(19px * var(--ts)); }
+html.ev-large-text :is(.headline, .today b, .run-bar .clock) { font-size: calc(20px * var(--ts)); }
+html.ev-large-text .modal h2 { font-size: calc(22px * var(--ts)); }
+html.ev-large-text .btn.small { min-height: 44px; }
+/* Bigger power cells and slots too. */
+html.ev-large-text :is(.cell-token, .slot-box) { width: calc(30px * var(--ts)); height: calc(40px * var(--ts)); }
+html.ev-large-text .cell-token::before, html.ev-large-text .cell-token::after { left: calc(50% - 5px); }
+@media (max-width: 900px) {
+  html.ev-large-text body { font-size: calc(16px * var(--ts)); }
+  html.ev-large-text .tray { flex-wrap: wrap; }
+  html.ev-large-text .tray-actions { margin-left: 0; width: 100%; }
+}
+/* Phones (down to 360 px): one column where two would squeeze. */
+@media (max-width: 520px) {
+  html.ev-large-text .modal { padding: 14px 12px 16px; overflow-wrap: anywhere; }
+  html.ev-large-text .read-bar { margin-right: 0; }
+  html.ev-large-text .modal > .close-x + .read-bar { margin-right: 48px; }
+  html.ev-large-text .title-screen .menu-row { grid-template-columns: 1fr; }
+  html.ev-large-text .modules { grid-template-columns: 1fr; }
+  html.ev-large-text .modules .module.o2 { grid-column: auto; }
+  html.ev-large-text .meter { min-width: 0; flex-basis: calc(50% - 4px); max-width: none; }
+  html.ev-large-text .sol-chip small { white-space: normal; }
+  html.ev-large-text .mc-board { grid-template-columns: 1fr; }
+  html.ev-large-text .coach-bubble { padding: 8px 10px; }
+}
+
+/* High contrast: brighter lines and text, darker panels, same palette. Body text is at least 13:1 (WCAG AA is 4.5:1). */
+html.ev-contrast {
+  --bg: #05040c;
+  --panel: #0b0a18;
+  --panel-2: #15122b;
+  --panel-3: #2e2654;
+  --line: #a89ae0;
+  --ink: #fffaf0;
+  --muted: #e8dcc4;
+  --red: #ff8a80;
+}
+html.ev-contrast #modal-root { background: #05040ce6; }
+html.ev-contrast #stage::after { display: none; }
+html.ev-contrast .btn { border-color: var(--ink); }
+html.ev-contrast .btn.primary { background: var(--rust); }
+html.ev-contrast .btn.go { background: #1d6b38; }
+html.ev-contrast .btn.cyan, html.ev-contrast .speak-btn.on { background: #17524e; }
+html.ev-contrast .btn[disabled] { opacity: 0.8; filter: none; border-style: dashed; }
+html.ev-contrast :is(.card, .module, .crate, .science, .badge, .today, .access-panel, .mc-station) { border-color: var(--line); }
+html.ev-contrast :is(.bar, .slot-box, .pip) { border-color: var(--line); }
+html.ev-contrast .slot-box:not(.filled) { border-color: var(--muted); }
+html.ev-contrast .pip.used { background: #6b5fa0; }
+html.ev-contrast .star { opacity: 0.65; }
+html.ev-contrast :is(.coach-bubble, .modal) { border-color: var(--ink); }
+html.ev-contrast .tray { border-color: var(--muted); }
+html.ev-contrast a { text-decoration: underline; text-underline-offset: 2px; }
+html.ev-contrast :where(button, a[href], summary, input, select, textarea, [tabindex]):focus-visible,
+html.ev-contrast :is(.btn, .slot-box, .cell-token, .data-badge, .cc-input):focus-visible { outline: 4px solid var(--cyan); outline-offset: 3px; }
+
+/* Dyslexia-friendly spacing (British Dyslexia Association style guide): wider letter, word and line spacing,
+   left-aligned body text. The font stays Atkinson Hyperlegible. Pixel-font labels keep their own spacing. */
+html.ev-dyslexia body { letter-spacing: 0.12em; word-spacing: 0.16em; line-height: 1.5; }
+html.ev-dyslexia :is(p, li, td, .card, .headline, .module-desc, .effect, .brief-mini, .crate span, .run-log, .today b, .mchart-takeaway) { line-height: 1.6; }
+html.ev-dyslexia :is(.modal, .coach-bubble) :is(p, li, .card) { text-align: left; }
+html.ev-dyslexia .title-screen p { text-align: center; }
+html.ev-dyslexia .modal p, html.ev-dyslexia ul.clean li { margin-bottom: 0.75em; }
+html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, .module-head, .slot-label, .tray-label, .sol-chip, .data-badge, .tag, .crew-name, .star, .badge b, .coach-head, table.log th, .upgrade-head .cost, .clock, .mc-tag, .voice-pick label) {
+  letter-spacing: 0.03em; word-spacing: normal;
+}
+
+/* Junior Astronaut certificate */
+.cert-name-row { display: grid; gap: 6px; margin: 6px 0 12px; }
+.cert-name-row label { font-family: var(--font-px); font-size: 14px; color: var(--amber); text-transform: uppercase; }
+.cc-input.cert-name { font-family: var(--font-body); font-size: 22px; letter-spacing: 0; text-transform: none; width: 100%; max-width: 440px; }
+.cert-name-row .title-foot { margin: 0; }
+.cert-preview { border: 3px solid #000; box-shadow: 4px 4px 0 var(--shadow); background: #f4ead8; }
+.cert-canvas { display: block; width: 100%; height: auto; }
+#cert-print { display: none; }
+@page { size: landscape; margin: 10mm; }
+@media print {
+  html.ev-printing-cert, html.ev-printing-cert body { background: #fff !important; height: auto !important; overflow: visible !important; }
+  html.ev-printing-cert body > :not(#cert-print) { display: none !important; }
+  html.ev-printing-cert #cert-print { display: block !important; }
+  #cert-print img { display: block; width: 100%; height: auto; max-height: 180mm; object-fit: contain; margin: 0 auto; }
+}

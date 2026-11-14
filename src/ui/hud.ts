@@ -71,7 +71,7 @@ export function renderHud(root: HTMLElement, m: HudModel, right: HTMLElement[]) 
   const doseNextPct = m.next ? (m.next.dose / m.doseBudget) * 100 : undefined;
   const dose = h(
     'section',
-    { class: `meter dose ${dosePct > 75 ? 'danger' : ''}`, 'aria-label': `Radiation dose ${fmt1(m.now.dose)} of a ${m.doseBudget} budget` },
+    { class: `meter dose ${dosePct > 75 ? 'danger' : ''}`, 'aria-label': `Radiation dose ${fmt1(m.now.dose)} of a ${m.doseBudget} mSv budget` },
     h('div', { class: 'meter-head' }, icon('radiation', 20), 'Dose', h('span', { class: 'meter-value px' }, `${fmt1(m.now.dose)}/${m.doseBudget}`)),
     bar('', dosePct, doseNextPct),
     h('div', { class: 'meter-sub' }, 'Radiation budget (mSv)'),
