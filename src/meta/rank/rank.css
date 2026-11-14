@@ -1,0 +1,193 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* Astronaut rank: the title-screen player card, the "Missions and rank" dialog, the level-up card and the XP chip. */
+
+/* ---------- shared XP bar ---------- */
+.rk-bar { position: relative; height: 14px; margin-top: 6px; background: #000; border: 2px solid #000; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.rk-bar .rk-fill { position: absolute; top: 0; bottom: 0; left: 0; background: repeating-linear-gradient(90deg, var(--amber) 0 6px, #ffd34d 6px 8px); }
+.rk-bar::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 9%, #0006 9% 10%); pointer-events: none; }
+.rk-bar.small { height: 10px; }
+.rk-bar.tiny { height: 8px; margin: 0; border-width: 1px; box-shadow: none; }
+.rank-badge { display: inline-flex; line-height: 0; flex: none; }
+
+/* ---------- title-screen player card ---------- */
+.rank-strip {
+  container-type: inline-size; text-align: left;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 3px solid #000;
+  box-shadow: inset 0 0 0 2px var(--amber), 4px 4px 0 var(--shadow); padding: 10px 12px;
+}
+.rs-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; }
+.rs-id { display: flex; gap: 14px; align-items: center; min-width: 0; }
+.rs-badge { position: relative; flex: none; line-height: 0; }
+.rs-badge .rs-lv {
+  position: absolute; right: -8px; bottom: -6px; min-width: 24px; padding: 3px 4px 2px; text-align: center;
+  font-family: var(--font-px); font-size: 14px; line-height: 1; background: var(--amber); color: #15122b; border: 2px solid #000;
+}
+.rs-badge.big .rs-lv { font-size: 18px; min-width: 30px; }
+.rs-who { min-width: 0; flex: 1; }
+.rs-kicker { font-family: var(--font-px); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.rs-rank { font-family: var(--font-px); font-size: 22px; line-height: 1.1; color: var(--amber); text-shadow: 2px 2px 0 var(--rust); overflow-wrap: anywhere; }
+.rs-level { font-family: var(--font-px); font-size: 13px; color: var(--ink); margin-top: 2px; }
+.rs-of { color: var(--muted); }
+.rs-xp { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.rs-next { font-size: 13px; color: var(--ink); margin-top: 1px; }
+.rs-next b { color: var(--cyan); font-weight: 700; }
+.rs-daily { min-width: 0; display: flex; flex-direction: column; gap: 5px; border-left: 2px dashed var(--line); padding-left: 12px; }
+.rs-dhead { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.rs-streak { font-family: var(--font-px); font-size: 11px; color: var(--cyan); text-transform: uppercase; }
+.rs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.rs-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 1.25; }
+.rs-list .rs-mt { flex: 1; min-width: 0; }
+.rs-list .rs-mp { flex: none; font-family: var(--font-px); font-size: 12px; color: var(--muted); }
+.rs-list li.done .rs-mt { color: var(--muted); }
+.rs-list li.done .rs-mp { color: var(--green); }
+.rs-open { align-self: flex-start; margin-top: 2px; }
+/* Stack when the card itself is narrow (phones, or a narrow title dialog). */
+@container (max-width: 540px) {
+  .rs-inner { grid-template-columns: 1fr; gap: 10px; }
+  .rs-daily { border-left: 0; padding-left: 0; border-top: 2px dashed var(--line); padding-top: 8px; }
+  .rs-open { align-self: stretch; }
+  .rs-rank { font-size: 20px; }
+}
+@supports not (container-type: inline-size) {
+  @media (max-width: 640px) {
+    .rs-inner { grid-template-columns: 1fr; gap: 10px; }
+    .rs-daily { border-left: 0; padding-left: 0; border-top: 2px dashed var(--line); padding-top: 8px; }
+    .rs-open { align-self: stretch; }
+  }
+}
+
+/* ---------- "Missions and rank" dialog ---------- */
+.rank-dialog { text-align: left; }
+.rank-dialog h3 { margin-top: 18px; }
+.rank-dialog h2:focus { outline: none; }
+.rank-dialog h2:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.rd-head { display: flex; gap: 18px; align-items: center; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--amber); padding: 12px 14px; margin-right: 48px; }
+.rd-who { flex: 1; min-width: 0; }
+.rd-who .kicker { margin: 0; }
+.rd-who h2 { margin: 2px 0 2px; text-shadow: 2px 2px 0 var(--rust); }
+.rank-dialog .rd-next { margin: 6px 0 0; font-size: 15px; }
+.rank-dialog .rd-note { color: var(--muted); font-size: 15px; margin: 0 0 10px; }
+.rd-earn { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.rd-earn li { display: inline-flex; align-items: baseline; gap: 6px; background: var(--panel-2); border: 2px solid #000; box-shadow: inset 0 0 0 1px var(--line); padding: 3px 8px; font-size: 14px; }
+.rd-earn b { font-family: var(--font-px); font-weight: 400; font-size: 12px; color: var(--amber); }
+.rd-missions { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rd-mission { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.rd-mission.done { box-shadow: inset 0 0 0 2px var(--green); }
+.rd-mhead { display: flex; gap: 8px; align-items: flex-start; }
+.rd-mhead b { flex: 1; font-size: 16px; line-height: 1.25; }
+.rd-mxp { flex: none; font-family: var(--font-px); font-size: 12px; background: var(--amber); color: #15122b; border: 2px solid #000; padding: 1px 5px; }
+.rank-dialog .rd-mission p { margin: 0; flex: 1; font-size: 14px; color: var(--muted); }
+.rd-mfoot { display: flex; align-items: center; gap: 8px; }
+.rd-mfoot .rk-bar { flex: 1; margin: 0; }
+.rd-slot { font-family: var(--font-px); font-size: 10px; text-transform: uppercase; color: var(--cyan); }
+.rd-mcount { font-family: var(--font-px); font-size: 12px; white-space: nowrap; }
+.rd-mission.done .rd-mcount { color: var(--green); }
+
+.rd-ladder { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.rd-rank details { background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); }
+.rd-rank.here details { box-shadow: inset 0 0 0 3px var(--amber); }
+.rd-rank summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 10px; cursor: pointer; list-style: none; }
+.rd-rank summary::-webkit-details-marker { display: none; }
+.rd-rank summary::after { content: '+'; font-family: var(--font-px); font-size: 16px; color: var(--muted); width: 14px; text-align: center; }
+.rd-rank details[open] > summary::after { content: '-'; }
+.rd-rank summary:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.rd-rname { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rd-rname b { font-family: var(--font-px); font-weight: 400; font-size: 15px; }
+.rd-rname small { font-size: 13px; color: var(--muted); }
+.rd-rtag { flex: none; font-family: var(--font-px); font-size: 11px; padding: 2px 6px; border: 2px solid #000; background: var(--panel-3); text-transform: uppercase; }
+.rd-rank.here .rd-rtag { background: var(--amber); color: #15122b; }
+.rd-rank.reached .rd-rtag { background: #2f8f4a; }
+.rd-rank.locked summary .rank-badge { filter: grayscale(1) brightness(0.75); }
+.rank-dialog :is(.rd-blurb, .rd-none) { margin: 0 12px 8px; font-size: 14px; color: var(--muted); }
+.rd-rewards { list-style: none; margin: 0 10px 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px; }
+.rd-reward { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 2px solid #000; padding: 4px 8px; }
+.rd-rprev { flex: none; width: 32px; height: 32px; display: grid; place-items: center; overflow: hidden; }
+.rd-rprev > * { max-width: 32px; max-height: 32px; }
+.rd-rtext { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rd-rtext b { font-size: 14px; }
+.rd-rtext small { font-size: 12px; color: var(--muted); }
+.rd-rstate { flex: none; font-family: var(--font-px); font-size: 10px; text-transform: uppercase; color: var(--muted); }
+.rd-reward.open .rd-rstate { color: var(--green); }
+.rd-reward.locked .rd-rprev { filter: grayscale(1); opacity: 0.6; }
+
+.rd-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 0; }
+.rd-stat { background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; }
+.rd-stat dt { font-size: 13px; color: var(--muted); }
+.rd-stat dd { margin: 2px 0 0; font-family: var(--font-px); font-size: 22px; color: var(--cyan); }
+@media (max-width: 760px) {
+  .rd-missions { grid-template-columns: 1fr; }
+  .rd-head { gap: 12px; padding: 10px; }
+  .rd-head .rank-badge svg { width: 64px; height: 64px; }
+}
+
+/* ---------- the level-up card ---------- */
+.ev-levelup { position: fixed; inset: 0; z-index: 75; display: grid; place-items: center; padding: 16px; background: #05040cd9; overflow-y: auto; }
+.ev-lu-card {
+  position: relative; z-index: 1; width: min(460px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto;
+  text-align: center; background: var(--panel); border: 4px solid var(--amber); box-shadow: 0 0 0 4px #000, 10px 10px 0 var(--shadow); padding: 18px 18px 20px;
+}
+.ev-lu-kicker { display: inline-block; font-family: var(--font-px); font-size: 14px; text-transform: uppercase; color: #15122b; background: var(--amber); border: 2px solid #000; padding: 3px 10px; }
+.ev-lu-hero { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 14px 0 4px; }
+.ev-lu-num { font-family: var(--font-px); font-size: 88px; line-height: 0.9; color: var(--amber); text-shadow: 4px 4px 0 var(--rust), 8px 8px 0 #000; }
+.ev-lu-title { font-family: var(--font-px); font-weight: 400; font-size: 26px; color: var(--ink); margin: 8px 0 2px; }
+.ev-lu-rank { font-size: 18px; margin: 0 0 6px; }
+.ev-lu-rank b { font-family: var(--font-px); font-weight: 400; color: var(--cyan); }
+.ev-lu-blurb { color: var(--muted); margin: 0 0 10px; }
+.ev-lu-unlocks h3 { font-family: var(--font-px); font-weight: 400; font-size: 14px; text-transform: uppercase; color: var(--green); margin: 8px 0 6px; }
+.ev-lu-unlocks ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ev-lu-reward { display: flex; align-items: center; gap: 10px; text-align: left; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--green); padding: 6px 10px; }
+.ev-lu-prev { flex: none; width: 40px; height: 40px; display: grid; place-items: center; overflow: hidden; }
+.ev-lu-prev > * { max-width: 40px; max-height: 40px; }
+.ev-lu-rtext { display: flex; flex-direction: column; min-width: 0; }
+.ev-lu-rtext b { font-family: var(--font-px); font-weight: 400; font-size: 15px; }
+.ev-lu-rtext small { font-size: 13px; color: var(--muted); }
+.ev-lu-next { font-size: 14px; color: var(--muted); margin: 10px 0 0; }
+.ev-lu-actions { display: flex; justify-content: center; margin-top: 14px; }
+.ev-lu-actions .btn { min-width: 180px; }
+.ev-lu-burst { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.ev-lu-rays { position: absolute; left: 50%; top: 50%; width: 160vmax; height: 160vmax; margin: -80vmax 0 0 -80vmax; background: repeating-conic-gradient(from 0deg, #ffb6271f 0 10deg, transparent 10deg 20deg); }
+.ev-lu-burst i { position: absolute; top: -16px; width: 10px; height: 10px; border: 2px solid #000; opacity: 0; }
+@media (max-width: 420px) {
+  .ev-lu-num { font-size: 64px; }
+  .ev-lu-hero .rank-badge svg { width: 72px; height: 72px; }
+}
+
+/* ---------- XP chip while a mission is on screen ---------- */
+.rank-chip {
+  position: absolute; left: 12px; top: calc(var(--hud-h, 110px) + 4px); z-index: 6; pointer-events: none;
+  display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 6px;
+  background: var(--panel); border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--shadow);
+}
+.rank-chip .rc-text { display: flex; flex-direction: column; gap: 3px; min-width: 76px; }
+.rank-chip b { font-family: var(--font-px); font-weight: 400; font-size: 13px; line-height: 1; color: var(--amber); }
+.rank-chip.lvl { border-color: var(--amber); }
+
+/* ---------- motion (none with reduced motion: the OS setting or the game's own switch) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.reduce-motion) .ev-lu-card { animation: ev-lu-pop 0.4s steps(5) both; }
+  html:not(.reduce-motion) .ev-lu-num { animation: ev-lu-flash 0.6s steps(2) 3; }
+  html:not(.reduce-motion) .ev-lu-rays { animation: ev-lu-spin 30s linear infinite; }
+  html:not(.reduce-motion) .ev-lu-burst i { animation-name: ev-lu-fall; animation-timing-function: steps(14); animation-iteration-count: 2; animation-fill-mode: both; }
+  html:not(.reduce-motion) .rank-chip.bump .rk-fill { animation: ev-rc-glow 0.6s steps(3); }
+  html:not(.reduce-motion) .rank-chip.lvl { animation: ev-rc-lvl 0.5s steps(2) 4; }
+  @keyframes ev-lu-pop { from { transform: scale(0.5); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes ev-lu-flash { 50% { color: #fff; } }
+  @keyframes ev-lu-spin { to { transform: rotate(360deg); } }
+  @keyframes ev-lu-fall { 0% { opacity: 1; transform: translateY(0) rotate(0deg); } 100% { opacity: 1; transform: translateY(110vh) rotate(270deg); } }
+  @keyframes ev-rc-glow { 50% { filter: brightness(1.6); } }
+  @keyframes ev-rc-lvl { 50% { border-color: var(--cyan); } }
+}
+
+/* ---------- accessibility settings (see src/ui/access.ts) ---------- */
+html.ev-large-text .rs-kicker, html.ev-large-text .rs-streak, html.ev-large-text .rd-rtag { font-size: calc(11px * var(--ts)); }
+html.ev-large-text :is(.rs-level, .rs-xp, .rs-next, .rd-rname small, .rd-stat dt) { font-size: calc(13px * var(--ts)); }
+html.ev-large-text :is(.rs-list li, .rank-dialog .rd-mission p, .rank-dialog .rd-blurb, .rank-dialog .rd-none, .rd-rtext b, .rd-earn li, .ev-lu-next) { font-size: calc(14px * var(--ts)); }
+html.ev-large-text :is(.rank-dialog .rd-note, .rank-dialog .rd-next) { font-size: calc(15px * var(--ts)); }
+html.ev-large-text .rd-mhead b { font-size: calc(16px * var(--ts)); }
+html.ev-contrast .rank-strip, html.ev-contrast .rd-head { border-color: var(--ink); }
+html.ev-contrast :is(.rd-rank details, .rd-stat, .rd-reward, .rank-chip, .rk-bar) { border-color: var(--line); }
+html.ev-contrast .rd-reward.locked .rd-rprev { opacity: 0.85; }
+html.ev-dyslexia :is(.rs-kicker, .rs-rank, .rs-level, .rs-streak, .rs-mp, .rd-earn b, .rd-mxp, .rd-slot, .rd-mcount, .rd-rname b, .rd-rtag, .rd-rstate, .rd-stat dd, .ev-lu-kicker, .ev-lu-num, .ev-lu-title, .ev-lu-rank b, .ev-lu-rtext b, .rank-chip b) {
+  letter-spacing: 0.03em; word-spacing: normal;
+}
+html.ev-dyslexia :is(.rank-strip, .rank-dialog) :is(p, li) { line-height: 1.5; }
