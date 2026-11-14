@@ -115,7 +115,8 @@ function missionRow(m: DailyView): HTMLElement {
     { class: m.done ? 'done' : '' },
     checkIcon(m.done, 18),
     h('span', { class: 'rs-mt' }, m.def.title),
-    h('span', { class: 'rs-mp' }, m.done ? 'Done' : `${m.progress}/${m.def.goal}`),
+    h('span', { class: 'rs-mp', 'aria-hidden': 'true' }, m.done ? 'Done' : `${m.progress}/${m.def.goal}`),
+    h('span', { class: 'sr-only' }, m.done ? 'Done.' : `${m.progress} of ${m.def.goal}.`),
   );
 }
 
@@ -239,7 +240,7 @@ function missionCard(m: DailyView): HTMLElement {
         },
         h('span', { class: 'rk-fill', style: `width:${pct}%` }),
       ),
-      h('span', { class: 'rd-mcount' }, m.done ? 'Done' : `${m.progress} / ${m.def.goal}`),
+      h('span', { class: 'rd-mcount', 'aria-hidden': 'true' }, m.done ? 'Done' : `${m.progress} / ${m.def.goal}`),
     ),
   );
 }
