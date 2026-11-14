@@ -30,6 +30,8 @@ export interface ExpeditionResult {
 export interface Campaign {
   version: 1;
   seed: string;
+  /** The class code this campaign started with (it is also the seed). See classcode.ts. */
+  classCode?: string;
   difficulty: Difficulty;
   /** Current expedition, 1-based. Past the last one = campaign complete. */
   expedition: number;

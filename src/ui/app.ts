@@ -35,6 +35,8 @@ import { renderScienceLog } from './sciencelog';
 import { renderCredits } from './credits';
 import { Coach, type CoachPhase } from './tutorial';
 import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange } from './views';
+import { ClassCodes, classCodeLine } from './classcode';
+import { campaignWithCode } from '../sim/classcode';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale';
 type Mode = 'campaign' | 'quick' | 'history';
@@ -126,6 +128,8 @@ export class App {
   private lastReport: SolReport | null = null;
   private ff = false;
   private coach = new Coach();
+  /** The class code new campaigns and quick missions use (from `?code=` or typed in). */
+  private codes = new ClassCodes();
 
   constructor(stage: Stage) {
     this.stage = stage;
@@ -339,6 +343,7 @@ export class App {
         h('div', { class: 'art' }, h('img', { src: '/art/title.png', alt: 'A tiny outpost on Mars with a rocket on its launch pad (AI-generated art)' })),
         h('h1', null, 'Escape Velocity'),
         h('p', { class: 'tagline' }, 'Build a base on Mars, crew after crew. Make air to breathe and oxygen for the rocket home, and leave the base better for the next crew.'),
+        this.codes.titleNote(),
         h(
           'div',
           { class: 'menu' },
@@ -409,6 +414,7 @@ export class App {
             h('span', null, 'Less time, more and bigger storms, and the Sun blocks your messages for a few sols.'),
           ),
         ),
+        this.codes.panel({ hint: 'Now pick the same difficulty as your class.', sfx: (n) => this.audio.sfx(n) }),
         readSave() ? h('p', { class: 'title-foot' }, 'Starting a new campaign replaces your saved one.') : null,
         h('div', { class: 'actions end' }, h('button', { class: 'btn small', onclick: () => this.showTitle() }, 'Back')),
       ],
@@ -530,6 +536,7 @@ export class App {
           h('button', { class: 'btn', onclick: () => this.showCredits() }, 'Credits'),
           h('button', { class: 'btn', onclick: () => this.showTitle() }, this.mode === 'campaign' ? 'Save and quit' : 'Quit to title'),
         ),
+        this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
         this.mission
           ? h('p', { class: 'title-foot' }, `Seed ${this.mission.config.seed} · ${this.mission.config.difficulty}${this.mode === 'campaign' ? ' · your campaign saves after every sol' : ''}`)
           : null,
@@ -576,7 +583,7 @@ export class App {
     this.audio.sfx('click');
     this.clearSave();
     this.mode = 'campaign';
-    this.campaign = newCampaign(this.seed(), difficulty);
+    this.campaign = campaignWithCode(this.codes.active, this.seed(), difficulty);
     this.showExpeditionIntro();
   }
 
@@ -597,7 +604,7 @@ export class App {
   private startQuick() {
     this.audio.sfx('click');
     this.mode = 'quick';
-    this.campaign = newCampaign(this.seed(), 'cadet');
+    this.campaign = campaignWithCode(this.codes.active, this.seed(), 'cadet');
     this.showExpeditionIntro();
   }
 
@@ -663,6 +670,12 @@ export class App {
               h('b', null, 'Earn stars: '),
               (Object.keys(STAR_INFO) as StarId[]).map((s) => h('div', null, icon('sun', 14), ' ', h('b', null, STAR_INFO[s].name), `: ${STAR_INFO[s].how}`)),
             )
+          : null,
+        this.mode === 'quick'
+          ? this.codes.panel({
+              sfx: (n) => this.audio.sfx(n),
+              onChange: (code) => (this.campaign = campaignWithCode(code, this.seed(), 'cadet')),
+            })
           : null,
         h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
       ],
@@ -1087,6 +1100,7 @@ export class App {
         h('h2', { class: won ? 'tone-good' : '' }, end.title),
         won ? h('p', null, `Mars' escape velocity is about ${REAL.marsEscapeKms.toFixed(1)} km/s: the speed your rocket needs to break free of Mars' gravity.`) : null,
         this.mode !== 'history' ? starRow(stars) : null,
+        this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
         h('h3', null, 'What happened'),
         h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),
         m.builtThisExpedition.length
@@ -1213,6 +1227,7 @@ export class App {
           built.length ? built.map((id, i) => [i ? ', ' : '', `${UPGRADES[id].name}${maxLevel(id) > 1 ? ` x${c.base.levels[id]}` : ''}`]) : 'the same as the first crew found it',
           '. Three crews, one base: every crew built on the work of the one before. That is how real space stations and bases grow.',
         ),
+        classCodeLine(c.classCode),
         h('div', { class: 'card event' }, h('div', { class: 'kicker' }, 'Talk about it'), h('ul', { class: 'clean' }, TALK_ABOUT_IT[3].map((q) => h('li', null, q)))),
         h(
           'div',

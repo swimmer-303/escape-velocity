@@ -18,9 +18,12 @@ export function isFast(e: SpaceWeatherEvent): boolean {
 export const MAY2024_START = Date.UTC(2024, 4, 6);
 
 export function chooseStorms(rng: Rng, pool: SpaceWeatherEvent[], count: number, maxMajor: number): SpaceWeatherEvent[] {
+  // Sort first, so the same events give the same storms whatever order they arrived in
+  // (one class code = the same Mars on every student's device).
+  const events = [...pool].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const byTier = (sev: Severity) => {
-    const live = shuffle(rng, pool.filter((e) => e.severity === sev && e.origin === 'live'));
-    const archive = shuffle(rng, pool.filter((e) => e.severity === sev && e.origin === 'archive'));
+    const live = shuffle(rng, events.filter((e) => e.severity === sev && e.origin === 'live'));
+    const archive = shuffle(rng, events.filter((e) => e.severity === sev && e.origin === 'archive'));
     return [...live, ...archive];
   };
   const majors = byTier('major');
