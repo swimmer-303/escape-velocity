@@ -2,7 +2,7 @@
 // TEST FIXTURES ONLY. These shapes mimic DONKI records so tests do not depend on the network.
 // They are never shown in the game; the game only uses real DONKI records.
 import type { MissionConfig, SpaceWeatherEvent } from './types';
-import type { Difficulty, Site } from './constants';
+import type { Difficulty, Landing, Site } from './constants';
 import { freshBase, type BaseState } from './upgrades';
 
 const ev = (i: number, severity: SpaceWeatherEvent['severity'], cls: string): SpaceWeatherEvent => ({
@@ -26,7 +26,16 @@ export const TEST_POOL: SpaceWeatherEvent[] = [
   ev(9, 'minor', 'C5.1'),
 ];
 
-export function testConfig(seed: string, difficulty: Difficulty = 'cadet', expedition = 1, base: BaseState = freshBase(), prefillPct = 0, site?: Site): MissionConfig {
+export function testConfig(
+  seed: string,
+  difficulty: Difficulty = 'cadet',
+  expedition = 1,
+  base: BaseState = freshBase(),
+  prefillPct = 0,
+  site?: Site,
+  landing?: Landing,
+): MissionConfig {
   if (site === 'moon') return { seed, difficulty, site, lightTimeMin: 1.3 / 60, eventPool: TEST_POOL, expedition, base, prefillPct };
+  if (landing === 'arcadia') return { seed, difficulty, landing, lightTimeMin: 12, eventPool: TEST_POOL, expedition, base, prefillPct };
   return { seed, difficulty, lightTimeMin: 12, eventPool: TEST_POOL, expedition, base, prefillPct };
 }

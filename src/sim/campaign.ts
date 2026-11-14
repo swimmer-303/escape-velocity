@@ -4,7 +4,7 @@
 // robot O2 plant keeps working and pre-fills the next crew's rocket.
 // On the Moon there is no 26-month wait (the Moon is always close), but the base still sits empty between crews.
 
-import { EXPEDITIONS, PREFILL_MAX_PCT, PREFILL_PCT_PER_CELL, REAL, tuningFor, type Difficulty, type Site } from './constants';
+import { EXPEDITIONS, PREFILL_MAX_PCT, PREFILL_PCT_PER_CELL, REAL, landingOf, tuningFor, type Difficulty, type Landing, type Site } from './constants';
 import { REACTOR_CELLS, UPGRADE_BOOST } from './sim';
 import { freshBase, type BaseState, type UpgradeId } from './upgrades';
 import { isMissionSeries, missionSeries, type MissionSeries } from './series';
@@ -39,6 +39,8 @@ export interface Campaign {
   difficulty: Difficulty;
   /** Mars or the Moon. Missing in saves from before the Moon existed: those are Mars. */
   site?: Site;
+  /** Mars only: where the base lands. Missing (Gale Crater, and every save from before landing sites existed) means Gale. */
+  landing?: Landing;
   /** Current expedition, 1-based. Past the last one = campaign complete. */
   expedition: number;
   /** The base when the current expedition started (used for retries). */
@@ -48,9 +50,11 @@ export interface Campaign {
   usedEventIds: string[];
 }
 
-export function newCampaign(seed: string, difficulty: Difficulty, site: Site = 'mars'): Campaign {
+export function newCampaign(seed: string, difficulty: Difficulty, site: Site = 'mars', landing: Landing = 'gale'): Campaign {
   const base = freshBase();
-  return { version: 1, seed, difficulty, site, expedition: 1, base, prefillPct: 0, results: [], usedEventIds: [] };
+  // Only Arcadia is written down, so a Gale Crater campaign looks exactly as it always has.
+  const ice = site === 'mars' && landing === 'arcadia' ? { landing } : {};
+  return { version: 1, seed, difficulty, site, ...ice, expedition: 1, base, prefillPct: 0, results: [], usedEventIds: [] };
 }
 
 export function campaignDone(c: Campaign): boolean {
@@ -64,6 +68,7 @@ export function missionConfigFor(c: Campaign, lightTimeMin: number, eventPool: S
     seed: c.seed,
     difficulty: c.difficulty,
     ...(moon ? { site: 'moon' as const } : {}),
+    ...(landingOf(c) === 'arcadia' ? { landing: 'arcadia' as const } : {}),
     lightTimeMin: moon ? REAL.moonLightSec / 60 : lightTimeMin,
     eventPool,
     expedition: c.expedition,
@@ -74,8 +79,8 @@ export function missionConfigFor(c: Campaign, lightTimeMin: number, eventPool: S
 }
 
 /** How full the robot O2 plant gets the next crew's tank while the base is empty (on Mars, the ~26 months between crews). */
-export function prefillFor(base: BaseState, difficulty: Difficulty, site?: Site): number {
-  const cells = tuningFor(difficulty, site).baseCells + base.levels.panel + (base.levels.reactor ? REACTOR_CELLS : 0);
+export function prefillFor(base: BaseState, difficulty: Difficulty, site?: Site, landing?: Landing): number {
+  const cells = tuningFor(difficulty, site, landing).baseCells + base.levels.panel + (base.levels.reactor ? REACTOR_CELLS : 0);
   const boost = base.levels.moxie2 ? UPGRADE_BOOST : 1;
   return Math.min(PREFILL_MAX_PCT, Math.round(cells * PREFILL_PCT_PER_CELL * boost));
 }
@@ -116,7 +121,7 @@ export function finishExpedition(c: Campaign, end: MissionState): Campaign {
     ...c,
     expedition: c.expedition + 1,
     base: { levels: { ...end.base.levels }, progress: { ...end.base.progress }, project: end.base.project },
-    prefillPct: prefillFor(end.base, c.difficulty, c.site),
+    prefillPct: prefillFor(end.base, c.difficulty, c.site, landingOf(c)),
     results,
     usedEventIds: [...used],
   };

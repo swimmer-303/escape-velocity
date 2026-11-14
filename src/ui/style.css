@@ -565,3 +565,12 @@ table.mc-players td { vertical-align: middle; }
 .today-event { box-shadow: inset 0 0 0 3px var(--amber); }
 .today-calm { box-shadow: inset 0 0 0 3px var(--green); }
 @media (max-width: 900px) { .tray-actions { margin-left: 0; width: 100%; } }
+
+/* ---------- Landing site ---------- */
+.landing-pick { margin-bottom: 12px; }
+.landing-pick h3 { margin: 0 0 8px; }
+.landing-pick .crates { grid-template-columns: repeat(2, 1fr); }
+.landing-card { box-shadow: inset 0 0 0 2px var(--air); }
+.landing-card .landing-effects { margin: 8px 0; }
+.landing-card .landing-effects li { margin: 4px 0; }
+@media (max-width: 900px) { .landing-pick .crates { grid-template-columns: 1fr; } }

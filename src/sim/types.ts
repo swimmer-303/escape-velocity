@@ -1,5 +1,5 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-import type { Difficulty, Site } from './constants';
+import type { Difficulty, Landing, Site } from './constants';
 import type { BaseState, UpgradeId } from './upgrades';
 
 export type ModuleId = 'air' | 'fuel' | 'greenhouse' | 'heaters' | 'shelter' | 'monitor' | 'build' | 'battery';
@@ -60,6 +60,8 @@ export interface MissionConfig {
   difficulty: Difficulty;
   /** Where the base is: Mars (default, also for old saves) or the Moon. */
   site?: Site;
+  /** Mars only: where the base lands. Missing (old saves) means Gale Crater. */
+  landing?: Landing;
   /** One-way Earth to Mars (or Moon) light time used for the comm-delay mechanic, minutes. */
   lightTimeMin: number;
   /** Real space-weather events to deal into the mission. */

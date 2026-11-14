@@ -120,7 +120,7 @@ export class ThreeStage implements Stage {
   }
 
   setScene(scene: StageScene) {
-    const siteChanged = (scene.site ?? 'mars') !== (this.sceneInfo?.site ?? 'mars');
+    const siteChanged = (scene.site ?? 'mars') !== (this.sceneInfo?.site ?? 'mars') || (scene.landing ?? 'gale') !== (this.sceneInfo?.landing ?? 'gale');
     this.sceneInfo = scene;
     this.diorama?.setScene(scene);
     // A new world needs a new sky and new light right away.

@@ -6,6 +6,9 @@ import { Diorama } from './diorama';
 import { galeRelativeMeters, marsHeight, EXAGGERATION } from './gale';
 import { GALE_EXAGGERATION, GALE_PRODUCT, GALE_PRODUCT_URL } from './gale-info';
 import gale from '../data/snapshots/gale-terrain.json';
+import arcadia from '../data/snapshots/arcadia-terrain.json';
+import { arcadiaRelativeMeters, arcadiaHeight, frostAmount } from './arcadia';
+import { ARCADIA_RELIEF_M, GALE_RELIEF_M, ARCADIA_ELEVATION_M, GALE_ELEVATION_M } from './arcadia-info';
 import { emptyLevels, UPGRADE_IDS, maxLevel } from '../sim/upgrades';
 import { emptyAlloc } from '../sim/sim';
 
@@ -153,5 +156,94 @@ describe('Gale Crater terrain from NASA Mars Trek', () => {
     expect(best.h).toBeGreaterThan(4000);
     // The orbiting camera (up to 38 units out, and at least ~7 units up out there) stays above the ground.
     for (let a = 0; a < 360; a += 5) expect(marsHeight(Math.cos((a * Math.PI) / 180) * 38, Math.sin((a * Math.PI) / 180) * 38)).toBeLessThan(6);
+  });
+});
+
+describe('the ice landing site: Arcadia Planitia', () => {
+  const all = emptyLevels();
+  for (const id of UPGRADE_IDS) all[id] = maxLevel(id);
+  const scene = (landing?: string, site: 'mars' | 'moon' = 'mars') => ({
+    sol: 2,
+    weather: 'clear' as const,
+    alloc: { ...emptyAlloc(), air: 1, fuel: 2, greenhouse: 1, heaters: 1 },
+    fuel: 30,
+    sheltered: false,
+    levels: all,
+    crew: 4,
+    site,
+    landing,
+  });
+  const shown = (d: Diorama, name: string) => {
+    let o: THREE.Object3D | null | undefined = d.group.getObjectByName(name);
+    if (!o) return false;
+    for (; o; o = o.parent) if (!o.visible) return false;
+    return true;
+  };
+  const maxRelief = (d: Diorama, rMax: number) => {
+    let m = 0;
+    for (let x = -rMax; x <= rMax; x += 2)
+      for (let z = -rMax; z <= rMax; z += 2) if (Math.hypot(x, z) <= rMax) m = Math.max(m, Math.abs(d.groundHeight(x, z)));
+    return m;
+  };
+
+  it('shows flat, frosty plains with no Mount Sharp, keeps the pad flat, and switches back to Gale', () => {
+    const d = new Diorama();
+    d.setScene(scene());
+    const galeRelief = maxRelief(d, 70);
+    expect(d.group.getObjectByName('arcadia-ground')).toBeUndefined(); // built only when needed
+
+    d.setScene(scene('arcadia'));
+    for (let i = 0; i < 30; i++) d.tick(1 / 30, i / 30, false);
+    expect(d.currentSite).toBe('mars');
+    expect(d.currentLanding).toBe('arcadia');
+    expect(shown(d, 'arcadia-ground')).toBe(true);
+    expect(shown(d, 'mars-ground')).toBe(false);
+    expect(shown(d, 'frost')).toBe(true);
+    // No Mount Sharp: within 70 km the ground stays within about a unit of the base (Gale: kilometers).
+    expect(maxRelief(d, 70)).toBeLessThan(1);
+    expect(galeRelief).toBeGreaterThan(5);
+    for (let a = 0; a < 360; a += 10)
+      for (const r of [0, 4, 8, 10.9]) expect(Math.abs(d.groundHeight(Math.cos((a * Math.PI) / 180) * r, Math.sin((a * Math.PI) / 180) * r))).toBe(0);
+    for (let k = 0; k <= 1; k += 0.1) d.launchStep(k);
+    expect(d.rocketPosition().y).toBeGreaterThan(50);
+    d.resetLaunch();
+
+    // A landing site means nothing on the Moon.
+    d.setScene(scene('arcadia', 'moon'));
+    expect(d.currentLanding).toBe('gale');
+    expect(shown(d, 'moon-ground')).toBe(true);
+    expect(shown(d, 'arcadia-ground')).toBe(false);
+
+    d.setScene(scene('gale'));
+    expect(shown(d, 'mars-ground')).toBe(true);
+    expect(shown(d, 'arcadia-ground')).toBe(false);
+    expect(maxRelief(d, 70)).toBeCloseTo(galeRelief, 6);
+  });
+
+  it('is a real Mars Trek elevation grid (same product as Gale) centered on Arcadia Planitia', () => {
+    expect(arcadia.units).toBe('m');
+    expect(arcadia.heights.length).toBe(arcadia.size.cols * arcadia.size.rows);
+    expect(arcadia.product).toBe(GALE_PRODUCT);
+    expect(arcadia.productInfoUrl).toBe(GALE_PRODUCT_URL);
+    expect(arcadia.sourceUrls.some((u) => u.startsWith('https://trek.nasa.gov/'))).toBe(true);
+    expect(arcadia.center.lat).toBeCloseTo(46.66, 2);
+    expect(arcadia.center.lon).toBeCloseTo(192, 2);
+    const mid = ((arcadia.size.rows - 1) / 2) * arcadia.size.cols + (arcadia.size.cols - 1) / 2;
+    expect(arcadia.heights[mid]).toBe(arcadia.center.elevationM);
+    expect(arcadiaRelativeMeters(0, 0)).toBe(0);
+    // Low, smooth plains: a few hundred meters of relief across the whole snapshot (Gale: over 5 km).
+    expect(arcadia.range.max - arcadia.range.min).toBeLessThan(1000);
+    expect(gale.range.max - gale.range.min).toBeGreaterThan(5000);
+    // The grid reaches about as far east-west as north-south, even this far north.
+    const ewKm = (arcadia.size.cols - 1) * arcadia.spacingKm.eastWest;
+    const nsKm = (arcadia.size.rows - 1) * arcadia.spacingKm.northSouth;
+    expect(Math.abs(ewKm - nsKm)).toBeLessThan(10);
+    expect(frostAmount(0, 0)).toBe(0);
+    expect(arcadiaHeight(0, 0)).toBe(0);
+    // The Science Log's numbers match the snapshots.
+    expect(ARCADIA_RELIEF_M).toBe(arcadia.range.max - arcadia.range.min);
+    expect(GALE_RELIEF_M).toBe(gale.range.max - gale.range.min);
+    expect(ARCADIA_ELEVATION_M).toBe(arcadia.center.elevationM);
+    expect(GALE_ELEVATION_M).toBe(gale.center.elevationM);
   });
 });

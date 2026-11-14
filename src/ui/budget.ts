@@ -4,8 +4,7 @@
 
 import { h, clear, fmt1 } from './dom';
 import { icon, type IconName } from './icons';
-import { RATES } from '../sim/constants';
-import { moduleCap, airPerCell, foodPerGreenhouseCell, fuelPctPerCell, type Preview } from '../sim/sim';
+import { moduleCap, airPerCell, foodPerGreenhouseCell, greenhouseAirPerCell, fuelPctPerCell, type Preview } from '../sim/sim';
 import { UPGRADES, nextCost, upgradeDef } from '../sim/upgrades';
 import { MOON_BATTERY } from '../sim/constants';
 import { siteText, type Site } from '../sim/site';
@@ -192,7 +191,7 @@ export class BudgetDock {
       case 'greenhouse':
         return {
           text: a
-            ? h('span', null, h('b', null, `+${fmt1((a * foodPerGreenhouseCell(s)) / crew)}`), ' days food, ', h('b', null, `+${fmt1((a * RATES.airPerGreenhouseCell) / crew)}`), ' air')
+            ? h('span', null, h('b', null, `+${fmt1((a * foodPerGreenhouseCell(s)) / crew)}`), ' days food, ', h('b', null, `+${fmt1((a * greenhouseAirPerCell(s)) / crew)}`), ' air')
             : 'No food grown',
           cls: a ? 'good' : 'warn',
         };

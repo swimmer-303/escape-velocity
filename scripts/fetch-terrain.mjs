@@ -1,8 +1,9 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 //
-// Snapshot REAL Gale Crater elevations from NASA Mars Trek for the 3D diorama's skyline.
+// Snapshot REAL Mars elevations from NASA Mars Trek for the 3D diorama's skyline.
 //
-//   node scripts/fetch-terrain.mjs
+//   node scripts/fetch-terrain.mjs                  Gale Crater (Curiosity's landing site) -> gale-terrain.json
+//   node scripts/fetch-terrain.mjs --site=arcadia   Arcadia Planitia (the ice landing site) -> arcadia-terrain.json
 //
 // Node 22+, ESM, no dependencies (uses global fetch and a tiny built-in TIFF reader).
 //
@@ -18,9 +19,9 @@
 // Curiosity's landing site, read the raw floats, and store them as whole meters.
 // Nothing is drawn, shaded or guessed.
 //
-// Writes src/data/snapshots/gale-terrain.json:
+// Writes src/data/snapshots/<site>-terrain.json:
 //   heights: rows x cols numbers in meters, row-major, row 0 = northern edge, column 0 = western edge,
-//            each value at a pixel center; the center pixel is the landing site.
+//            each value at a pixel center; the center pixel is the base site.
 //
 // Safety rule (same as fetch-data.mjs): the snapshot is only replaced when every check passes.
 
@@ -29,7 +30,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = join(ROOT, 'src', 'data', 'snapshots', 'gale-terrain.json');
 const USER_AGENT = 'escape-velocity-data-fetch/1.0 (NASA Space Apps 2026 student game)';
 
 const LAYER = 'Mars_MOLA_blend200ppx_HRSC_DEM_clon0dd_200mpp_lzw';
@@ -38,18 +38,42 @@ const SERVICE = `${SERVICES}/${LAYER}/ImageServer`;
 // Mars Trek's product catalog entry for the same layer (title "MGS MOLA and Mars Express HRSC, DEM").
 const CATALOG = `https://trek.nasa.gov/mars/TrekServices/ws/index/eq/searchItems?start=0&rows=5&facetKeys=itemType%7CproductLabel&facetValues=product%7C${LAYER}`;
 
-// Bradbury Landing, where Curiosity touched down on Aug 6, 2012 (planetocentric, east-positive).
-const SITE = {
-  name: 'Bradbury Landing (Curiosity landing site)',
-  lat: -4.5895,
-  lon: 137.4417,
-  sourceUrl: 'https://en.wikipedia.org/wiki/Bradbury_Landing',
+// The sites (planetocentric, east-positive longitudes, 0-360).
+const SITES = {
+  // Bradbury Landing, where Curiosity touched down on Aug 6, 2012.
+  gale: {
+    file: 'gale-terrain.json',
+    name: 'Bradbury Landing (Curiosity landing site)',
+    lat: -4.5895,
+    lon: 137.4417,
+    sourceUrl: 'https://en.wikipedia.org/wiki/Bradbury_Landing',
+    label: 'landing site',
+  },
+  // The center of Arcadia Planitia, from the IAU/USGS Gazetteer of Planetary Nomenclature (feature 348):
+  // center latitude 46.66, center longitude 192.00 (planetocentric, +East, 0-360). NASA's SWIM project maps
+  // likely shallow ice here (see scripts/fetch-swim.mjs).
+  arcadia: {
+    file: 'arcadia-terrain.json',
+    name: 'Arcadia Planitia (center of the plain, IAU/USGS Gazetteer)',
+    lat: 46.66,
+    lon: 192.0,
+    sourceUrl: 'https://planetarynames.wr.usgs.gov/Feature/348',
+    label: 'base site',
+  },
 };
+const siteArg = (process.argv.find((a) => a.startsWith('--site=')) ?? '--site=gale').slice('--site='.length);
+const SITE = SITES[siteArg];
+if (!SITE) throw new Error(`unknown --site=${siteArg} (choose ${Object.keys(SITES).join(' or ')})`);
+const OUT = join(ROOT, 'src', 'data', 'snapshots', SITE.file);
 
-// Grid: SIZE x SIZE samples centered on the landing site, SPACING_KM apart north-south (+-120 km).
-// The image server only returns square pixels in degrees, so east-west spacing is SPACING_KM x cos(latitude)
-// (2.99 km here): close enough to square for a skyline, and recorded in the snapshot.
+// Grid: ROWS samples north-south, SPACING_KM apart (+-120 km), centered on the site.
+// The image server only returns square pixels in degrees, so east-west spacing is SPACING_KM x cos(latitude):
+// 2.99 km at Gale Crater, but only 2.06 km at Arcadia Planitia (46.66 N). So there are more columns than rows
+// far from the equator, enough to reach about as far east and west as north and south. The spacing is recorded
+// in the snapshot. (At Gale this gives 81 x 81, exactly as before.)
 const SIZE = 81;
+const ROWS = SIZE;
+const COLS = 2 * Math.round((SIZE / Math.cos((SITE.lat * Math.PI) / 180) - 1) / 2) + 1; // odd, so the middle column is the site
 const SPACING_KM = 3;
 // Mars 2000 sphere radius used by the service's coordinate system (GCS_Mars_2000, 3,396,190 m).
 const MARS_RADIUS_KM = 3396.19;
@@ -143,27 +167,31 @@ async function main() {
   if (meta.bandCount !== 1 || !/^[SUF]\d+$/.test(meta.pixelType ?? '')) throw new Error(`unexpected service: ${meta.bandCount} bands, ${meta.pixelType}`);
   console.log(`      service ${meta.name}: ${meta.pixelType}, ${meta.pixelSizeX} deg/px, values ${meta.minValues} .. ${meta.maxValues}`);
 
-  // 3. Ask for the grid. Pixel-is-area: the bbox spans SIZE whole pixels, so pixel centers are
-  //    a whole number of pixels apart and the middle pixel sits on the landing site.
+  // 3. Ask for the grid. Pixel-is-area: the bbox spans COLS x ROWS whole pixels, so pixel centers are
+  //    a whole number of pixels apart and the middle pixel sits on the site.
+  //    The image server's longitudes run from -180 to 180, so 192 E is asked for as -168.
   const kmPerDegLat = (Math.PI / 180) * MARS_RADIUS_KM;
   const kmPerDegLon = kmPerDegLat * Math.cos((SITE.lat * Math.PI) / 180);
-  const halfDeg = (SIZE * SPACING_KM) / 2 / kmPerDegLat;
-  const bounds = { west: SITE.lon - halfDeg, east: SITE.lon + halfDeg, south: SITE.lat - halfDeg, north: SITE.lat + halfDeg };
-  const spacingKm = { northSouth: SPACING_KM, eastWest: Number(((2 * halfDeg * kmPerDegLon) / SIZE).toFixed(4)) };
+  const degPerPx = SPACING_KM / kmPerDegLat;
+  const halfLat = (ROWS * degPerPx) / 2;
+  const halfLon = (COLS * degPerPx) / 2;
+  const lon = SITE.lon > 180 ? SITE.lon - 360 : SITE.lon;
+  const bounds = { west: lon - halfLon, east: lon + halfLon, south: SITE.lat - halfLat, north: SITE.lat + halfLat };
+  const spacingKm = { northSouth: SPACING_KM, eastWest: Number(((2 * halfLon * kmPerDegLon) / COLS).toFixed(4)) };
   const round = (v) => Number(v.toFixed(6));
   const bbox = [bounds.west, bounds.south, bounds.east, bounds.north].map(round).join(',');
   const exportUrl =
-    `${SERVICE}/exportImage?bbox=${bbox}&bboxSR=${SR}&imageSR=${SR}&size=${SIZE},${SIZE}` +
+    `${SERVICE}/exportImage?bbox=${bbox}&bboxSR=${SR}&imageSR=${SR}&size=${COLS},${ROWS}` +
     `&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image`;
   const res = await get(exportUrl, 'image/tiff');
   const type = res.headers.get('content-type') ?? '';
   if (!type.includes('tiff')) throw new Error(`expected a TIFF, got ${type}`);
   const tif = readFloatTiff(new Uint8Array(await res.arrayBuffer()));
-  if (tif.width !== SIZE || tif.height !== SIZE) throw new Error(`asked for ${SIZE}x${SIZE}, got ${tif.width}x${tif.height}`);
+  if (tif.width !== COLS || tif.height !== ROWS) throw new Error(`asked for ${COLS}x${ROWS}, got ${tif.width}x${tif.height}`);
 
   // 4. Check the georeferencing matches what we asked for.
-  const degLon = (bounds.east - bounds.west) / SIZE;
-  const degLat = (bounds.north - bounds.south) / SIZE;
+  const degLon = (bounds.east - bounds.west) / COLS;
+  const degLat = (bounds.north - bounds.south) / ROWS;
   if (tif.pixelScale && (Math.abs(tif.pixelScale[0] - degLon) > 1e-4 || Math.abs(tif.pixelScale[1] - degLat) > 1e-4))
     throw new Error(`pixel scale ${tif.pixelScale} does not match the request (${degLon}, ${degLat})`);
   if (tif.tiepoint && (Math.abs(tif.tiepoint[3] - bounds.west) > 1e-3 || Math.abs(tif.tiepoint[4] - bounds.north) > 1e-3))
@@ -180,18 +208,19 @@ async function main() {
     min = Math.min(min, m);
     max = Math.max(max, m);
   }
-  const center = heights[((SIZE - 1) / 2) * SIZE + (SIZE - 1) / 2];
+  const center = heights[((ROWS - 1) / 2) * COLS + (COLS - 1) / 2];
 
-  // 6. Cross-check the landing site at full resolution (the grid above is resampled).
+  // 6. Cross-check the site at full resolution (the grid above is resampled).
   let siteFullRes = null;
   try {
-    const idUrl = `${SERVICE}/identify?geometry=${encodeURIComponent(JSON.stringify({ x: SITE.lon, y: SITE.lat, spatialReference: { wkid: SR } }))}&geometryType=esriGeometryPoint&returnGeometry=false&returnCatalogItems=false&f=json`;
+    const idUrl = `${SERVICE}/identify?geometry=${encodeURIComponent(JSON.stringify({ x: lon, y: SITE.lat, spatialReference: { wkid: SR } }))}&geometryType=esriGeometryPoint&returnGeometry=false&returnCatalogItems=false&f=json`;
     const id = await (await get(idUrl, 'application/json')).json();
     const v = Number(id?.value);
     if (Number.isFinite(v)) siteFullRes = v;
   } catch (e) {
-    console.warn(`WARN  full-resolution check at the landing site failed: ${e.message}`);
+    console.warn(`WARN  full-resolution check at the ${SITE.label} failed: ${e.message}`);
   }
+  const siteInfo = { name: SITE.name, lat: SITE.lat, lon: SITE.lon, sourceUrl: SITE.sourceUrl };
 
   const data = {
     source: 'NASA Mars Trek (NASA/JPL Solar System Treks), ArcGIS image service for the Mars Trek DEM layer',
@@ -202,29 +231,30 @@ async function main() {
     productInfoUrl: 'https://astrogeology.usgs.gov/search/map/mars_mgs_mola_mex_hrsc_blended_dem_global_200m',
     encodes: 'Elevation in meters (the service stores signed 16-bit meters; we asked for 32-bit floats and rounded to whole meters). These are real heights, not shaded-relief colors.',
     fetchedAt: new Date().toISOString(),
-    center: { ...SITE, elevationM: center, elevationFullResM: siteFullRes },
+    center: { ...siteInfo, elevationM: center, elevationFullResM: siteFullRes },
     bounds: Object.fromEntries(Object.entries(bounds).map(([k, v]) => [k, round(v)])),
-    size: { cols: SIZE, rows: SIZE },
+    size: { cols: COLS, rows: ROWS },
     spacingKm,
-    order: 'row-major; row 0 = northern edge, column 0 = western edge; values at pixel centers; the middle sample is the landing site',
+    order: `row-major; row 0 = northern edge, column 0 = western edge; values at pixel centers; the middle sample is the ${SITE.label}`,
     units: 'm',
     range: { min, max },
     heights,
     notes:
-      `A ${SIZE} x ${SIZE} grid, ${spacingKm.northSouth} km apart north-south and ${spacingKm.eastWest} km east-west (about ${(SIZE - 1) * SPACING_KM} km across), resampled from the 200 m DEM by the Mars Trek image server (bilinear). ` +
-      'Degrees were converted to km on the Mars 2000 sphere (radius 3,396.19 km) with a flat (equirectangular) approximation around the landing site. ' +
-      'The game uses only height differences from the landing site. In the diorama the landscape is shrunk to 1 scene unit per km (the base itself is not to scale), ' +
-      'heights are exaggerated (see src/render/gale.ts), and the ground right around the base is flattened for the buildings.',
+      `A ${COLS} x ${ROWS} grid, ${spacingKm.northSouth} km apart north-south and ${spacingKm.eastWest} km east-west (about ${(ROWS - 1) * SPACING_KM} km across), resampled from the 200 m DEM by the Mars Trek image server (bilinear). ` +
+      `Degrees were converted to km on the Mars 2000 sphere (radius 3,396.19 km) with a flat (equirectangular) approximation around the ${SITE.label}. ` +
+      (lon !== SITE.lon ? `Bounds use the image server's -180..180 east longitudes (${SITE.lon} E = ${lon}). ` : '') +
+      `The game uses only height differences from the ${SITE.label}. In the diorama the landscape is shrunk to 1 scene unit per km (the base itself is not to scale), ` +
+      `heights are exaggerated (see src/render/${siteArg}.ts), and the ground right around the base is flattened for the buildings.`,
   };
 
   await mkdir(dirname(OUT), { recursive: true });
   const tmp = `${OUT}.tmp`;
   await writeFile(tmp, `${JSON.stringify(data, null, 1).replace(/\n\s+(-?\d+)(?=,|\n)/g, ' $1')}\n`, 'utf8');
   await rename(tmp, OUT);
-  console.log(`      wrote src/data/snapshots/gale-terrain.json: ${SIZE}x${SIZE}, ${min} .. ${max} m, landing site ${center} m (full res ${siteFullRes ?? 'n/a'} m)`);
+  console.log(`      wrote src/data/snapshots/${SITE.file}: ${COLS}x${ROWS}, ${min} .. ${max} m, ${SITE.label} ${center} m (full res ${siteFullRes ?? 'n/a'} m)`);
 }
 
 main().catch((e) => {
-  console.warn(`WARN  gale-terrain.json: ${e.message} -> kept the existing snapshot unchanged`);
+  console.warn(`WARN  ${SITE.file}: ${e.message} -> kept the existing snapshot unchanged`);
   process.exitCode = 1;
 });

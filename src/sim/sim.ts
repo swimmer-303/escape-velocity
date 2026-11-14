@@ -15,9 +15,12 @@ import {
   SUN_EARTH_LIGHT_MIN,
   MOON_BATTERY,
   MOON_NIGHT,
+  ARCADIA,
   expeditionFor,
   tuningFor,
+  landingOf,
   type ExpeditionSpec,
+  type Landing,
   type Site,
 } from './constants';
 import { buildPlan } from './plan';
@@ -50,12 +53,12 @@ export function totalCells(a: Allocation): number {
   return MODULE_IDS.reduce((s, id) => s + a[id], 0);
 }
 
-export function expeditionSpec(config: Pick<MissionConfig, 'expedition'> & { site?: Site }): ExpeditionSpec {
-  return expeditionFor(config.expedition, config.site);
+export function expeditionSpec(config: Pick<MissionConfig, 'expedition'> & { site?: Site; landing?: Landing }): ExpeditionSpec {
+  return expeditionFor(config.expedition, config.site, landingOf(config));
 }
 
 export function windowSol(state: MissionState): number {
-  return expeditionSpec(state.config).windowSol + tuningFor(state.config.difficulty, state.config.site).windowBonus;
+  return expeditionSpec(state.config).windowSol + tuningFor(state.config.difficulty, state.config.site, landingOf(state.config)).windowBonus;
 }
 
 function cloneBase(b: BaseState): BaseState {
@@ -63,7 +66,7 @@ function cloneBase(b: BaseState): BaseState {
 }
 
 export function createMission(config: MissionConfig): MissionState {
-  const t = tuningFor(config.difficulty, config.site);
+  const t = tuningFor(config.difficulty, config.site, landingOf(config));
   const spec = expeditionSpec(config);
   return {
     config,
@@ -98,6 +101,9 @@ export const has = (s: MissionState, id: UpgradeId) => s.base.levels[id] > 0;
 
 /** Moon rules apply (lunar night, regolith O2, no dust, Earth 1.3 light-seconds away). */
 export const isMoon = (s: MissionState) => s.config.site === 'moon';
+
+/** Mars, landed on the ice-rich plains of Arcadia Planitia (less sun, colder nights, water for the greenhouse). */
+export const isIceSite = (s: MissionState) => landingOf(s.config) === 'arcadia';
 
 /** Moon only: is this turn part of the lunar night? Always false on Mars. */
 export function isNight(s: MissionState, sol = s.sol): boolean {
@@ -139,7 +145,11 @@ export function fuelPctPerCell(s: MissionState) {
   return (100 / expeditionSpec(s.config).fuelNeeded) * (has(s, 'moxie2') ? UPGRADE_BOOST : 1);
 }
 export function foodPerGreenhouseCell(s: MissionState) {
-  return RATES.foodPerGreenhouseCell * (has(s, 'dome2') ? UPGRADE_BOOST : 1);
+  return RATES.foodPerGreenhouseCell * (has(s, 'dome2') ? UPGRADE_BOOST : 1) * (isIceSite(s) ? ARCADIA.greenhouseBoost : 1);
+}
+/** Air from the greenhouse plants, per cell. At the ice site the plants grow more, so they also breathe out more oxygen. */
+export function greenhouseAirPerCell(s: MissionState) {
+  return RATES.airPerGreenhouseCell * (isIceSite(s) ? ARCADIA.greenhouseBoost : 1);
 }
 export function shelterBlock(s: MissionState): readonly number[] {
   return has(s, 'berm') ? [0, SHELTER_BLOCK[2], SHELTER_BLOCK[2]] : SHELTER_BLOCK;
@@ -147,7 +157,7 @@ export function shelterBlock(s: MissionState): readonly number[] {
 
 /** Solar cells on a clear sol, from the starting array plus panels built. */
 export function solarCells(s: MissionState) {
-  return tuningFor(s.config.difficulty, s.config.site).baseCells + s.base.levels.panel;
+  return tuningFor(s.config.difficulty, s.config.site, landingOf(s.config)).baseCells + s.base.levels.panel;
 }
 
 /** Most cells each module can take today. */
@@ -295,7 +305,7 @@ function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undef
   }
 
   // Production.
-  const airMade = alloc.air * airPerCell(state) + alloc.greenhouse * RATES.airPerGreenhouseCell;
+  const airMade = alloc.air * airPerCell(state) + alloc.greenhouse * greenhouseAirPerCell(state);
   const foodMade = alloc.greenhouse * foodPerGreenhouseCell(state);
   const fuelAdd = alloc.fuel * fuelPctPerCell(state);
   const fuelMade = Math.min(100 - s.fuel, fuelAdd);

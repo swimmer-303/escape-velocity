@@ -7,7 +7,7 @@ import { moduleCap } from './sim';
 import { MODULE_IDS, type Allocation, type MissionState, type ModuleId } from './types';
 import { freshBase, type BaseState } from './upgrades';
 import { finishExpedition, newCampaign, missionConfigFor, serialize, deserialize, prefillFor } from './campaign';
-import { MOON_BATTERY, REAL, type Site } from './constants';
+import { MOON_BATTERY, REAL, type Landing, type Site } from './constants';
 
 /** A base with the monitor and battery built, so every module exists. */
 function fullBase(): BaseState {
@@ -39,12 +39,12 @@ function moonBase(reactor = false): BaseState {
 }
 
 /** States visited by a reasonable player across many seeds. */
-function sampleStates(difficulty: 'cadet' | 'commander', seeds = 25, site: Site = 'mars'): MissionState[] {
+function sampleStates(difficulty: 'cadet' | 'commander', seeds = 25, site: Site = 'mars', landing?: Landing): MissionState[] {
   const out: MissionState[] = [];
   for (let i = 0; i < seeds; i++) {
     for (const exp of [1, 2, 3]) {
       const base = site === 'moon' ? moonBase(exp === 3) : fullBase();
-      let s = createMission(testConfig(`nfc-${i}`, difficulty, exp, base, 10, site));
+      let s = createMission(testConfig(`nfc-${i}`, difficulty, exp, base, 10, site, landing));
       while (s.status === 'playing') {
         out.push(s);
         const { alloc, crate } = builder(s);
@@ -55,11 +55,17 @@ function sampleStates(difficulty: 'cadet' | 'commander', seeds = 25, site: Site 
   return out;
 }
 
+/** Mars at Gale Crater, the Moon, and Mars at the ice landing site (Arcadia Planitia). */
+type Place = 'mars' | 'moon' | 'arcadia';
+const PLACES: Record<Place, { site: Site; landing?: Landing }> = { mars: { site: 'mars' }, moon: { site: 'moon' }, arcadia: { site: 'mars', landing: 'arcadia' } };
+const landingIn = (place: Place) => PLACES[place].landing;
+
 describe('no free choices', () => {
-  it.each(['mars', 'moon'] as const)('%s: moving a useful power cell from one job to another always costs something', (site) => {
+  it.each(['mars', 'moon', 'arcadia'] as const)('%s: moving a useful power cell from one job to another always costs something', (place) => {
+    const site = PLACES[place].site;
     let checked = 0;
     for (const difficulty of ['cadet', 'commander'] as const) {
-      for (const state of sampleStates(difficulty, 25, site)) {
+      for (const state of sampleStates(difficulty, 25, site, landingIn(place))) {
         const base = builder(state).alloc;
         const baseMetrics = (['none', 'major'] as const).map((sc) => metrics(state, base, sc));
         for (const from of MODULE_IDS) {
@@ -72,7 +78,7 @@ describe('no free choices', () => {
             if (to === from || base[to] >= moduleCap(state, to as ModuleId)) continue;
             const moved = { ...base, [from]: base[from] - 1, [to]: base[to] + 1 };
             const costs = (['none', 'major'] as const).some((sc, k) => worseSomewhere(baseMetrics[k], metrics(state, moved, sc)));
-            expect(costs, `${site} turn ${state.sol}: moving a cell ${from} -> ${to} should cost something`).toBe(true);
+            expect(costs, `${place} turn ${state.sol}: moving a cell ${from} -> ${to} should cost something`).toBe(true);
             checked++;
           }
         }
@@ -81,8 +87,9 @@ describe('no free choices', () => {
     expect(checked).toBeGreaterThan(1000);
   }, 60000);
 
-  it.each(['mars', 'moon'] as const)('%s: every module does something useful when given a cell', (site) => {
-    const state = createMission(testConfig('useful', 'cadet', 1, site === 'moon' ? moonBase() : fullBase(), 0, site));
+  it.each(['mars', 'moon', 'arcadia'] as const)('%s: every module does something useful when given a cell', (place) => {
+    const site = PLACES[place].site;
+    const state = createMission(testConfig('useful', 'cadet', 1, site === 'moon' ? moonBase() : fullBase(), 0, site, landingIn(place)));
     const base = emptyAlloc();
     const baseMetrics = (['none', 'major'] as const).map((sc) => metrics(state, base, sc));
     for (const id of MODULE_IDS) {

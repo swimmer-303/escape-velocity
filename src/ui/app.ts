@@ -10,10 +10,10 @@ import { BudgetDock } from './budget';
 import { GameAudio } from './audio';
 import { createMission, emptyAlloc, getBriefing, previewSol, runSol, windowSol, checkAlloc, setProject, expeditionSpec } from '../sim/sim';
 import { explainSol, endingFor, eventDate, type Debrief } from '../sim/explain';
-import { REAL, EXPEDITIONS, SYNODIC_MONTHS, tuningFor, siteOf, type Difficulty } from '../sim/constants';
+import { REAL, EXPEDITIONS, SYNODIC_MONTHS, tuningFor, siteOf, landingOf, type Difficulty, type Landing } from '../sim/constants';
 import { UPGRADES, UPGRADE_IDS, nextCost, maxLevel, emptyLevels, upgradeDef, upgradesFor, type UpgradeId } from '../sim/upgrades';
 import { siteText, type Site } from '../sim/site';
-import { SITE_CHOICES, MOON_DIFFICULTY, MOON_TALK_ABOUT_IT, nightCards, moonSky } from './sitecopy';
+import { SITE_CHOICES, MOON_DIFFICULTY, MOON_TALK_ABOUT_IT, nightCards, moonSky, landingPicker, landingCard } from './sitecopy';
 import {
   newCampaign,
   missionConfigFor,
@@ -141,6 +141,13 @@ export class App {
   private codes = new ClassCodes();
   /** Mars or the Moon, as picked in the mission chooser. */
   private site: Site = 'mars';
+  /** Mars only: the landing site picked in the mission chooser (Gale Crater unless the player picks the ice site). */
+  private landingSite: Landing = 'gale';
+
+  /** Where new campaigns and quick missions go: the chosen world, plus the landing site on Mars (only Arcadia is written down). */
+  private place(): { site: Site; landing?: Landing } {
+    return this.site === 'mars' && this.landingSite === 'arcadia' ? { site: 'mars', landing: 'arcadia' } : { site: this.site };
+  }
 
   constructor(stage: Stage) {
     this.stage = stage;
@@ -355,6 +362,7 @@ export class App {
       project: p,
       projectProgress: p && cost ? Math.min(1, (m.base.progress[p] + (this.phase === 'plan' ? this.alloc.build : 0)) / cost) : undefined,
       site: siteOf(m.config),
+      landing: landingOf(m.config),
     });
   }
 
@@ -470,9 +478,10 @@ export class App {
         h('div', { class: 'kicker' }, kind === 'quick' ? 'Quick mission' : 'New campaign'),
         h('h2', null, 'Where will you build?'),
         sitePicker,
+        moon ? null : landingPicker(this.landingSite, (l) => ((this.landingSite = l), this.chooseDifficulty(kind))),
         kind === 'quick'
           ? [
-              h('p', null, `One crew of 4 on Cadet difficulty, about 10 minutes, on ${moon ? 'the Moon' : 'Mars'}.`),
+              h('p', null, `One crew of 4 on Cadet difficulty, about 10 minutes, on ${moon ? 'the Moon' : this.landingSite === 'arcadia' ? 'Mars, at Arcadia Planitia' : 'Mars'}.`),
               h(
                 'div',
                 { class: 'actions end' },
@@ -672,7 +681,7 @@ export class App {
     this.audio.sfx('click');
     this.clearSave();
     this.mode = 'campaign';
-    this.campaign = { ...campaignWithCode(this.codes.active, this.seed(), difficulty), site: this.site };
+    this.campaign = { ...campaignWithCode(this.codes.active, this.seed(), difficulty), ...this.place() };
     this.showExpeditionIntro();
   }
 
@@ -682,6 +691,7 @@ export class App {
     this.campaign = saved.campaign;
     this.campaignAtStart = saved.campaign;
     this.site = siteOf(saved.campaign);
+    this.landingSite = landingOf(saved.campaign);
     if (saved.mission && saved.mission.status === 'playing') {
       this.mission = saved.mission;
       this.audio.playMusic('mission');
@@ -699,7 +709,7 @@ export class App {
   private launchQuick() {
     this.audio.sfx('click');
     this.mode = 'quick';
-    this.campaign = { ...campaignWithCode(this.codes.active, this.seed(), 'cadet'), site: this.site };
+    this.campaign = { ...campaignWithCode(this.codes.active, this.seed(), 'cadet'), ...this.place() };
     this.showExpeditionIntro();
   }
 
@@ -721,8 +731,8 @@ export class App {
     clear(this.dock);
     this.refreshHud();
     this.audio.playMusic('mission');
-    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: c.prefillPct, sheltered: false, levels: c.base.levels, crew: 0, site: siteOf(c) });
-    const spec = expeditionSpec({ expedition: c.expedition, site: c.site });
+    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: c.prefillPct, sheltered: false, levels: c.base.levels, crew: 0, site: siteOf(c), landing: landingOf(c) });
+    const spec = expeditionSpec(c);
     const built = UPGRADE_IDS.filter((id) => c.base.levels[id] > 0);
     const isCampaign = this.mode === 'campaign';
     const windowSols = spec.windowSol + tuningFor(c.difficulty, c.site).windowBonus;
@@ -735,6 +745,7 @@ export class App {
           ? h('div', { class: 'art' }, h('img', { src: c.expedition === 1 ? '/art/title.png' : '/art/event-resupply.png', alt: 'The Mars outpost (AI-generated art)' }))
           : null,
         h('p', null, spec.blurb),
+        landingCard(c),
         meetCrew(c.expedition),
         h(
           'div',
@@ -785,7 +796,7 @@ export class App {
         this.mode === 'quick'
           ? this.codes.panel({
               sfx: (n) => this.audio.sfx(n),
-              onChange: (code) => (this.campaign = campaignWithCode(code, this.seed(), 'cadet')),
+              onChange: (code) => (this.campaign = { ...campaignWithCode(code, this.seed(), 'cadet'), ...this.place() }),
             })
           : null,
         h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
@@ -1160,7 +1171,7 @@ export class App {
     const t = siteText(m.config);
     const d: Debrief = explainSol(report, t.site);
     this.audio.sfx(d.tone === 'good' ? 'good' : d.tone === 'bad' ? 'bad' : 'click');
-    const fact = this.mode === 'history' && report.storm?.event.kind === 'cme' ? FACTS[0] : factFor(d.topic, report.sol + m.config.seed.length + m.config.expedition, t.site);
+    const fact = this.mode === 'history' && report.storm?.event.kind === 'cme' ? FACTS[0] : factFor(d.topic, report.sol + m.config.seed.length + m.config.expedition, t.site, landingOf(m.config));
     const over = m.status !== 'playing';
     this.modal(
       [
@@ -1289,7 +1300,7 @@ export class App {
     clear(this.dock);
     this.refreshHud();
     this.audio.sfx('click');
-    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: c.prefillPct, sheltered: false, levels: c.base.levels, crew: 0, site: siteOf(c) });
+    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: c.prefillPct, sheltered: false, levels: c.base.levels, crew: 0, site: siteOf(c), landing: landingOf(c) });
     const moon = siteOf(c) === 'moon';
     const future = new Date();
     future.setMonth(future.getMonth() + SYNODIC_MONTHS * (c.expedition - 1));
@@ -1338,7 +1349,7 @@ export class App {
     clear(this.dock);
     this.refreshHud();
     this.audio.playMusic('title');
-    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: 0, sheltered: false, levels: c.base.levels, crew: 0, site: siteOf(c) });
+    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: 0, sheltered: false, levels: c.base.levels, crew: 0, site: siteOf(c), landing: landingOf(c) });
     const t = siteText(c);
     const total = totalStars(c);
     const max = EXPEDITIONS.length * 3;
