@@ -1,8 +1,9 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // Tiny Node server for the droplet: serves /api/spaceweather (handler in api/spaceweather.ts)
 // with a 1-hour in-memory cache so players never hit NASA rate limits, /api/sun (api/sun.ts):
-// NASA SDO's newest picture of the Sun, cached for 10 minutes, and /api/rooms (src/room/http.ts):
-// Mission Control rooms for class team play, kept in memory only.
+// NASA SDO's newest picture of the Sun, cached for 10 minutes, /api/rooms (src/room/http.ts):
+// Mission Control rooms for class team play, kept in memory only, and /api/daily (src/daily/http.ts):
+// the daily challenge and its boards, saved to daily.json in STATE_DIR.
 // Caddy serves the static game and reverse-proxies /api/* to this process.
 
 import { createServer, type Server, type ServerResponse } from 'node:http';
@@ -12,6 +13,8 @@ import { buildEventPool, RECENT_SNAPSHOT, type DonkiSnapshot, type SpaceWeatherF
 import { earthMarsLightTime } from '../src/data/lighttime';
 import { RoomStore, type RoomEvents } from '../src/room/store';
 import { createRoomsHandler } from '../src/room/http';
+import { DailyStore, flushOnExit } from '../src/daily/store';
+import { createDailyHandler } from '../src/daily/http';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -120,9 +123,13 @@ export interface ApiServerOptions {
   fetchSnapshot?: () => Promise<DonkiSnapshot | null>;
   /** Wait this long to bundle quick room changes into one live message, ms. */
   coalesceMs?: number;
+  /** Where daily.json lives (default: STATE_DIR, else /var/lib/escape-velocity). Tests pass a temp folder. */
+  stateDir?: string;
+  /** The clock for the daily challenge (tests move it across midnight). */
+  now?: () => number;
 }
 
-export function createApiServer(opts: ApiServerOptions = {}): { server: Server; rooms: RoomStore } {
+export function createApiServer(opts: ApiServerOptions = {}): { server: Server; rooms: RoomStore; daily: DailyStore } {
   const fetchSnapshot = opts.fetchSnapshot ?? cachedSnapshot;
   const rooms = new RoomStore({
     events: () => roomEvents(fetchSnapshot),
@@ -130,6 +137,9 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
     coalesceMs: opts.coalesceMs,
   }).start();
   const handleRooms = createRoomsHandler(rooms);
+  // The daily challenge freezes the same real storms a new room would get.
+  const daily = new DailyStore({ dir: opts.stateDir ?? process.env.STATE_DIR ?? '/var/lib/escape-velocity', events: () => roomEvents(fetchSnapshot), now: opts.now });
+  const handleDaily = createDailyHandler(daily);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
@@ -138,6 +148,7 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
       return;
     }
     if (url.pathname.startsWith('/api/rooms') && (await handleRooms(req, res, url))) return;
+    if (url.pathname.startsWith('/api/daily') && (await handleDaily(req, res, url))) return;
     if (req.method !== 'GET' || url.pathname !== '/api/spaceweather') {
       res.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}');
       return;
@@ -154,12 +165,14 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
     }
   });
   server.on('close', () => rooms.stop());
-  return { server, rooms };
+  server.on('close', () => daily.close());
+  return { server, rooms, daily };
 }
 
 // Run as a program (not when a test imports this file).
 if (!process.env.VITEST) {
-  const { server } = createApiServer();
+  const { server, daily } = createApiServer();
+  flushOnExit(daily);
   server.listen(PORT, HOST, () => console.log(`Escape Velocity API on http://${HOST}:${PORT}`));
   // Warm the NASA cache so the first Mission Control room gets live storms right away.
   void spaceWeather('30').catch(() => undefined);

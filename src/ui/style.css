@@ -565,3 +565,27 @@ table.mc-players td { vertical-align: middle; }
 .today-event { box-shadow: inset 0 0 0 3px var(--amber); }
 .today-calm { box-shadow: inset 0 0 0 3px var(--green); }
 @media (max-width: 900px) { .tray-actions { margin-left: 0; width: 100%; } }
+
+/* ---------- Daily challenge ---------- */
+.daily-intro .daily-pool { margin: 8px 0 0; font-size: 15px; }
+.daily-intro .title-foot { margin-top: 8px; }
+.daily-intro .actions { margin-top: 8px; }
+.daily-board h3 { margin-top: 2px; }
+.daily-form label { display: block; margin-bottom: 6px; font-size: 15px; }
+.daily-form .cc-row .btn { flex: 0 0 auto; }
+.daily-name-input { font-family: var(--font-body); font-size: 20px; letter-spacing: 0; text-transform: none; }
+.daily-rank { font-size: 18px; font-weight: 700; color: var(--green); }
+.daily-table-wrap { overflow-x: auto; margin: 6px 0; }
+table.daily-table { min-width: 420px; font-variant-numeric: tabular-nums; }
+table.daily-table th, table.daily-table td { padding: 6px 8px; }
+table.daily-table td:first-child { font-family: var(--font-px); color: var(--muted); width: 2.5em; }
+table.daily-table .daily-name { overflow-wrap: anywhere; }
+table.daily-table tr.you td { background: #2f8f4a33; }
+table.daily-table tr.you .daily-name { font-weight: 700; }
+table.daily-table .daily-you { color: var(--green); font-weight: 400; font-size: 13px; }
+table.daily-table tr.gap td { color: var(--muted); padding: 2px 8px; border-bottom: none; }
+.daily-stars { display: inline-flex; gap: 1px; color: var(--amber); white-space: nowrap; }
+@media (max-width: 520px) {
+  table.daily-table { font-size: 14px; }
+  table.daily-table th, table.daily-table td { padding: 5px 4px; }
+}
