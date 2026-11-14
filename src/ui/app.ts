@@ -65,6 +65,13 @@ interface Settings extends AccessSettings {
 
 const SETTINGS_KEY = 'ev-settings';
 const SAVE_KEY = 'ev-save-v1';
+/** The presenter demo (/demo): a fixed seed so every rehearsal plays the same, and a rocket already 78% full. */
+export const SHORT_DEMO_SEED = 'short-demo';
+export const SHORT_DEMO_PREFILL = 78;
+/** playescapevelocity.com/demo (or ?short) opens the 3-sol presenter demo. */
+export function isShortDemoUrl(loc: { pathname: string; search: string }): boolean {
+  return /^\/demo\/?$/.test(loc.pathname) || new URLSearchParams(loc.search).has('short');
+}
 
 function loadSettings(): Settings {
   const base: Settings = { muted: false, reducedMotion: prefersReducedMotion(), view3d: true, ...ACCESS_DEFAULTS };
@@ -134,6 +141,8 @@ export class App {
 
   private phase: Phase = 'title';
   private mode: Mode | null = null;
+  /** The 3-sol presenter demo (/demo): the May 2024 replay with the rocket already mostly full. */
+  private shortDemo = false;
   private campaign: Campaign | null = null;
   /** Campaign as it was when the current expedition started (for "try again"). */
   private campaignAtStart: Campaign | null = null;
@@ -208,6 +217,7 @@ export class App {
     const dash = dashboardParams(location.search);
     if (dash) this.openDashboard(dash);
     else if (room) this.openRoom(room);
+    else if (isShortDemoUrl(location)) this.startShortDemo();
     else {
       this.showTitle();
       // ?demo: the attract mode for an event table or a screen recording.
@@ -328,7 +338,7 @@ export class App {
 
   private hudLabel(m: MissionState) {
     if (this.mode === 'daily' && this.daily) return dailyHudLabel(this.daily.config);
-    return this.mode === 'history' ? 'MAY 2024' : this.mode === 'campaign' ? `CREW ${m.config.expedition} OF ${EXPEDITIONS.length}` : 'QUICK MISSION';
+    return this.mode === 'history' ? (this.shortDemo ? 'SHORT DEMO · MAY 2024' : 'MAY 2024') : this.mode === 'campaign' ? `CREW ${m.config.expedition} OF ${EXPEDITIONS.length}` : 'QUICK MISSION';
   }
 
   private refreshHud(next?: Snapshot) {
@@ -404,6 +414,7 @@ export class App {
   showTitle() {
     if (this.demoActive) this.stopDemo();
     if (this.coach.active) this.coach.stop(false);
+    this.shortDemo = false;
     this.phase = 'title';
     this.mission = null;
     this.mode = null;
@@ -939,10 +950,28 @@ export class App {
   private startHistory() {
     this.audio.sfx('click');
     this.mode = 'history';
+    this.shortDemo = false;
     this.campaign = newCampaign(this.seed(), 'cadet', 'mars');
     const config: MissionConfig = { ...missionConfigFor(this.campaign, this.light.oneWayMinutes, may2024Pool()), scenario: 'may2024' };
     this.campaignAtStart = this.campaign;
     this.mission = createMission(config);
+    this.audio.playMusic('mission');
+    this.showBriefing();
+  }
+
+  /**
+   * The presenter demo at /demo: three sols you can play live in about two minutes. It is the real May 2024
+   * replay (ARCHIVE data), with the rocket pre-filled so the crew can launch on sol 3, right after the real
+   * X-class flare of May 8, 2024. Put about 4 cells on FUEL on sols 1 and 2, then shelter on sol 3.
+   */
+  private startShortDemo() {
+    this.stopDemo();
+    if (this.coach.active) this.coach.stop(false);
+    this.mode = 'history';
+    this.shortDemo = true;
+    this.campaign = { ...newCampaign(SHORT_DEMO_SEED, 'cadet', 'mars'), prefillPct: SHORT_DEMO_PREFILL };
+    this.campaignAtStart = this.campaign;
+    this.mission = createMission({ ...missionConfigFor(this.campaign, this.light.oneWayMinutes, may2024Pool()), scenario: 'may2024' });
     this.audio.playMusic('mission');
     this.showBriefing();
   }
@@ -1076,6 +1105,17 @@ export class App {
         b.powerNotes.length ? h('div', { class: 'title-foot', style: 'margin-top:4px' }, b.powerNotes.join(' · ')) : null,
       ),
     );
+    if (this.shortDemo && m.sol === 1)
+      cards.push(
+        h(
+          'div',
+          { class: 'card good' },
+          icon('o2', 20),
+          ' ',
+          h('b', null, `Short demo: three sols. `),
+          `While the base was empty, the O2 plant filled the rocket to ${SHORT_DEMO_PREFILL}%. Put about 4 cells on FUEL today and tomorrow, keep the heaters on, and watch for the real solar storms of May 2024.`,
+        ),
+      );
     if (this.mode === 'history') {
       const day = new Date(MAY2024_START + (m.sol - 1) * 86_400_000).toISOString().slice(0, 10);
       for (const g of earthStormsOn(day)) {
@@ -1333,7 +1373,7 @@ export class App {
     const ffBtn = h('button', { class: 'btn small', onclick: () => (this.ff = true) }, 'Skip', h('span', { class: 'arrow' }));
     this.dock.append(h('div', { class: 'run-bar' }, clock, h('div', { class: 'bar' }, fill), ffBtn), logLine);
     this.ff = false;
-    const duration = this.settings.reducedMotion ? 2000 : 9000;
+    const duration = this.settings.reducedMotion ? 2000 : this.shortDemo ? 6000 : 9000;
     const start = performance.now();
     // Mars: one sol (24 h 39 min) from sunrise to sunrise. Moon: one Earth day, with the Sun barely moving.
     const hours = site === 'moon' ? 24 : 24.66;
@@ -1516,7 +1556,7 @@ export class App {
           !isCampaign
             ? h(
                 'button',
-                { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? this.startHistory() : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
+                { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? (this.shortDemo ? this.startShortDemo() : this.startHistory()) : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
                 'Play again',
               )
             : null,
