@@ -21,7 +21,7 @@ import {
   type Site,
 } from './constants';
 import { buildPlan } from './plan';
-import { defaultNextProject, maxLevel, nextCost, upgradesFor, type BaseState, type UpgradeId } from './upgrades';
+import { defaultNextProject, maxLevel, nextCost, upgradesFor, type BaseState, type UpgradeId, remainingBuildCost } from './upgrades';
 import {
   MODULE_IDS,
   type Allocation,
@@ -161,12 +161,9 @@ export function moduleCap(s: MissionState, id: ModuleId): number {
       return isMoon(s) ? Math.max(0, Math.min(MODULE_CAP.battery, MOON_BATTERY.capacity - (s.stored - batteryOut(s)))) : MODULE_CAP.battery;
     case 'shelter':
       return has(s, 'berm') ? 1 : MODULE_CAP.shelter;
-    case 'build': {
-      const p = s.base.project;
-      if (!p) return 0;
-      const cost = nextCost(p, s.base.levels);
-      return cost === null ? 0 : Math.min(MODULE_CAP.build, cost - s.base.progress[p]);
-    }
+    case 'build':
+      // No limit: spend as many cells as you like. Extra cells roll into the next project.
+      return s.base.project ? remainingBuildCost(s.base, s.config.site) : 0;
     default:
       return MODULE_CAP[id];
   }
@@ -306,20 +303,31 @@ function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undef
   s.food += foodMade;
   s.fuel = Math.min(100, s.fuel + fuelAdd);
 
-  // Workshop: invest cells in the current project.
-  let built: UpgradeId | undefined;
+  // Workshop: invest cells in the current project. Any cells beyond what it needs roll into the
+  // next project (the same one again if it has more levels), so several upgrades can finish in one sol.
   const project = s.base.project;
-  if (project && alloc.build > 0) {
-    s.base.progress[project] += alloc.build;
-    const cost = nextCost(project, s.base.levels);
-    if (cost !== null && s.base.progress[project] >= cost) {
-      s.base.levels[project] += 1;
-      s.base.progress[project] = 0;
-      built = project;
-      s.builtThisExpedition.push(project);
-      if (s.base.levels[project] >= maxLevel(project)) s.base.project = defaultNextProject(s.base.levels, state.config.site);
+  const builtAll: UpgradeId[] = [];
+  let toSpend = alloc.build;
+  let guard = 0;
+  while (toSpend > 0 && s.base.project && guard++ < 50) {
+    const p = s.base.project;
+    const cost = nextCost(p, s.base.levels);
+    if (cost === null) {
+      s.base.project = defaultNextProject(s.base.levels, state.config.site);
+      continue;
+    }
+    const use = Math.min(toSpend, cost - s.base.progress[p]);
+    s.base.progress[p] += use;
+    toSpend -= use;
+    if (s.base.progress[p] >= cost) {
+      s.base.levels[p] += 1;
+      s.base.progress[p] = 0;
+      builtAll.push(p);
+      s.builtThisExpedition.push(p);
+      if (s.base.levels[p] >= maxLevel(p)) s.base.project = defaultNextProject(s.base.levels, state.config.site);
     }
   }
+  const built: UpgradeId | undefined = builtAll[0];
 
   // Battery. Mars: cells stored today come back tomorrow. Moon: they wait in the battery for the night.
   s.stored = isMoon(state) ? state.stored - b.fromBattery + alloc.battery : alloc.battery;
@@ -412,6 +420,7 @@ function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undef
     blackout: p.blackout,
     cleaning: p.cleaning,
     built,
+    builtAll: builtAll.length ? builtAll : undefined,
     buildProject: project,
     stored: alloc.battery,
     ...(p.night && isMoon(state) ? { night: true } : {}),

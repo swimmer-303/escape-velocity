@@ -141,6 +141,8 @@ export interface SolReport {
   cleaning: boolean;
   /** Upgrade finished this sol. */
   built?: UpgradeId;
+  /** Every upgrade finished this sol (extra Workshop cells roll into the next project). */
+  builtAll?: UpgradeId[];
   buildProject?: UpgradeId | null;
   stored: number;
   /** Moon only: this turn was part of the lunar night. */

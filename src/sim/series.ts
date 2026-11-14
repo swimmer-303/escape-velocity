@@ -68,7 +68,7 @@ export function missionSeries(m: Pick<MissionState, 'log' | 'doseBudget'>): Miss
       s.storms.push({ sol: r.sol, severity: st.event.severity, shelter, dose: r2(st.doseTaken) });
     }
     if (r.weather !== 'clear') s.dust.push(r.sol);
-    if (r.built) s.built.push({ sol: r.sol, id: r.built });
+    for (const id of r.builtAll ?? (r.built ? [r.built] : [])) s.built.push({ sol: r.sol, id });
     if (r.heaterShortfall > 0) s.cold.push(r.sol);
   }
   return s;

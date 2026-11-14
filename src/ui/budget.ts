@@ -213,7 +213,12 @@ export class BudgetDock {
         const cost = nextCost(p, s.base.levels) ?? 0;
         const done = s.base.progress[p] + a;
         return {
-          text: h('span', null, h('b', null, `${done}/${cost}`), done >= cost ? ' Finishes tonight!' : ' cells built'),
+          text: h(
+            'span',
+            null,
+            h('b', null, `${Math.min(done, cost)}/${cost}`),
+            done >= cost ? ` Finishes tonight!${done > cost ? ` +${done - cost} toward the next project` : ''}` : ' cells built',
+          ),
           cls: done >= cost ? 'good' : a ? 'good' : '',
         };
       }
@@ -317,7 +322,9 @@ export class BudgetDock {
   }
 
   private slotRow(s: SlotDef, showLabel: boolean) {
-    const cap = this.cap(s.id);
+    const fullCap = this.cap(s.id);
+    // The Workshop has no limit: show the cells placed plus room for a few more, growing as you add.
+    const cap = s.id === 'build' ? Math.min(fullCap, Math.max(3, this.alloc.build + Math.min(2, this.left()))) : fullCap;
     const a = this.alloc[s.id];
     const need = s.id === 'heaters' ? this.briefing.heaterNeed : 0;
     const eff = this.effectFor(s.id);

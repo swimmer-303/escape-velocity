@@ -76,7 +76,11 @@ export function explainSol(r: SolReport, site?: Site): Debrief {
     if (s.warnedBy === 'monitor') details.push('Your own radiation monitor spotted it coming.');
   } else if (r.built) {
     const u = upgradeDef(r.built, site);
-    headline = `Your crew finished building: ${u.name}! ${u.effect} It stays with the base for every crew after you.`;
+    const all = r.builtAll ?? [r.built];
+    headline =
+      all.length > 1
+        ? `Your crew finished ${all.length} upgrades: ${all.map((id) => upgradeDef(id, site).name).join(', ')}! They stay with the base for every crew after you.`
+        : `Your crew finished building: ${u.name}! ${u.effect} It stays with the base for every crew after you.`;
     topic = r.built === 'panel' || r.built === 'reactor' || r.built === 'battery' ? 'build' : r.built === 'monitor' ? 'monitor' : r.built === 'berm' ? 'shelter' : r.built === 'dome2' ? 'greenhouse' : 'o2';
     tone = 'good';
   } else if (r.newDamage) {
@@ -117,7 +121,7 @@ export function explainSol(r: SolReport, site?: Site): Debrief {
   }
 
   if (headline !== fuelLine) details.push(fuelLine);
-  if (r.built && r.storm) details.push(`Your crew also finished building: ${UPGRADES[r.built].name}.`);
+  if (r.built && r.storm) details.push(`Your crew also finished building: ${(r.builtAll ?? [r.built]).map((id) => UPGRADES[id].name).join(', ')}.`);
   if (r.alloc.build && !r.built && r.buildProject) details.push(`${cells(r.alloc.build)} went into the Workshop: ${UPGRADES[r.buildProject].name} is getting closer.`);
   if (r.stored) details.push(moon ? `You saved ${cells(r.stored)} in the battery for the lunar night.` : `You stored ${cells(r.stored)} in the battery for tomorrow.`);
   if (r.crate === 'food') details.push('The cargo lander brought 3 days of food.');

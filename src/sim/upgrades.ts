@@ -149,6 +149,20 @@ export function freshBase(): BaseState {
 }
 
 /** Suggested build order when a project finishes and the player hasn't picked another. */
+/**
+ * Every cell still needed to finish everything buildable at this site (the current project first).
+ * The Workshop takes as many cells as you like, up to this: extra cells roll into the next project.
+ */
+export function remainingBuildCost(base: BaseState, site?: Site): number {
+  let total = 0;
+  for (const id of upgradesFor(site)) {
+    const def = UPGRADES[id];
+    for (let l = base.levels[id]; l < def.costs.length; l++) total += def.costs[l];
+    if (base.levels[id] < def.costs.length) total -= base.progress[id];
+  }
+  return Math.max(0, total);
+}
+
 export function defaultNextProject(levels: Levels, site?: Site): UpgradeId | null {
   const order: UpgradeId[] =
     site === 'moon'
