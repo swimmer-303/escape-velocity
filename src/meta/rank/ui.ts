@@ -326,13 +326,30 @@ export function rankDialog(back: () => void): HTMLElement {
 
 // ------------------------------------------------------------------ the level-up card
 let calmTimer: ReturnType<typeof setTimeout> | null = null;
+let anchorTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Show the level-up card at the next calm moment: after `ms`, if the end screen (or the title) is up. */
+/** The newest open game dialog (not our own card). */
+function topDialog(): HTMLElement | null {
+  const all = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]')).filter((d) => !d.classList.contains('ev-levelup'));
+  return all[all.length - 1] ?? null;
+}
+
+/**
+ * Show the level-up card at the next calm moment. The game draws the end screen (or the title) right after it
+ * tells us, so we note which screen that is a moment later, and show the card after `ms` only if the player is
+ * still looking at it: never over a sol in progress, a mini-game, or whatever the player clicked on to next.
+ */
 export function scheduleCelebration(where: 'title' | 'end', ms: number): void {
   if (calmTimer) clearTimeout(calmTimer);
+  if (anchorTimer) clearTimeout(anchorTimer);
+  let anchor: HTMLElement | null = null;
+  anchorTimer = setTimeout(() => {
+    anchorTimer = null;
+    anchor = where === 'title' ? document.querySelector<HTMLElement>('.rank-strip') : topDialog();
+  }, 0);
   calmTimer = setTimeout(() => {
     calmTimer = null;
-    tryCelebrate(where);
+    tryCelebrate(anchor);
   }, ms);
 }
 
@@ -344,12 +361,13 @@ function reducedMotion(): boolean {
   }
 }
 
-/** Show the card if a level is waiting and the screen is calm. */
-export function tryCelebrate(where: 'title' | 'end'): boolean {
-  if (!pendingLevels().length || document.querySelector('.ev-levelup')) return false;
-  // The title: our card is on screen. The end screen: a dialog is open (never the running sol, which has none).
-  const calm = where === 'title' ? !!document.querySelector('.rank-strip') : !!document.querySelector('[role="dialog"]');
-  if (!calm) return false;
+/** Show the card if a level is waiting and `anchor` (the calm screen) is still the one on show. */
+export function tryCelebrate(anchor: HTMLElement | null): boolean {
+  if (!pendingLevels().length || document.querySelector('.ev-levelup') || !anchor) return false;
+  // The same screen, or the same dialog drawn again (the game redraws a dialog to update it).
+  const label = anchor.getAttribute('aria-label');
+  const still = anchor.isConnected || (!!label && topDialog()?.getAttribute('aria-label') === label);
+  if (!still) return false;
   return !!showCelebration();
 }
 
@@ -497,9 +515,11 @@ function bumpChip(levelUp: boolean): void {
 export function resetRankUi(): void {
   if (batchTimer) clearTimeout(batchTimer);
   if (calmTimer) clearTimeout(calmTimer);
+  if (anchorTimer) clearTimeout(anchorTimer);
   batch = null;
   batchTimer = null;
   calmTimer = null;
+  anchorTimer = null;
   hideChip();
   document.querySelectorAll('.ev-levelup').forEach((e) => e.remove());
 }

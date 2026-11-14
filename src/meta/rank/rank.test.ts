@@ -216,6 +216,24 @@ describe('levels', () => {
     expect(document.querySelector('.ev-levelup')).toBeNull();
   });
 
+  it('waits again if the player clicked on from the end screen before the card was due', () => {
+    emitGame('xp', { amount: 100, reason: 'test' });
+    showEndScreen();
+    end(false);
+    vi.advanceTimersByTime(100);
+    ctx.modal(Object.assign(document.createElement('button'), { textContent: 'Land the crew' }), { label: 'Between crews' });
+    vi.advanceTimersByTime(END_DELAY_MS);
+    expect(document.querySelector('.ev-levelup')).toBeNull();
+    expect(pendingLevels()).toEqual([2]);
+    // But the same end screen drawn again still counts.
+    showEndScreen();
+    end(false);
+    vi.advanceTimersByTime(100);
+    showEndScreen();
+    vi.advanceTimersByTime(END_DELAY_MS);
+    expect(document.querySelector('.ev-levelup')).not.toBeNull();
+  });
+
   it('skips the card if the screen moved on before the calm moment', () => {
     emitGame('xp', { amount: 100, reason: 'test' });
     showTitleScreen();
