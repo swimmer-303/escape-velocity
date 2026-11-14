@@ -1,0 +1,48 @@
+# Written with AI assistance (Claude Code). See README "Use of AI tools".
+# Every push to main: test, build, and deploy to the DigitalOcean droplet.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm run build:server
+      - name: Set up SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Upload and switch release
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          REL=/var/www/escape-velocity/releases/${GITHUB_SHA::12}
+          SSH="ssh -i ~/.ssh/deploy_key"
+          rsync -az --delete -e "$SSH" dist/ deploy@$HOST:$REL/
+          rsync -az --delete -e "$SSH" dist-server/ deploy@$HOST:/opt/escape-velocity-api/
+          $SSH deploy@$HOST "ln -sfn $REL /var/www/escape-velocity/current && sudo /usr/bin/systemctl restart escape-velocity-api && ls -1dt /var/www/escape-velocity/releases/* | tail -n +6 | xargs -r rm -rf"
+      - name: Smoke check
+        env:
+          SITE: ${{ secrets.DEPLOY_URL }}
+        run: |
+          curl -fsS "$SITE" -o /dev/null
+          curl -fsS "$SITE/api/spaceweather?days=30" | head -c 200

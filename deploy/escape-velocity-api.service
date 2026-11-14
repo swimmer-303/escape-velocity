@@ -1,0 +1,22 @@
+# Written with AI assistance (Claude Code). See README "Use of AI tools".
+[Unit]
+Description=Escape Velocity NASA DONKI proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=deploy
+WorkingDirectory=/opt/escape-velocity-api
+ExecStart=/usr/bin/node /opt/escape-velocity-api/server.mjs
+Environment=PORT=3001
+Environment=HOST=127.0.0.1
+EnvironmentFile=-/etc/escape-velocity.env
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
