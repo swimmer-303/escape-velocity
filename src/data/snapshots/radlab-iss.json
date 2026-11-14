@@ -1,0 +1,163 @@
+{
+  "fetchedAt": "2026-11-14T14:07:14.563Z",
+  "queryUrl": "https://visualization.osdr.nasa.gov/radlab/api/?instrument_id=DosTel1&timestamp%3E=2024-09-29T00%3A00&timestamp%3C2024-10-29T00%3A00&absorbed_dose_rate&module&format=json",
+  "spacecraft": "ISS",
+  "instrument": "DosTel1 (DOSTEL silicon detector telescope, DLR), module: Columbus",
+  "startDate": "2024-09-29",
+  "endDate": "2024-10-28",
+  "units": "µGy/day (absorbed dose; DOSTEL measures in silicon, not in tissue, and this is not a dose equivalent in µSv)",
+  "meanDoseRatePerDay": 194.4,
+  "dailySeries": [
+    {
+      "date": "2024-09-29",
+      "value": 197.9,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-09-30",
+      "value": 199.5,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-01",
+      "value": 199.7,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-02",
+      "value": 204.3,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-03",
+      "value": 196.9,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-04",
+      "value": 219.6,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-05",
+      "value": 196.5,
+      "coverageHours": 23.7
+    },
+    {
+      "date": "2024-10-06",
+      "value": 233.9,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-07",
+      "value": 172.2,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-08",
+      "value": 198.1,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-09",
+      "value": 187.3,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-10",
+      "value": 166.4,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-11",
+      "value": 151.6,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-12",
+      "value": 182.1,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-13",
+      "value": 189.7,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-14",
+      "value": 191,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-15",
+      "value": 195.7,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-16",
+      "value": 198,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-17",
+      "value": 200.4,
+      "coverageHours": 23.7
+    },
+    {
+      "date": "2024-10-18",
+      "value": 202.9,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-19",
+      "value": 190.5,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-20",
+      "value": 191.7,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-21",
+      "value": 194.6,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-22",
+      "value": 195.7,
+      "coverageHours": 22.1
+    },
+    {
+      "date": "2024-10-23",
+      "value": 195.3,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-24",
+      "value": 195.6,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-25",
+      "value": 192.2,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-26",
+      "value": 205.6,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-27",
+      "value": 183.2,
+      "coverageHours": 24
+    },
+    {
+      "date": "2024-10-28",
+      "value": 205.2,
+      "coverageHours": 24
+    }
+  ],
+  "notes": "RadLab reports absorbed_dose_rate in µGy/hour. Readings are unevenly spaced (about every 20 s inside the South Atlantic Anomaly, about every 100 s elsewhere), so each reading was weighted by the time until the next reading (gaps over 10 min skipped) to get a time-averaged µGy/hour for each UTC day, then multiplied by 24 to get µGy/day. Days with under 20 h of coverage are left out. 27052 readings used. For comparison, a plain unweighted average of all readings would be 533 µGy/day, which over-counts the SAA. This is archived data (RadLab's ISS series ended in late 2024), not a live reading. Gray (Gy) is absorbed energy; sievert (Sv) is the biological dose equivalent, so do not compare these numbers directly with mSv figures."
+}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Escape Velocity: a Mars outpost game</title>
+    <meta name="description" content="Command a tiny Mars outpost: budget power between air, food, heat, radiation shelter and rocket fuel, with real NASA space-weather data. A NASA Space Apps Challenge 2026 project by Team Sendy1." />
+    <meta name="ai-assistance" content="Code written with AI assistance (Claude Code, Anthropic). All images AI-generated with Higgsfield (GPT Image 2.6) and visibly watermarked 'AI-generated'. Music AI-generated with Higgsfield (ElevenLabs Music v2.5). Data comes unmodified from NASA sources (DONKI, OSDR, RadLab, JPL). See README 'Use of AI tools' and ASSETS.md." />
+    <meta name="theme-color" content="#0b0a18" />
+    <meta property="og:title" content="Escape Velocity" />
+    <meta property="og:description" content="A retro Mars outpost game about real engineering trade-offs, powered by real NASA data." />
+    <meta property="og:image" content="/art/title.png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <noscript>Escape Velocity needs JavaScript to run.</noscript>
+    <div id="app">
+      <div id="stage" aria-hidden="true"></div>
+      <header id="hud"></header>
+      <main id="dock" aria-label="Power budget"></main>
+    </div>
+    <div id="modal-root"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

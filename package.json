@@ -1,0 +1,29 @@
+{
+  "name": "escape-velocity",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Escape Velocity: a retro 3D Mars outpost game for kids about real engineering trade-offs. NASA Space Apps Challenge 2026, Team Sendy1. Code written with AI assistance (Claude Code); see README 'Use of AI tools'.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "fetch-data": "node scripts/fetch-data.mjs",
+    "balance": "vitest run src/sim/balance.test.ts --reporter=verbose"
+  },
+  "dependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/silkscreen": "^5.3.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
+    "happy-dom": "^21.0.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

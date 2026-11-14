@@ -1,0 +1,130 @@
+// Written with AI assistance (Claude Code). See README "Use of AI tools".
+// "Real Science" cards shown after each sol, keyed by what happened.
+// Every number here is a published figure; sources are listed on the card and in the Science Log.
+
+import type { ScienceTopic } from '../sim/explain';
+import { REAL } from '../sim/constants';
+import { OSDR_CARDS, type OsdrCard } from './osdr';
+
+export interface ScienceFact {
+  topic: ScienceTopic;
+  title: string;
+  body: string;
+  source: string;
+  url: string;
+  art?: string;
+}
+
+export const FACTS: ScienceFact[] = [
+  {
+    topic: 'shelter',
+    title: 'The biggest solar storm Curiosity ever measured',
+    body: `On May 20, 2024, a giant solar storm hit Mars. NASA's Curiosity rover measured a radiation dose of ${REAL.may2024EventUgy.toLocaleString('en-US')} micrograys in one day: about the same as ${REAL.may2024EventChestXrays} chest X-rays. Astronauts on Mars will need a shelter to hide in during storms like that.`,
+    source: 'NASA/JPL news release, June 2024 (Curiosity RAD)',
+    url: 'https://www.jpl.nasa.gov/news/nasa-watches-mars-light-up-during-epic-solar-storm/',
+    art: 'science-shield',
+  },
+  {
+    topic: 'shelter',
+    title: 'Radiation on the surface of Mars',
+    body: `Mars has thin air and no global magnetic field, so more space radiation reaches the ground than on Earth. Curiosity measured about ${REAL.marsSurfaceMsvPerDay} millisieverts per day at Gale Crater. A millisievert (mSv) is the unit scientists use to measure radiation dose. In this game, every sol adds that much to your crew's dose.`,
+    source: 'Hassler et al., Science (2014), Curiosity Radiation Assessment Detector',
+    url: 'https://www.science.org/doi/10.1126/science.1244797',
+    art: 'science-shield',
+  },
+  {
+    topic: 'monitor',
+    title: 'Why Mars needs its own space-weather station',
+    body: 'Forecasters on Earth watch the Sun and send warnings, but their messages travel at the speed of light and can take 3 to 22 minutes to reach Mars. The fastest particles from a big solar flare can get there first. A radiation monitor at the outpost spots a storm without waiting for Earth.',
+    source: 'NASA DONKI space-weather database; one-way light time from JPL orbital elements',
+    url: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
+    art: 'event-blackout',
+  },
+  {
+    topic: 'comm',
+    title: 'The Sun can block the phone line',
+    body: 'About every 26 months, the Sun passes between Earth and Mars. For around two weeks, mission teams stop sending commands because the Sun scrambles the radio signals. This is called solar conjunction.',
+    source: 'NASA Mars Exploration: solar conjunction',
+    url: 'https://science.nasa.gov/mars/',
+    art: 'event-blackout',
+  },
+  {
+    topic: 'o2',
+    title: 'Making oxygen from Mars air',
+    body: `MOXIE, an experiment on NASA's Perseverance rover, pulled oxygen out of the carbon dioxide in Mars' air. Over ${REAL.moxieRuns} runs it made ${REAL.moxieTotalO2g} grams, and its best rate was ${REAL.moxiePeakGPerHour} grams per hour. A bigger version could make oxygen for astronauts to breathe AND for the rocket that flies them home.`,
+    source: 'NASA/JPL, MOXIE results 2021-2023',
+    url: 'https://www.jpl.nasa.gov/news/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/',
+    art: 'science-o2',
+  },
+  {
+    topic: 'o2',
+    title: 'How much air does an astronaut breathe?',
+    body: `Each astronaut uses about ${REAL.o2PerCrewKgPerDay} kg of oxygen per day. Your crew of ${REAL.crewSize} needs about ${(REAL.o2PerCrewKgPerDay * REAL.crewSize).toFixed(1)} kg every sol. In the game, 1 power cell on AIR makes 1 day of air for the whole crew.`,
+    source: 'NASA Life Support Baseline Values and Assumptions (BVAD)',
+    url: 'https://ntrs.nasa.gov/citations/20180001338',
+    art: 'science-o2',
+  },
+  {
+    topic: 'greenhouse',
+    title: 'Growing food far from home',
+    body: 'Astronauts on the International Space Station have grown and eaten lettuce and other leafy greens under LED lights. Growing food takes a lot of power for lights and heat, which is why your greenhouse needs 2 cells to feed the crew.',
+    source: 'NASA Veggie plant growth system; Canadian Space Agency: Food production on the Moon and in remote areas',
+    url: 'https://www.asc-csa.gc.ca/eng/youth-educators/resources-stem-and-youth-organizations.asp',
+    art: 'science-plants',
+  },
+  {
+    topic: 'dust',
+    title: 'Dust storms and solar power',
+    body: `In 2007, a dust storm blocked about 99% of the direct sunlight at the Opportunity rover. Its solar panels went from about ${REAL.oppyNormalWh} watt-hours a day down to ${REAL.oppy2007StormWh}. In 2018, a planet-wide storm cut its power to about ${REAL.oppy2018StormWh} watt-hours, and Opportunity never woke up again.`,
+    source: 'NASA/JPL, Mars Exploration Rover mission',
+    url: 'https://science.nasa.gov/mission/mer-opportunity/',
+    art: 'event-dust',
+  },
+  {
+    topic: 'dust',
+    title: 'Wind can clean solar panels',
+    body: 'The Spirit and Opportunity rovers got lucky "cleaning events": gusts of wind blew the dust off their solar panels, and their power jumped back up.',
+    source: 'NASA/JPL, Mars Exploration Rover mission',
+    url: 'https://science.nasa.gov/mission/mer-opportunity/',
+    art: 'event-cleaning',
+  },
+  {
+    topic: 'cold',
+    title: 'Freezing Mars nights',
+    body: 'Mars nights are far colder than winter anywhere people live on Earth. Batteries and electronics can be damaged by deep cold, so rovers and outposts spend power on heaters every night, even when they would rather use it for something else.',
+    source: 'NASA Mars facts',
+    url: 'https://science.nasa.gov/mars/facts/',
+    art: 'event-cold',
+  },
+  {
+    topic: 'crew',
+    title: 'Recycling water in space',
+    body: 'Water is heavy to launch, so spacecraft recycle it. In 2023, the International Space Station reached about 98% water recovery: almost every drop gets cleaned and used again.',
+    source: 'NASA, ISS Environmental Control and Life Support System (2023)',
+    url: 'https://www.nasa.gov/missions/station/iss-research/nasa-achieves-water-recovery-milestone-on-international-space-station/',
+    art: 'science-crew',
+  },
+];
+
+const OSDR_ART: Record<OsdrCard['tieIn'], string> = {
+  greenhouse: 'science-plants',
+  shelter: 'science-shield',
+  crew: 'science-crew',
+  o2: 'science-o2',
+};
+
+/** Real NASA OSDR studies, shown as Real Science cards for the matching topic. */
+export const OSDR_FACTS: ScienceFact[] = OSDR_CARDS.map((c) => ({
+  topic: c.tieIn,
+  title: `${c.osdId}: ${c.title}`,
+  body: c.takeaway,
+  source: `NASA Open Science Data Repository, study ${c.osdId}`,
+  url: c.url,
+  art: OSDR_ART[c.tieIn],
+}));
+
+export function factFor(topic: ScienceTopic, seed: number): ScienceFact {
+  const list = [...FACTS, ...OSDR_FACTS].filter((f) => f.topic === topic);
+  const pool = list.length ? list : FACTS;
+  return pool[Math.abs(seed) % pool.length];
+}

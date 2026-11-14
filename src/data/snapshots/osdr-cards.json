@@ -1,0 +1,82 @@
+[
+  {
+    "osdId": "OSD-772",
+    "title": "PH-04 Chile Peppers in Space",
+    "takeaway": "Chile pepper plants grew in a plant chamber on the International Space Station for 137 days, one of the longest plant-growing tests there, and made 26 peppers.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-772",
+    "searchTerm": "plant growth",
+    "tieIn": "greenhouse"
+  },
+  {
+    "osdId": "OSD-267",
+    "title": "Microbiological and nutritional analysis of lettuce crops grown on the International Space Station-VEG01A",
+    "takeaway": "Scientists grew red romaine lettuce in the Veggie plant chamber on the space station and compared it with lettuce grown on Earth to check that space-grown food is safe and healthy to eat.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-267",
+    "searchTerm": "lettuce",
+    "tieIn": "greenhouse"
+  },
+  {
+    "osdId": "OSD-314",
+    "title": "Adaptive response of Arabidopsis seedlings in microgravity and Mars reduced gravity environment is enhanced by red light photostimulation",
+    "takeaway": "Scientists grew tiny seedlings on the space station in weightlessness and in Mars-strength gravity, and found that the Mars-gravity seedlings only got their growing cells back on track when they were given red light.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-314",
+    "searchTerm": "partial gravity",
+    "tieIn": "greenhouse"
+  },
+  {
+    "osdId": "OSD-581",
+    "title": "A molecular study of Italian ryegrass grown on Martian regolith simulant",
+    "takeaway": "Scientists on Earth grew ryegrass in pretend Mars soil: the plants grew for two weeks, but their leaves turned yellowish and bent downward.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-581",
+    "searchTerm": "oxygen",
+    "tieIn": "greenhouse"
+  },
+  {
+    "osdId": "OSD-210",
+    "title": "Approaches for Surveying Cosmic Radiation Damage in Large Populations of Arabidopsis thaliana Seeds- an Antarctic Example",
+    "takeaway": "Scientists sent about 580,000 tiny plant seeds high above Antarctica on a balloon to study cosmic radiation, and those seeds sprouted less often and had more mutations than seeds that stayed safe in the lab.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-210",
+    "searchTerm": "cosmic radiation",
+    "tieIn": "shelter"
+  },
+  {
+    "osdId": "OSD-431",
+    "title": "Microgravity and space radiation exert either opposite or synergic effects on single molecular pathways",
+    "takeaway": "Scientists flew human blood-vessel cells to the space station and found that space radiation and weightlessness change the cells in different ways, with radiation switching on the cells’ DNA-repair systems.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-431",
+    "searchTerm": "space radiation",
+    "tieIn": "shelter"
+  },
+  {
+    "osdId": "OSD-479",
+    "title": "The impact of deep space radiation on cognitive performance: From biological sex to biomarkers to countermeasures (Elevated Plus Maze, Novel Object Recognition, Open Field, Radial Arm Water Maze, and Three Chamber Social Isolation/Interaction)",
+    "takeaway": "Scientists on Earth used a particle accelerator to give mice radiation like the kind found in deep space; afterward the male mice had more trouble learning their way through a maze, but the female mice did not.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-479",
+    "searchTerm": "cosmic radiation",
+    "tieIn": "shelter"
+  },
+  {
+    "osdId": "OSD-714",
+    "title": "Lunar gravity prevents skeletal muscle atrophy but not myofiber type shift in mice",
+    "takeaway": "On the space station, mice that rode in a spinning habitat with Moon-strength gravity kept their leg muscle size, while mice in weightlessness lost some.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-714",
+    "searchTerm": "muscle",
+    "tieIn": "crew"
+  },
+  {
+    "osdId": "OSD-342",
+    "title": "Targeting myostatin/activin A protects against skeletal muscle and bone loss during spaceflight [plasma proteomics]",
+    "takeaway": "Mice that spent 33 days on the space station lost muscle and bone, so scientists tested a treatment that helped mice build muscle and bone, both in space and on the ground.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-342",
+    "searchTerm": "bone",
+    "tieIn": "crew"
+  },
+  {
+    "osdId": "OSD-324",
+    "title": "Osteocytes transcriptome is altered during spaceflight",
+    "takeaway": "Scientists flew bone cells to the space station for 2 to 6 days to learn how bones sense weightlessness, because astronauts lose bone on long trips.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-324",
+    "searchTerm": "bone",
+    "tieIn": "crew"
+  }
+]
