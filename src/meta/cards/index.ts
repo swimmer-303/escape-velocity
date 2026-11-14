@@ -6,7 +6,7 @@
 // Rarity rules and wording: ./rarity.ts. The collection in localStorage: ./store.ts. What there is to find: ./pool.ts.
 
 import './cards.css';
-import { addTitleExtra, emitGame, onGame, whenMetaReady, type GameEventMap } from '../hooks';
+import { addTitleExtra, emitGame, metaContext, onGame, whenMetaReady, type GameEventMap } from '../hooks';
 import { toast } from '../toast';
 import { miniCard } from './art';
 import { cardTitle, isFarSideGiant, rarityOf, RARITY_WORD, RARITY_XP, SET_BONUS_XP, SPECIAL_BONUS_XP } from './rarity';
@@ -50,6 +50,8 @@ export function onSol(p: GameEventMap['sol']): void {
   const rarity = rarityOf(c);
   if (res.isNew) {
     emitGame('xp', { amount: xpFor(c), reason: `New Storm Card: ${title} (${RARITY_WORD[rarity]})` });
+    // A collectible deserves a sound: the game's "good news" chime (respects the player's mute setting).
+    metaContext()?.audio.sfx('good');
     toast('New Storm Card!', `${title}, ${RARITY_WORD[rarity]}${isFarSideGiant(c) ? ' (special)' : ''}. A real storm from ${dateWords(c.time)}.`, {
       tone: rarity === 'legendary' ? 'gold' : rarity === 'epic' || rarity === 'rare' ? 'cyan' : 'amber',
       icon: miniCard(c),
