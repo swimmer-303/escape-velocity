@@ -1,5 +1,5 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// The 3D stage: renders the diorama at a low internal resolution (about 216 px tall),
+// The 3D stage: renders the diorama at a reduced internal resolution (about 400 px tall),
 // runs the retro post-process, and the canvas is upscaled with crisp nearest-neighbor pixels.
 
 import * as THREE from 'three';
@@ -8,7 +8,7 @@ import { Diorama } from './diorama';
 import { SNAP, makePostMaterial, makeSkyMaterial } from './retro';
 import type { Stage, StageScene } from './stage';
 
-const TARGET_HEIGHT = 216;
+const TARGET_HEIGHT = 400;
 
 export class ThreeStage implements Stage {
   private el?: HTMLElement;
@@ -106,12 +106,13 @@ export class ThreeStage implements Stage {
     const w = Math.max(1, this.el.clientWidth);
     const h = Math.max(1, this.el.clientHeight);
     // Whole-number upscale keeps the pixels crisp and even.
-    const scale = Math.max(2, Math.round(h / TARGET_HEIGHT));
+    const scale = Math.max(1, Math.round(h / TARGET_HEIGHT));
     const iw = Math.max(64, Math.round(w / scale));
     const ih = Math.max(36, Math.round(h / scale));
     this.renderer.setSize(iw, ih, false);
     this.target.setSize(iw, ih);
-    SNAP.value.set(iw / 2, ih / 2);
+    // Vertex wobble grid stays a little coarser than the pixels, for a gentle retro feel.
+    SNAP.value.set(iw * 0.75, ih * 0.75);
     this.camera.aspect = w / h;
     // Narrow screens: pull back so the whole base fits.
     this.camera.fov = w / h < 1.1 ? 58 : 42;

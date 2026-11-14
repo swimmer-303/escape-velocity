@@ -80,7 +80,7 @@ export function makePostMaterial(target: THREE.WebGLRenderTarget) {
   return new THREE.ShaderMaterial({
     uniforms: {
       tDiffuse: { value: target.texture },
-      uLevels: { value: 7 },
+      uLevels: { value: 12 },
       uTime: { value: 0 },
       uSparkle: { value: 0 },
       uFlash: { value: 0 },
