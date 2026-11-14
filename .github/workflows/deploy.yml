@@ -15,6 +15,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Deploy steps run only once the droplet secrets are set (tests and build always run).
+      CAN_DEPLOY: ${{ secrets.DEPLOY_HOST != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,12 +29,14 @@ jobs:
       - run: npm run build
       - run: npm run build:server
       - name: Set up SSH
+        if: env.CAN_DEPLOY == 'true'
         run: |
           install -d -m 700 ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Upload and switch release
+        if: env.CAN_DEPLOY == 'true'
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
@@ -41,6 +46,7 @@ jobs:
           rsync -az --delete -e "$SSH" dist-server/ deploy@$HOST:/opt/escape-velocity-api/
           $SSH deploy@$HOST "ln -sfn $REL /var/www/escape-velocity/current && sudo /usr/bin/systemctl restart escape-velocity-api && ls -1dt /var/www/escape-velocity/releases/* | tail -n +6 | xargs -r rm -rf"
       - name: Smoke check
+        if: env.CAN_DEPLOY == 'true'
         env:
           SITE: ${{ secrets.DEPLOY_URL }}
         run: |
