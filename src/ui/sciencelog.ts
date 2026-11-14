@@ -9,6 +9,7 @@ import { MAY2024_SNAPSHOT, countByClass } from '../data/donki';
 import type { LightTime } from '../data/lighttime';
 import { OSDR_CARDS } from '../data/osdr';
 import { RADLAB_ISS, RADLAB_ISS_MAY2024 } from '../data/radlab';
+import { GALE_EXAGGERATION, GALE_PRODUCT, GALE_PRODUCT_URL } from '../render/gale-info';
 
 interface Ctx {
   feed: SpaceWeatherFeed;
@@ -118,6 +119,15 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
       ],
       [tag('real', 'PUBLISHED FIGURE')],
       [link('https://www.jpl.nasa.gov/news/nasa-mars-rovers-braving-severe-dust-storms', 'NASA/JPL 2007'), ' · ', link('https://www.planetary.org/articles/06-mer-update-opportunity-dust-storm-sleep', 'Planetary Society 2018')],
+    ],
+    [
+      'NASA Mars Trek: Gale Crater terrain',
+      [
+        `Terrain: NASA Mars Trek, ${GALE_PRODUCT}, Gale Crater; horizontal scale compressed, height exaggerated ×${GALE_EXAGGERATION}. `,
+        'Your base sits where Curiosity landed (Bradbury Landing). The crater wall and Mount Sharp around it are built from real heights measured from orbit by the MOLA laser on Mars Global Surveyor and the HRSC camera on Mars Express. The landscape is shrunk a lot to fit around your base (the buildings are not to scale), and the ground right next to the base is smoothed flat. On the Moon, the craters are made up for the game.',
+      ],
+      [tag('archive', 'ARCHIVE'), ' A snapshot of Mars Trek elevations, stored with the game.'],
+      [link('https://trek.nasa.gov/mars/', 'trek.nasa.gov/mars'), ' · ', link(GALE_PRODUCT_URL, 'USGS product page')],
     ],
     [
       'Canadian Space Agency: food production',

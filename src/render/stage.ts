@@ -18,6 +18,8 @@ export interface StageScene {
   /** The Workshop's current project and how far along it is (0..1), shown as a blueprint. */
   project?: UpgradeId | null;
   projectProgress?: number;
+  /** Which world the base is on (default 'mars'). The stage switches scenery whenever it changes. */
+  site?: 'mars' | 'moon';
 }
 
 export interface Stage {
@@ -40,22 +42,28 @@ export class CssStage implements Stage {
   private sky = document.createElement('div');
   private sun = document.createElement('div');
   private label = document.createElement('div');
+  private ground = document.createElement('div');
   private weather: Weather = 'clear';
+  private moon = false;
 
   mount(el: HTMLElement) {
     this.el = el;
     this.sky.className = 'stage-css';
-    const ground = document.createElement('div');
-    ground.className = 'ground';
+    this.ground.className = 'ground';
     this.sun.className = 'sunball';
     this.label.className = 'label';
-    this.sky.append(this.sun, ground, this.label);
+    this.sky.append(this.sun, this.ground, this.label);
     el.append(this.sky);
     this.setTimeOfDay(0.25);
   }
 
   setScene(scene: StageScene) {
     this.weather = scene.weather;
+    this.moon = scene.site === 'moon';
+    // Moon: gray ground and a white Sun (inline styles; empty strings fall back to the Mars CSS).
+    this.ground.style.background = this.moon ? 'linear-gradient(#8d8b87, #4f4f52)' : '';
+    this.sun.style.background = this.moon ? '#ffffff' : '';
+    this.sun.style.boxShadow = this.moon ? 'none' : '';
     this.label.textContent = '';
     this.setTimeOfDay(0.25);
   }
@@ -67,7 +75,10 @@ export class CssStage implements Stage {
     const dust = this.weather === 'clear' ? 0 : this.weather === 'dusty' ? 0.35 : 0.6;
     let top: string;
     let bottom: string;
-    if (dusk) {
+    if (this.moon) {
+      top = '#000000'; // no air: the sky stays black, day and night
+      bottom = '#07070c';
+    } else if (dusk) {
       top = '#2b3a6b';
       bottom = '#5b7bb5'; // Mars sunsets are blue
     } else if (day) {

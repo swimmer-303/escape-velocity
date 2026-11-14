@@ -1,12 +1,18 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// The low-poly Mars outpost. Built from code (no model files), so it's tiny to download.
+// The low-poly outpost. Built from code (no model files), so it's tiny to download.
 // The base visibly grows: every upgrade has its own piece, and the Workshop's current
 // project shows as a see-through blueprint that fills in as the crew builds it.
+// On Mars the ground around the base is real Gale Crater terrain (see gale.ts); on the Moon it is
+// made-up gray, cratered regolith with the Earth in the sky (see moon.ts).
 
 import * as THREE from 'three';
-import { mat } from './retro';
+import { mat, rand } from './retro';
+import { marsHeight, GROUND_RADIUS } from './gale';
+import { moonHeight, moonTone, buildEarth } from './moon';
 import type { StageScene } from './stage';
 import type { UpgradeId, Levels } from '../sim/upgrades';
+
+export type Site = NonNullable<StageScene['site']>;
 
 const C = {
   rust: '#8a3a1c',
@@ -25,17 +31,6 @@ const C = {
   orange: '#e8742a',
   white: '#f4f0e6',
 };
-
-function rand(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function mesh(geo: THREE.BufferGeometry, material: THREE.Material, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geo, material);
@@ -59,6 +54,38 @@ const SPOT = {
   reactor: [-2.5, -8],
   workshop: [-0.8, -4.4],
 } as const;
+
+/** Hull colors that turn a little brighter on the Moon (no red dust settling on them). */
+const HULL_COLORS = new Set([C.hab, C.habShade, C.white, '#d8d4cc'].map((c) => new THREE.Color(c).getHex()));
+
+/**
+ * A round ground disc: a grid warped so cells are about `nearCell` wide around the base and grow
+ * toward the edge, with the corners pulled in onto the circle (so the horizon is round, not square).
+ */
+function groundGeometry(radius: number, segments: number, nearCell: number, height: (x: number, z: number) => number, color: (x: number, z: number, y: number) => THREE.Color) {
+  const geo = new THREE.PlaneGeometry(2, 2, segments, segments);
+  geo.rotateX(-Math.PI / 2);
+  const c = (nearCell * segments) / 2; // slope of the warp at the center
+  const warp = (u: number) => u * (c + (radius - c) * u * u);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const colors: number[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    let x = warp(pos.getX(i));
+    let z = warp(pos.getZ(i));
+    const r = Math.hypot(x, z);
+    if (r > radius) {
+      x *= radius / r;
+      z *= radius / r;
+    }
+    const y = height(x, z);
+    pos.setXYZ(i, x, y, z);
+    const col = color(x, z, y);
+    colors.push(col.r, col.g, col.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  return geo.toNonIndexed();
+}
 
 /** Solar panel rows: 3 at the start, then one more for each panel upgrade. */
 const PANEL_SLOTS: Array<[number, number]> = [
@@ -102,6 +129,11 @@ export class Diorama {
   private trail: THREE.Points;
   private night = 0;
   private storming = 0;
+  private site: Site = 'mars';
+  private marsGround: THREE.Group;
+  /** Built the first time the Moon is shown. */
+  private moonGround?: THREE.Group;
+  private hull: Array<{ m: THREE.MeshPhongMaterial; base: THREE.Color }> = [];
 
   constructor() {
     this.ambient = new THREE.HemisphereLight('#f2d2a8', '#6b2e16', 1.1);
@@ -118,7 +150,8 @@ export class Diorama {
     this.sunLight.shadow.bias = -0.002;
     this.group.add(this.ambient, this.sunLight, this.sunLight.target);
 
-    this.group.add(this.buildTerrain());
+    this.marsGround = this.buildMarsGround();
+    this.group.add(this.marsGround);
     this.group.add(this.buildHab());
     const o2 = this.buildO2();
     this.fan = o2.getObjectByName('fan')!;
@@ -157,58 +190,40 @@ export class Diorama {
     this.group.add(this.dust);
     this.trail = this.buildTrail();
     this.group.add(this.trail);
+
+    // Remember the white hull materials, so the Moon can brighten them.
+    const seen = new Set<THREE.Material>();
+    this.group.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.MeshPhongMaterial | undefined;
+      if (!m || !(m as THREE.MeshPhongMaterial).isMeshPhongMaterial || seen.has(m) || o.parent === this.marsGround) return;
+      seen.add(m);
+      if (HULL_COLORS.has(m.color.getHex())) this.hull.push({ m, base: m.color.clone() });
+    });
   }
 
   // ------------------------------------------------------------------ building pieces
 
+  /** Ground height. Both sites keep the base pad (within 11 units) perfectly flat at 0. */
   private height(x: number, z: number) {
-    const r = Math.hypot(x, z);
-    let h = Math.sin(x * 0.21) * Math.cos(z * 0.17) * 0.6 + Math.sin(x * 0.53 + z * 0.31) * 0.25 + Math.cos(z * 0.6 - x * 0.2) * 0.15;
-    const flat = THREE.MathUtils.smoothstep(r, 11, 16); // flat pad for the base
-    h *= flat;
-    // Crater rim rising in the distance.
-    h += THREE.MathUtils.smoothstep(r, 22, 34) * 6;
-    return h;
+    return this.site === 'moon' ? moonHeight(x, z) : marsHeight(x, z);
   }
 
-  private buildTerrain() {
+  /** Gale Crater from real Mars Trek elevations (Mount Sharp included), plus rocks near the base. */
+  private buildMarsGround() {
     const g = new THREE.Group();
-    const geo = new THREE.PlaneGeometry(80, 80, 44, 44);
-    geo.rotateX(-Math.PI / 2);
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    const colors: number[] = [];
+    g.name = 'mars-ground';
     const r = rand(7);
     const cA = new THREE.Color(C.rust);
     const cB = new THREE.Color(C.oxide);
     const cC = new THREE.Color(C.dust);
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      const y = this.height(x, z);
-      pos.setY(i, y);
+    const geo = groundGeometry(GROUND_RADIUS, 72, 1.8, marsHeight, (_x, _z, y) => {
       const k = r();
       const c = k < 0.45 ? cA : k < 0.85 ? cB : cC;
-      const lift = THREE.MathUtils.clamp(y / 6, 0, 1);
-      const out = c.clone().lerp(cC, lift * 0.5);
-      colors.push(out.r, out.g, out.b);
-    }
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geo.computeVertexNormals();
-    const ground = new THREE.Mesh(geo.toNonIndexed(), mat('#ffffff', { vertexColors: true }));
+      return c.clone().lerp(cC, THREE.MathUtils.clamp(y / 8, 0, 1) * 0.5);
+    });
+    const ground = new THREE.Mesh(geo, mat('#ffffff', { vertexColors: true }));
     ground.receiveShadow = true;
     g.add(ground);
-
-    // Mount Sharp (Aeolis Mons) rising from the middle of Gale Crater, in the distance.
-    const mt = new THREE.ConeGeometry(14, 9, 9, 3);
-    const mp = mt.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < mp.count; i++) {
-      const y = mp.getY(i);
-      if (y < 4.4) mp.setX(i, mp.getX(i) * (0.92 + r() * 0.16));
-    }
-    mt.computeVertexNormals();
-    const mount = mesh(mt, mat('#c48252'), -14, 3.6, -36);
-    mount.castShadow = false;
-    g.add(mount);
 
     // Rocks.
     const rockMat = mat('#6e3418');
@@ -218,12 +233,48 @@ export class Diorama {
       const d = 9 + r() * 16;
       const x = Math.cos(a) * d;
       const z = Math.sin(a) * d;
-      const rock = mesh(rockGeo, rockMat, x, this.height(x, z) + 0.1, z);
+      const rock = mesh(rockGeo, rockMat, x, marsHeight(x, z) + 0.1, z);
       const s = 0.5 + r() * 1.6;
       rock.scale.set(s, s * (0.5 + r() * 0.5), s);
       rock.rotation.set(r() * 3, r() * 3, r() * 3);
       g.add(rock);
     }
+    return g;
+  }
+
+  /** Made-up Moon ground: gray regolith, lots of craters, boulders, and the Earth in the sky. */
+  private buildMoonGround() {
+    const g = new THREE.Group();
+    g.name = 'moon-ground';
+    const r = rand(1972);
+    const greys = ['#8d8b87', '#7d7c79', '#96948f'].map((c) => new THREE.Color(c));
+    const bright = new THREE.Color('#c4c2bc');
+    const dark = new THREE.Color('#4f4f52');
+    const geo = groundGeometry(110, 84, 1.2, moonHeight, (x, z) => {
+      const base = greys[Math.floor(r() * greys.length)].clone();
+      const t = moonTone(x, z);
+      return t >= 0 ? base.lerp(bright, t * 2) : base.lerp(dark, -t * 2);
+    });
+    const ground = new THREE.Mesh(geo, mat('#ffffff', { vertexColors: true }));
+    ground.receiveShadow = true;
+    g.add(ground);
+
+    // Boulders.
+    const rockMat = mat('#5d5d60');
+    const rockGeo = new THREE.DodecahedronGeometry(0.35, 0);
+    for (let i = 0; i < 80; i++) {
+      const a = r() * Math.PI * 2;
+      const d = 9 + r() * 30;
+      const x = Math.cos(a) * d;
+      const z = Math.sin(a) * d;
+      const rock = mesh(rockGeo, rockMat, x, moonHeight(x, z) + 0.1, z);
+      const s = 0.4 + r() * 1.4;
+      rock.scale.set(s, s * (0.6 + r() * 0.5), s);
+      rock.rotation.set(r() * 3, r() * 3, r() * 3);
+      g.add(rock);
+    }
+
+    g.add(buildEarth());
     return g;
   }
 
@@ -508,7 +559,36 @@ export class Diorama {
 
   // ------------------------------------------------------------------ updating
 
+  /** Switch the scenery between Mars and the Moon. The base itself stays where it is. */
+  setSite(site: Site) {
+    if (site === this.site) return;
+    this.site = site;
+    const moon = site === 'moon';
+    if (moon && !this.moonGround) {
+      this.moonGround = this.buildMoonGround();
+      this.group.add(this.moonGround);
+    }
+    this.marsGround.visible = !moon;
+    if (this.moonGround) this.moonGround.visible = moon;
+    // Hulls look a little whiter on the Moon: no red dust settling on them.
+    const white = new THREE.Color('#ffffff');
+    for (const { m, base } of this.hull) m.color.copy(base).lerp(white, moon ? 0.35 : 0);
+    this.ambient.groundColor.set(moon ? '#3a3a40' : '#6b2e16');
+    // No air, no dust.
+    if (moon) (this.dust.material as THREE.PointsMaterial).opacity = 0;
+  }
+
+  get currentSite(): Site {
+    return this.site;
+  }
+
+  /** Ground height at a scene position, for the current site. */
+  groundHeight(x: number, z: number) {
+    return this.height(x, z);
+  }
+
   setScene(s: StageScene) {
+    this.setSite(s.site ?? 'mars');
     const prev = this.prevLevels;
     this.scene = s;
     // Panels: 3 rows to start, plus one per upgrade.
@@ -614,8 +694,8 @@ export class Diorama {
     });
     // Ghost blueprint shimmer.
     if (!reduced) this.ghostMat.opacity = Math.max(0.15, this.ghostMat.opacity * 0.98 + (0.35 + 0.15 * Math.sin(time * 3)) * 0.02);
-    // Dust particles drift when it's dusty.
-    const dustTarget = s.weather === 'storm' ? 0.85 : s.weather === 'dusty' ? 0.5 : 0;
+    // Dust particles drift when it's dusty (never on the Moon: there is no wind to lift it).
+    const dustTarget = this.site === 'moon' ? 0 : s.weather === 'storm' ? 0.85 : s.weather === 'dusty' ? 0.5 : 0;
     const dm = this.dust.material as THREE.PointsMaterial;
     dm.opacity += (dustTarget - dm.opacity) * Math.min(1, dt * 2);
     if (dm.opacity > 0.01 && !reduced) {
