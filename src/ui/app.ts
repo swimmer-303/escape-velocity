@@ -33,6 +33,7 @@ import { factFor, FACTS } from '../data/science';
 import type { Stage } from '../render/stage';
 import { renderScienceLog } from './sciencelog';
 import { renderCredits } from './credits';
+import { Coach, type CoachPhase } from './tutorial';
 import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange } from './views';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale';
@@ -124,6 +125,7 @@ export class App {
   private crate: CrateId | undefined;
   private lastReport: SolReport | null = null;
   private ff = false;
+  private coach = new Coach();
 
   constructor(stage: Stage) {
     this.stage = stage;
@@ -282,6 +284,21 @@ export class App {
     if (this.phase === 'running' && (e.key === 'f' || e.key === 'F')) this.ff = true;
   }
 
+  private coachPhase(): CoachPhase {
+    return this.phase === 'briefing' || this.phase === 'plan' || this.phase === 'running' || this.phase === 'debrief' ? this.phase : 'other';
+  }
+
+  private coachUpdate() {
+    if (!this.coach.active) return;
+    const heaterNeed = this.mission ? getBriefing(this.mission).heaterNeed : 1;
+    this.coach.update({ phase: this.coachPhase(), alloc: this.alloc, heaterNeed });
+  }
+
+  private startTutorial() {
+    const heaterNeed = this.mission ? getBriefing(this.mission).heaterNeed : 1;
+    this.coach.start({ phase: this.coachPhase(), alloc: this.alloc, heaterNeed });
+  }
+
   private stageScene() {
     const m = this.mission;
     if (!m) return;
@@ -303,6 +320,7 @@ export class App {
 
   // ------------------------------------------------------------------ title
   showTitle() {
+    if (this.coach.active) this.coach.stop(false);
     this.phase = 'title';
     this.mission = null;
     this.mode = null;
@@ -494,6 +512,19 @@ export class App {
           { class: 'actions' },
           h('button', { class: 'btn primary', onclick: () => this.resume() }, 'Resume'),
           this.mission ? h('button', { class: 'btn', onclick: () => this.showWorkshop(() => this.resume()) }, 'Workshop') : null,
+          this.mission
+            ? h(
+                'button',
+                {
+                  class: 'btn',
+                  onclick: () => {
+                    this.resume();
+                    this.startTutorial();
+                  },
+                },
+                'Replay tutorial',
+              )
+            : null,
           h('button', { class: 'btn', onclick: () => this.showHowTo(() => this.resume()) }, 'How to play'),
           h('button', { class: 'btn', onclick: () => this.showScienceLog() }, 'Science Log'),
           h('button', { class: 'btn', onclick: () => this.showCredits() }, 'Credits'),
@@ -652,6 +683,8 @@ export class App {
     this.mission = createMission(missionConfigFor(c, this.light.oneWayMinutes, pool));
     this.save();
     this.showBriefing();
+    // First time playing: a one-minute guided first sol.
+    if (!Coach.seen() && c.expedition === 1 && (this.mode === 'campaign' || this.mode === 'quick')) this.startTutorial();
   }
 
   // ------------------------------------------------------------------ one sol
@@ -832,6 +865,7 @@ export class App {
       ],
       { label: `Sol ${m.sol} morning briefing` },
     );
+    this.coachUpdate();
   }
 
   private showWorkshop(back: () => void) {
@@ -903,6 +937,7 @@ export class App {
     this.refreshHud(preview.after);
     this.stageScene();
     this.budget.set(m, b, this.alloc, preview, briefMini(m, b, check.remaining));
+    this.coachUpdate();
   }
 
   private async run() {
@@ -914,6 +949,7 @@ export class App {
     }
     this.audio.sfx('run');
     this.phase = 'running';
+    this.coachUpdate();
     const { next, report } = runSol(m, this.alloc, this.crate);
     this.lastReport = report;
 
@@ -1014,6 +1050,7 @@ export class App {
       ],
       { label: `Sol ${report.sol} debrief` },
     );
+    this.coachUpdate();
   }
 
   // ------------------------------------------------------------------ endings

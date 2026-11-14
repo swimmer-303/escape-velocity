@@ -67,7 +67,7 @@ async function play(app: App, done: () => boolean) {
         }
       }
       (await waitFor(() => button(/^Run sol/))).click();
-      (await waitFor(() => button(/Skip/))).click();
+      (await waitFor(() => button(/^Skip$/))).click();
       sols++;
       continue;
     }
@@ -83,6 +83,24 @@ async function play(app: App, done: () => boolean) {
 }
 
 describe('UI smoke test', () => {
+  it('guides a first-time player through the first sol, and can be skipped', async () => {
+    new App(new CssStage());
+    (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Land the crew/))).click();
+    const bubble = await waitFor(() => document.querySelector('.coach-bubble'));
+    expect(bubble.textContent).toMatch(/PLAN THE DAY/);
+    button(/Plan the day/)!.click();
+    await sleep(0);
+    expect(document.querySelector('.coach-bubble')!.textContent).toMatch(/power cells/);
+    button(/^Next$/)!.click();
+    expect(document.querySelector('.coach-bubble')!.textContent).toMatch(/AIR/);
+    document.querySelector<HTMLButtonElement>('button[aria-label="Add a cell to Air"]')!.click();
+    expect(document.querySelector('.coach-bubble')!.textContent).toMatch(/FUEL/);
+    button(/Skip tutorial/)!.click();
+    expect(document.querySelector('.coach-bubble')).toBeNull();
+    expect(localStorage.getItem('ev-tutorial-done')).toBe('1');
+  }, 20000);
+
   it('plays a whole 3-crew campaign from title to the finale, with saving', async () => {
     const app = new App(new CssStage());
     (await waitFor(() => button(/New campaign/))).click();
