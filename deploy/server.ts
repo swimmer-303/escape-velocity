@@ -1,8 +1,9 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // Tiny Node server for the droplet: serves /api/spaceweather (handler in api/spaceweather.ts)
 // with a 1-hour in-memory cache so players never hit NASA rate limits, /api/sun (api/sun.ts):
-// NASA SDO's newest picture of the Sun, cached for 10 minutes, and /api/rooms (src/room/http.ts):
-// Mission Control rooms for class team play, kept in memory only.
+// NASA SDO's newest picture of the Sun, cached for 10 minutes, /api/rooms (src/room/http.ts):
+// Mission Control rooms for class team play, kept in memory only, and /api/class (src/class/http.ts):
+// the teacher dashboard's class boards, saved in STATE_DIR/classes.json and deleted 7 days after the last result.
 // Caddy serves the static game and reverse-proxies /api/* to this process.
 
 import { createServer, type Server, type ServerResponse } from 'node:http';
@@ -12,9 +13,13 @@ import { buildEventPool, RECENT_SNAPSHOT, type DonkiSnapshot, type SpaceWeatherF
 import { earthMarsLightTime } from '../src/data/lighttime';
 import { RoomStore, type RoomEvents } from '../src/room/store';
 import { createRoomsHandler } from '../src/room/http';
+import { ClassStore } from '../src/class/store';
+import { createClassHandler } from '../src/class/http';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '127.0.0.1';
+/** Where the server keeps files between restarts (systemd's StateDirectory). */
+const STATE_DIR = process.env.STATE_DIR ?? '/var/lib/escape-velocity';
 const TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, { at: number; status: number; body: string }>();
 const loading = new Map<string, Promise<{ status: number; body: string }>>();
@@ -120,9 +125,11 @@ export interface ApiServerOptions {
   fetchSnapshot?: () => Promise<DonkiSnapshot | null>;
   /** Wait this long to bundle quick room changes into one live message, ms. */
   coalesceMs?: number;
+  /** Where class boards are saved (null = memory only). Default: STATE_DIR (memory only under tests). */
+  stateDir?: string | null;
 }
 
-export function createApiServer(opts: ApiServerOptions = {}): { server: Server; rooms: RoomStore } {
+export function createApiServer(opts: ApiServerOptions = {}): { server: Server; rooms: RoomStore; classes: ClassStore } {
   const fetchSnapshot = opts.fetchSnapshot ?? cachedSnapshot;
   const rooms = new RoomStore({
     events: () => roomEvents(fetchSnapshot),
@@ -130,6 +137,8 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
     coalesceMs: opts.coalesceMs,
   }).start();
   const handleRooms = createRoomsHandler(rooms);
+  const classes = new ClassStore({ dir: opts.stateDir !== undefined ? opts.stateDir : process.env.VITEST ? null : STATE_DIR }).load().start();
+  const handleClass = createClassHandler(classes);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
@@ -138,6 +147,7 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
       return;
     }
     if (url.pathname.startsWith('/api/rooms') && (await handleRooms(req, res, url))) return;
+    if (url.pathname.startsWith('/api/class') && (await handleClass(req, res, url))) return;
     if (req.method !== 'GET' || url.pathname !== '/api/spaceweather') {
       res.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}');
       return;
@@ -153,14 +163,24 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
       res.writeHead(502, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'proxy failed', details: String(e) }));
     }
   });
-  server.on('close', () => rooms.stop());
-  return { server, rooms };
+  server.on('close', () => {
+    rooms.stop();
+    classes.stop();
+  });
+  return { server, rooms, classes };
 }
 
 // Run as a program (not when a test imports this file).
 if (!process.env.VITEST) {
-  const { server } = createApiServer();
+  const { server, classes } = createApiServer();
   server.listen(PORT, HOST, () => console.log(`Escape Velocity API on http://${HOST}:${PORT}`));
+  // systemd stops us on every deploy: save the class boards first (the exit waits one tick for other handlers).
+  for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(sig, () => {
+      classes.stop();
+      setImmediate(() => process.exit(0));
+    });
+  }
   // Warm the NASA cache so the first Mission Control room gets live storms right away.
   void spaceWeather('30').catch(() => undefined);
 }

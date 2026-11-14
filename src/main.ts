@@ -2,6 +2,7 @@
 import './ui/style.css';
 import { App } from './ui/app';
 import { CssStage, SwappableStage } from './render/stage';
+import { dashboardParams } from './class/protocol';
 
 const stage = new SwappableStage(new CssStage());
 new App(stage);
@@ -15,7 +16,8 @@ function want3d(): boolean {
 }
 
 // Load the 3D outpost in the background so the title screen appears right away.
-if (want3d()) {
+// (Not on the teacher dashboard page: the game is hidden there.)
+if (want3d() && !dashboardParams(location.search)) {
   import('./render/three-stage')
     .then(({ ThreeStage }) => {
       if (!ThreeStage.supported()) return;

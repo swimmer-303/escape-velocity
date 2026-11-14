@@ -44,8 +44,10 @@ import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
 import { missionChartFor, crewCharts } from './charts';
 import { roomParam } from '../room/protocol';
+import { classBoard } from './classboard';
+import { dashboardParams, type DashboardLink } from '../class/protocol';
 
-type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room';
+type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room' | 'dashboard';
 type Mode = 'campaign' | 'quick' | 'history';
 
 interface Settings {
@@ -180,9 +182,12 @@ export class App {
       else this.refreshHud();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
-    // A Mission Control join link (?room=CODE) goes straight to the class room.
+    // A Mission Control join link (?room=CODE) goes straight to the class room;
+    // a teacher dashboard link (?dashboard=CODE&key=KEY) opens the class board instead of the game.
     const room = roomParam(location.search);
-    if (room) this.openRoom(room);
+    const dash = dashboardParams(location.search);
+    if (dash) this.openDashboard(dash);
+    else if (room) this.openRoom(room);
     else this.showTitle();
   }
 
@@ -457,6 +462,12 @@ export class App {
         ),
       )
       .catch(() => this.showTitle());
+  }
+
+  /** The teacher dashboard is its own page; the game stays hidden. */
+  private openDashboard(link: DashboardLink) {
+    this.phase = 'dashboard';
+    import('./dashboard/page').then(({ openDashboard }) => openDashboard(link)).catch(() => this.showTitle());
   }
 
   /** Pick Mars or the Moon, then a difficulty (campaign) or just go (quick mission). */
@@ -1211,6 +1222,8 @@ export class App {
     this.refreshHud();
     const won = m.status === 'won';
     if (first) {
+      // Class code: send this crew's result to the teacher's class board (in the background).
+      if (this.mode === 'campaign' || this.mode === 'quick') classBoard.report(this.campaign?.classCode, m, this.mode);
       if (won) {
         this.closeModal();
         this.audio.playMusic('launch');
@@ -1249,6 +1262,7 @@ export class App {
         crewSays(m.config.expedition, won),
         this.mode !== 'history' ? starRow(stars) : null,
         this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
+        this.mode !== 'history' ? classBoard.card(this.campaign?.classCode) : null,
         h('h3', null, 'What happened'),
         h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),
         missionChartFor(m),
@@ -1388,6 +1402,7 @@ export class App {
           '. Three crews, one base: every crew built on the work of the one before. That is how real space stations and bases grow.',
         ),
         classCodeLine(c.classCode),
+        classBoard.card(c.classCode),
         h('div', { class: 'card event' }, h('div', { class: 'kicker' }, 'Talk about it'), h('ul', { class: 'clean' }, (t.site === 'moon' ? MOON_TALK_ABOUT_IT : TALK_ABOUT_IT)[3].map((q) => h('li', null, q)))),
         h(
           'div',
