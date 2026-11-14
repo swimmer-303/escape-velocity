@@ -3,7 +3,7 @@
 // 3D diorama (Three.js) and the lightweight fallback are interchangeable.
 
 import type { Allocation, Weather } from '../sim/types';
-import type { Levels } from '../sim/upgrades';
+import type { Levels, UpgradeId } from '../sim/upgrades';
 
 export interface StageScene {
   sol: number;
@@ -15,6 +15,9 @@ export interface StageScene {
   levels: Levels;
   /** Astronauts walking around (0 while the base is empty between crews). */
   crew: number;
+  /** The Workshop's current project and how far along it is (0..1), shown as a blueprint. */
+  project?: UpgradeId | null;
+  projectProgress?: number;
 }
 
 export interface Stage {
@@ -101,4 +104,63 @@ function mix(a: string, b: string, t: number): string {
   const pb = parseInt(b.slice(1), 16);
   const ch = (s: number) => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
   return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
+}
+
+/**
+ * Starts with a lightweight stage and swaps in the 3D one once it has loaded,
+ * replaying the latest scene so nothing is lost.
+ */
+export class SwappableStage implements Stage {
+  private inner: Stage;
+  private el?: HTMLElement;
+  private last?: StageScene;
+  private t = 0.25;
+  private reduced = false;
+
+  constructor(initial: Stage) {
+    this.inner = initial;
+  }
+
+  swap(next: Stage) {
+    if (!this.el) return;
+    const prev = this.inner;
+    try {
+      next.mount(this.el);
+    } catch (e) {
+      console.warn('3D view failed to start; keeping the simple view.', e);
+      next.dispose();
+      return;
+    }
+    prev.dispose();
+    this.inner = next;
+    next.setReducedMotion(this.reduced);
+    if (this.last) next.setScene(this.last);
+    next.setTimeOfDay(this.t);
+  }
+
+  mount(el: HTMLElement) {
+    this.el = el;
+    this.inner.mount(el);
+  }
+  setScene(scene: StageScene) {
+    this.last = scene;
+    this.inner.setScene(scene);
+  }
+  setTimeOfDay(t: number) {
+    this.t = t;
+    this.inner.setTimeOfDay(t);
+  }
+  storm(intensity: number) {
+    this.inner.storm(intensity);
+  }
+  launch() {
+    return this.inner.launch();
+  }
+  setReducedMotion(on: boolean) {
+    this.reduced = on;
+    this.inner.setReducedMotion(on);
+  }
+  dispose() {
+    this.inner.dispose();
+  }
 }

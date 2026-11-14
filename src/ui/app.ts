@@ -41,13 +41,15 @@ type Mode = 'campaign' | 'quick' | 'history';
 interface Settings {
   muted: boolean;
   reducedMotion: boolean;
+  /** 3D outpost on (default) or the simple view for slow devices. */
+  view3d: boolean;
 }
 
 const SETTINGS_KEY = 'ev-settings';
 const SAVE_KEY = 'ev-save-v1';
 
 function loadSettings(): Settings {
-  const base = { muted: false, reducedMotion: prefersReducedMotion() };
+  const base = { muted: false, reducedMotion: prefersReducedMotion(), view3d: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...base, ...JSON.parse(raw) } : base;
@@ -284,7 +286,19 @@ export class App {
     const m = this.mission;
     if (!m) return;
     const b = getBriefing(m);
-    this.stage.setScene({ sol: m.sol, weather: b.weather, alloc: this.alloc, fuel: m.fuel, sheltered: this.alloc.shelter > 0, levels: m.base.levels, crew: m.crew });
+    const p = m.base.project;
+    const cost = p ? nextCost(p, m.base.levels) : null;
+    this.stage.setScene({
+      sol: m.sol,
+      weather: b.weather,
+      alloc: this.alloc,
+      fuel: m.fuel,
+      sheltered: this.alloc.shelter > 0,
+      levels: m.base.levels,
+      crew: m.crew,
+      project: p,
+      projectProgress: p && cost ? Math.min(1, (m.base.progress[p] + (this.phase === 'plan' ? this.alloc.build : 0)) / cost) : undefined,
+    });
   }
 
   // ------------------------------------------------------------------ title
@@ -458,6 +472,21 @@ export class App {
               },
             },
             s.reducedMotion ? 'Reduced motion: on' : 'Reduced motion: off',
+          ),
+          h(
+            'button',
+            {
+              class: 'btn small',
+              'aria-pressed': String(s.view3d),
+              title: 'Turn off on slow computers. The page reloads; your campaign is saved.',
+              onclick: () => {
+                s.view3d = !s.view3d;
+                saveSettings(s);
+                this.save();
+                location.reload();
+              },
+            },
+            s.view3d ? '3D view: on' : '3D view: off',
           ),
         ),
         h(
