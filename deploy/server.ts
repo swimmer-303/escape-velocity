@@ -2,8 +2,9 @@
 // Tiny Node server for the droplet: serves /api/spaceweather (handler in api/spaceweather.ts)
 // with a 1-hour in-memory cache so players never hit NASA rate limits, /api/sun (api/sun.ts):
 // NASA SDO's newest picture of the Sun, cached for 10 minutes, /api/rooms (src/room/http.ts):
-// Mission Control rooms for class team play, kept in memory only, and /api/class (src/class/http.ts):
-// the teacher dashboard's class boards, saved in STATE_DIR/classes.json and deleted 7 days after the last result.
+// Mission Control rooms for class team play (kept in memory only), /api/class (src/class/http.ts): the teacher
+// dashboard's class boards (STATE_DIR/classes.json, deleted 7 days after the last result), and /api/daily
+// (src/daily/http.ts): the daily challenge and its boards (STATE_DIR/daily.json).
 // Caddy serves the static game and reverse-proxies /api/* to this process.
 
 import { createServer, type Server, type ServerResponse } from 'node:http';
@@ -15,6 +16,10 @@ import { RoomStore, type RoomEvents } from '../src/room/store';
 import { createRoomsHandler } from '../src/room/http';
 import { ClassStore } from '../src/class/store';
 import { createClassHandler } from '../src/class/http';
+import { DailyStore } from '../src/daily/store';
+import { createDailyHandler } from '../src/daily/http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -125,11 +130,13 @@ export interface ApiServerOptions {
   fetchSnapshot?: () => Promise<DonkiSnapshot | null>;
   /** Wait this long to bundle quick room changes into one live message, ms. */
   coalesceMs?: number;
-  /** Where class boards are saved (null = memory only). Default: STATE_DIR (memory only under tests). */
+  /** Where class boards and daily.json are saved (null = class boards in memory only). Default: STATE_DIR (memory/temp under tests). */
   stateDir?: string | null;
+  /** The clock for the daily challenge (tests move it across midnight). */
+  now?: () => number;
 }
 
-export function createApiServer(opts: ApiServerOptions = {}): { server: Server; rooms: RoomStore; classes: ClassStore } {
+export function createApiServer(opts: ApiServerOptions = {}): { server: Server; rooms: RoomStore; classes: ClassStore; daily: DailyStore } {
   const fetchSnapshot = opts.fetchSnapshot ?? cachedSnapshot;
   const rooms = new RoomStore({
     events: () => roomEvents(fetchSnapshot),
@@ -139,6 +146,11 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
   const handleRooms = createRoomsHandler(rooms);
   const classes = new ClassStore({ dir: opts.stateDir !== undefined ? opts.stateDir : process.env.VITEST ? null : STATE_DIR }).load().start();
   const handleClass = createClassHandler(classes);
+  // The daily challenge freezes the same real storms a new room would get. It always needs a folder:
+  // tests that don't pass one get a private temp folder.
+  const dailyDir = opts.stateDir ?? (process.env.VITEST ? join(tmpdir(), `ev-daily-test-${process.pid}`) : STATE_DIR);
+  const daily = new DailyStore({ dir: dailyDir, events: () => roomEvents(fetchSnapshot), now: opts.now });
+  const handleDaily = createDailyHandler(daily);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
@@ -148,6 +160,7 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
     }
     if (url.pathname.startsWith('/api/rooms') && (await handleRooms(req, res, url))) return;
     if (url.pathname.startsWith('/api/class') && (await handleClass(req, res, url))) return;
+    if (url.pathname.startsWith('/api/daily') && (await handleDaily(req, res, url))) return;
     if (req.method !== 'GET' || url.pathname !== '/api/spaceweather') {
       res.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}');
       return;
@@ -166,18 +179,22 @@ export function createApiServer(opts: ApiServerOptions = {}): { server: Server; 
   server.on('close', () => {
     rooms.stop();
     classes.stop();
+    daily.close();
   });
-  return { server, rooms, classes };
+  return { server, rooms, classes, daily };
 }
 
 // Run as a program (not when a test imports this file).
 if (!process.env.VITEST) {
-  const { server, classes } = createApiServer();
+  const { server, classes, daily } = createApiServer();
   server.listen(PORT, HOST, () => console.log(`Escape Velocity API on http://${HOST}:${PORT}`));
-  // systemd stops us on every deploy: save the class boards first (the exit waits one tick for other handlers).
+  process.once('exit', () => daily.flushSync());
+  // systemd stops us on every deploy: save the class boards and the daily boards first (the exit waits one tick for other handlers).
   for (const sig of ['SIGTERM', 'SIGINT'] as const) {
     process.on(sig, () => {
+      // One handler saves everything, then exits: class boards and the daily challenge.
       classes.stop();
+      daily.flushSync();
       setImmediate(() => process.exit(0));
     });
   }

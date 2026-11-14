@@ -46,9 +46,12 @@ import { missionChartFor, crewCharts } from './charts';
 import { roomParam } from '../room/protocol';
 import { classBoard } from './classboard';
 import { dashboardParams, type DashboardLink } from '../class/protocol';
+import { dailyMissionConfig } from '../daily/replay';
+import { loadDaily, type DailySession } from './daily/net';
+import { dailyBadge, dailyEndPanel, dailyHudLabel, dailyIntroCard, dailyKicker, todaysBest } from './daily/screens';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room' | 'dashboard';
-type Mode = 'campaign' | 'quick' | 'history';
+type Mode = 'campaign' | 'quick' | 'history' | 'daily';
 
 interface Settings {
   muted: boolean;
@@ -143,6 +146,8 @@ export class App {
   private codes = new ClassCodes();
   /** Mars or the Moon, as picked in the mission chooser. */
   private site: Site = 'mars';
+  /** Today's daily challenge (from our server, or the bundled snapshot when offline). */
+  private daily: DailySession | null = null;
 
   constructor(stage: Stage) {
     this.stage = stage;
@@ -248,6 +253,7 @@ export class App {
   }
 
   private dataBadge(): HTMLElement {
+    if (this.mode === 'daily' && this.daily) return dailyBadge(this.daily.config, () => this.showScienceLog());
     const f = this.feed;
     let text: string;
     let cls: string = f.status;
@@ -297,6 +303,7 @@ export class App {
   }
 
   private hudLabel(m: MissionState) {
+    if (this.mode === 'daily' && this.daily) return dailyHudLabel(this.daily.config);
     return this.mode === 'history' ? 'MAY 2024' : this.mode === 'campaign' ? `CREW ${m.config.expedition} OF ${EXPEDITIONS.length}` : 'QUICK MISSION';
   }
 
@@ -412,6 +419,12 @@ export class App {
             { class: 'menu-row' },
             h('button', { class: 'btn', onclick: () => this.startQuick() }, 'Quick mission'),
             h('button', { class: 'btn cyan', onclick: () => this.startHistory(), disabled: MAY2024_SNAPSHOT ? undefined : true }, 'May 2024 storms'),
+          ),
+          h(
+            'div',
+            { class: 'menu-row' },
+            h('button', { class: 'btn go', onclick: () => void this.startDaily() }, 'Daily challenge'),
+            h('button', { class: 'btn', onclick: () => this.showTodaysBest(() => this.showTitle()) }, "Today's best"),
           ),
           h('button', { class: 'btn', onclick: () => this.openRoom() }, 'Class mission: Mission Control'),
           h(
@@ -724,6 +737,24 @@ export class App {
     this.showExpeditionIntro();
   }
 
+  /** Daily challenge: today's config from our server (or the bundled snapshot), then the usual crew intro. */
+  private async startDaily() {
+    this.audio.sfx('click');
+    this.modal([h('div', { class: 'kicker' }, 'Daily challenge'), h('p', null, "Getting today's challenge...")], { label: 'Daily challenge' });
+    const from = this.phase;
+    const session = await loadDaily();
+    if (this.phase !== from) return; // the player went somewhere else while we waited
+    this.mode = 'daily';
+    this.daily = session;
+    this.campaign = newCampaign(session.config.seed, 'cadet', session.config.site);
+    this.showExpeditionIntro();
+  }
+
+  private showTodaysBest(back: () => void) {
+    this.audio.sfx('click');
+    this.modal(todaysBest({ back, play: () => void this.startDaily() }), { label: "Today's best", onClose: back });
+  }
+
   private startHistory() {
     this.audio.sfx('click');
     this.mode = 'history';
@@ -750,7 +781,7 @@ export class App {
     const t = siteText(c);
     this.modal(
       [
-        h('div', { class: 'kicker' }, isCampaign ? `Crew ${c.expedition} of ${EXPEDITIONS.length}` : 'Quick mission'),
+        h('div', { class: 'kicker' }, isCampaign ? `Crew ${c.expedition} of ${EXPEDITIONS.length}` : this.mode === 'daily' && this.daily ? dailyKicker(this.daily.config) : 'Quick mission'),
         h('h2', null, spec.name),
         t.site === 'mars'
           ? h('div', { class: 'art' }, h('img', { src: c.expedition === 1 ? '/art/title.png' : '/art/event-resupply.png', alt: 'The Mars outpost (AI-generated art)' }))
@@ -795,7 +826,7 @@ export class App {
             ? [built.map((id, i) => [i ? ', ' : '', `${UPGRADES[id].name}${maxLevel(id) > 1 ? ` x${c.base.levels[id]}` : ''}`]), ', plus the basics.']
             : 'just the basics: a habitat, an O2 plant, a greenhouse, heaters, a storm shelter and a solar array.',
         ),
-        isCampaign
+        isCampaign || this.mode === 'daily'
           ? h(
               'div',
               { class: 'card' },
@@ -809,6 +840,7 @@ export class App {
               onChange: (code) => (this.campaign = campaignWithCode(code, this.seed(), 'cadet')),
             })
           : null,
+        this.mode === 'daily' && this.daily ? dailyIntroCard(this.daily, () => this.showTodaysBest(() => this.showExpeditionIntro())) : null,
         h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
       ],
       { label: `${spec.name} introduction` },
@@ -825,11 +857,11 @@ export class App {
     this.modalRoot.querySelectorAll('button').forEach((b) => b.setAttribute('disabled', ''));
     const pool = await this.pool().finally(() => (this.landing = false));
     this.campaignAtStart = c;
-    this.mission = createMission(missionConfigFor(c, this.light.oneWayMinutes, pool));
+    this.mission = createMission(this.mode === 'daily' && this.daily ? dailyMissionConfig(this.daily.config) : missionConfigFor(c, this.light.oneWayMinutes, pool));
     this.save();
     this.showBriefing();
     // First time playing: a one-minute guided first sol.
-    if (!Coach.seen() && c.expedition === 1 && (this.mode === 'campaign' || this.mode === 'quick')) this.startTutorial();
+    if (!Coach.seen() && c.expedition === 1 && (this.mode === 'campaign' || this.mode === 'quick' || this.mode === 'daily')) this.startTutorial();
   }
 
   // ------------------------------------------------------------------ one sol
@@ -1263,6 +1295,7 @@ export class App {
         this.mode !== 'history' ? starRow(stars) : null,
         this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
         this.mode !== 'history' ? classBoard.card(this.campaign?.classCode) : null,
+        this.mode === 'daily' && this.daily ? dailyEndPanel(this.daily, m) : null,
         h('h3', null, 'What happened'),
         h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),
         missionChartFor(m),
@@ -1286,7 +1319,11 @@ export class App {
           isCampaign && last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showFinale() }, 'See your base', h('span', { class: 'arrow' })) : null,
           isCampaign ? h('button', { class: 'btn', onclick: () => this.retryExpedition() }, 'Try this crew again') : null,
           !isCampaign
-            ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? this.startHistory() : this.startQuick()) }, 'Play again')
+            ? h(
+                'button',
+                { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? this.startHistory() : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
+                'Play again',
+              )
             : null,
           !isCampaign ? h('button', { class: 'btn', onclick: () => this.chooseDifficulty() }, 'Start a campaign') : null,
           h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Title screen'),

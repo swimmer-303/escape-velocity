@@ -46,7 +46,7 @@ class BodyError extends Error {
 }
 
 /** Read a small JSON object body (at most LIMITS.maxBody bytes). */
-export function readJson(req: IncomingMessage, max = LIMITS.maxBody): Promise<Record<string, unknown>> {
+export function readJson(req: IncomingMessage, max: number = LIMITS.maxBody): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const declared = Number(req.headers['content-length'] ?? 0);
     if (declared > max) {
