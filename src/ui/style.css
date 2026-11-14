@@ -1044,3 +1044,11 @@ html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, 
   .tp-overlay .tp-hair, .tp-overlay .tp-frame, .tp-overlay .tp-tick { stroke: CanvasText; }
   .tp-overlay text { fill: CanvasText; }
 }
+
+/* ---------- Title menu groups ---------- */
+.title-screen .menu-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px auto 0; max-width: 760px; text-align: left; }
+.title-screen .menu-group { display: flex; flex-direction: column; gap: 8px; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); padding: 10px; }
+.title-screen .menu-group .kicker { margin: 0 0 2px; }
+.title-screen .menu-group .btn { width: 100%; justify-content: flex-start; text-align: left; }
+.title-screen .menu-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+@media (max-width: 700px) { .title-screen .menu-groups { grid-template-columns: 1fr; } }
