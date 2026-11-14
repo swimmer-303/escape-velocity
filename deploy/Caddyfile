@@ -1,7 +1,7 @@
 # Written with AI assistance (Claude Code). See README "Use of AI tools".
-# Caddy gets and renews the HTTPS certificate automatically.
-# SITE_HOST is set in /etc/default/caddy (a domain, or <ip-with-dashes>.sslip.io if there is no domain).
-{$SITE_HOST} {
+# Caddy gets and renews the HTTPS certificates automatically (Let's Encrypt, HTTP-01;
+# works behind Cloudflare's proxy with SSL mode "Full" or "Full (strict)").
+playescapevelocity.com {
 	encode zstd gzip
 
 	handle /api/* {
@@ -21,4 +21,9 @@
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server
 	}
+}
+
+# One address for everyone: www and the droplet's old sslip.io address redirect to the domain.
+www.playescapevelocity.com, 143-110-195-117.sslip.io {
+	redir https://playescapevelocity.com{uri} permanent
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Written with AI assistance (Claude Code). See README "Use of AI tools".
 # One-time setup for a fresh Ubuntu 24.04 droplet. Run as root:  bash setup.sh <site-host> "<deploy-public-key>"
+# (The site's hostnames live in deploy/Caddyfile; SITE_HOST is kept only for reference.)
 set -euo pipefail
 SITE_HOST="$1"
 DEPLOY_PUBKEY="$2"

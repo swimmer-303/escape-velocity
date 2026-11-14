@@ -5,7 +5,7 @@ NASA Space Apps Challenge 2026, Charlotte, NC · Team Sendy1 (Spencer Hedges and
 
 > Build a base in Gale Crater on Mars, crew after crew. Keep each crew breathing, fed and safe from solar storms, make enough oxygen to fill the rocket that flies them home, and leave the base better for the next crew. Fill the tank and you hit **escape velocity**.
 
-**Play it:** https://143-110-195-117.sslip.io · no download, no account, works on Chromebooks, desktops and tablets.
+**Play it:** https://playescapevelocity.com · no download, no account, works on Chromebooks, desktops and tablets.
 
 ## The challenge
 
@@ -100,7 +100,7 @@ npm run build        # typecheck + production build into dist/
 
 ### Deployment
 
-Every push to `main` runs the tests, builds the game, and deploys it to our DigitalOcean droplet through GitHub Actions (`.github/workflows/deploy.yml`), so any teammate with push access can ship. On the droplet, **Caddy** serves the static game with automatic HTTPS and forwards `/api/*` to a tiny Node service (`deploy/server.ts`) that fetches NASA DONKI (`/api/spaceweather`, cached for an hour) and NASA SDO's newest picture of the Sun (`/api/sun`, cached for 10 minutes). One-time server setup lives in `deploy/setup.sh`; the GitHub secrets it needs are `DEPLOY_HOST`, `DEPLOY_URL`, `DEPLOY_SSH_KEY` (a deploy-only key) and `DEPLOY_KNOWN_HOSTS`. To use a real domain, point its DNS at the droplet and change `SITE_HOST` in `/etc/default/caddy`, then `systemctl restart caddy`.
+Every push to `main` runs the tests, builds the game, and deploys it to our DigitalOcean droplet through GitHub Actions (`.github/workflows/deploy.yml`), so any teammate with push access can ship. On the droplet, **Caddy** serves the static game with automatic HTTPS and forwards `/api/*` to a tiny Node service (`deploy/server.ts`) that fetches NASA DONKI (`/api/spaceweather`, cached for an hour) and NASA SDO's newest picture of the Sun (`/api/sun`, cached for 10 minutes). One-time server setup lives in `deploy/setup.sh`; the GitHub secrets it needs are `DEPLOY_HOST`, `DEPLOY_URL`, `DEPLOY_SSH_KEY` (a deploy-only key) and `DEPLOY_KNOWN_HOSTS`. The site is served at **playescapevelocity.com** (DNS on Cloudflare, proxied, SSL mode Full); `www` and the droplet's old `sslip.io` address redirect there. Caddy's config is `deploy/Caddyfile`: copy it to `/etc/caddy/Caddyfile` and `systemctl reload caddy` after changing it.
 
 Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to let the proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
 
