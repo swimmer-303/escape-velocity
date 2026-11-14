@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "fetch-data": "node scripts/fetch-data.mjs",
     "balance": "vitest run src/sim/balance.test.ts --reporter=verbose",
-    "build:server": "vite build --ssr deploy/server.ts --outDir dist-server --emptyOutDir && mv dist-server/server.js dist-server/server.mjs"
+    "build:server": "vite build --ssr deploy/server.ts --outDir dist-server --emptyOutDir && mv dist-server/server.js dist-server/server.mjs",
+    "fetch-terrain": "node scripts/fetch-terrain.mjs"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.3.0",

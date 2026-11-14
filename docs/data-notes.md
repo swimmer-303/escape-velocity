@@ -220,3 +220,13 @@ The title screen and the morning briefing show NASA Solar Dynamics Observatory's
 - **Listing size:** the full browse folder listing is about 1 MB; Apache's pattern filter `?C=M;O=D;P=*_512_0171.jpg` cuts it to about 14 KB.
 - **Cadence:** on 2026-11-14 (00:06 to 15:47 UTC) there were 94 AIA 171 pictures in the browse folder, a median of 10 minutes apart (8.4 to 19 minutes). The game says "about every 10 minutes".
 - **How the game loads it:** `/api/sun` on our server (`api/sun.ts`, cached 10 minutes in `deploy/server.ts`) serves the newest browse picture with `x-sun-taken-at` (from the file name), `last-modified` (NASA's), `x-sun-fetched-at` and `x-sun-source`, falling back to the latest file with no taken time. The browser tries `/api/sun` first, then NASA's latest file directly (also what the Vite dev server uses), and hides the picture if both fail. "Taken about N minutes ago" is shown only when the time came from the file name and the device clock agrees with the server's `Date`; otherwise the panel says NASA adds a new picture about every 10 minutes.
+
+---
+
+## 7. Terrain: NASA Mars Trek elevation (added 2026-11-14)
+
+- **Product:** MGS MOLA and Mars Express HRSC blended DEM, 200 m/pixel (`Mars_MOLA_blend200ppx_HRSC_DEM_clon0dd_200mpp_lzw`). USGS product page: https://astrogeology.usgs.gov/search/map/mars_mgs_mola_mex_hrsc_blended_dem_global_200m
+- **Access:** Mars Trek's WMTS map tiles are 8-bit shaded/stretched images (no usable heights). The Trek ArcGIS *ImageServer* for the same layer returns real elevations (signed 16-bit meters): `https://trek.nasa.gov/mars/trekarcgis/rest/services/Mars_MOLA_blend200ppx_HRSC_DEM_clon0dd_200mpp_lzw/ImageServer/exportImage?...&format=tiff&pixelType=F32`.
+- **Snapshot:** `npm run fetch-terrain` (scripts/fetch-terrain.mjs) writes `src/data/snapshots/gale-terrain.json`: an 81 x 81 grid, about 3 km spacing, about 240 km across, centered on Bradbury Landing (Curiosity's landing site, 4.5895°S 137.4417°E). Heights range from -4,557 m (crater floor) to +954 m (Mount Sharp's upper slopes); the landing site reads -4,501 m.
+- **In the game:** 1 scene unit = 1 km for the landscape (the outpost's buildings are not to scale), heights exaggerated x1.5, and the real terrain fades in beyond the flat base pad. Stated in the Science Log.
+- **Caveat:** the landing-site coordinates come from Wikipedia's Bradbury Landing article; we did not find a NASA page listing them.
