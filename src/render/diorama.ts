@@ -17,7 +17,9 @@ import { arcadiaHeight, frostAmount } from './arcadia';
 import { moonHeight, moonTone, buildEarth, EARTH_POS, EARTH_RADIUS } from './moon';
 import { Particles } from './fx';
 import { Rover, DustDevils, Drones, Lander, CommsBeam, worldPoint, type BuildSite } from './life';
-import type { FocusKey, StageCue, StageScene } from './stage';
+import { RoverPet, PET_HOME } from './pet';
+import { paintPixels, PAINT_W, PAINT_H, ROCKET_SPAN } from './paint';
+import type { Cosmetics, FocusKey, StageCue, StageScene } from './stage';
 import type { UpgradeId, Levels } from '../sim/upgrades';
 
 export type Site = NonNullable<StageScene['site']>;
@@ -105,6 +107,16 @@ const PULSE_VIOLET = new THREE.Color('#c58bff');
 
 /** Hull colors that turn a little brighter on the Moon (no red dust settling on them). */
 const HULL_COLORS = new Set([C.hab, C.habShade, C.white, '#d8d4cc'].map((c) => new THREE.Color(c).getHex()));
+const WHITE = new THREE.Color('#ffffff');
+
+/** Rocket hull UVs: v runs from the bottom of the booster to the tip of the nose, so one paint picture wraps the whole rocket. */
+function rocketUV(m: THREE.Mesh) {
+  const pos = m.geometry.attributes.position as THREE.BufferAttribute;
+  const uv = m.geometry.attributes.uv as THREE.BufferAttribute;
+  const span = ROCKET_SPAN.top - ROCKET_SPAN.bottom;
+  for (let i = 0; i < pos.count; i++) uv.setY(i, THREE.MathUtils.clamp((pos.getY(i) + m.position.y - ROCKET_SPAN.bottom) / span, 0, 1));
+  uv.needsUpdate = true;
+}
 
 /**
  * A round ground disc: a grid warped so cells are about `nearCell` wide around the base and grow
@@ -228,6 +240,17 @@ export class Diorama {
   private boosterParts: THREE.Object3D[] = [];
   private booster = new THREE.Group();
   private launchState = { ignited: false, staged: false, stageY: 0 };
+  // The Hangar's looks (see setCosmetics). Every astronaut shares these materials: a white and an orange suit
+  // taking turns until the player picks a suit for the whole crew.
+  private suitMats = [mat(C.white), mat(C.orange)];
+  private packMat = mat(C.habShade);
+  private helmetMat = mat(C.white);
+  private visorMat = mat('#202838', { emissive: new THREE.Color(C.amber), emissiveIntensity: 0.4 });
+  private suitGlow = false;
+  private rocketHull!: THREE.MeshPhongMaterial;
+  private rocketFins!: THREE.MeshPhongMaterial;
+  private rocketPaint: THREE.DataTexture | null = null;
+  private pet: RoverPet | null = null;
 
   constructor() {
     this.ambient = new THREE.HemisphereLight('#f2d2a8', '#6b2e16', 1.1);
@@ -629,15 +652,21 @@ export class Diorama {
     // Two stages: the upper stage (with the crew cabin) and the booster below it, which drops away in flight.
     const white = mat(C.white);
     const dark = mat(C.dark);
-    g.add(mesh(new THREE.CylinderGeometry(0.55, 0.585, 2.2, 10), white, 0, 3.7, 0));
-    g.add(mesh(new THREE.ConeGeometry(0.55, 1.3, 10), white, 0, 5.45, 0));
+    // The hull (upper stage, nose cone and booster) shares one material, so a Hangar paint job covers it all.
+    this.rocketHull = white;
+    const upper = mesh(new THREE.CylinderGeometry(0.55, 0.585, 2.2, 10), white, 0, 3.7, 0);
+    const nose = mesh(new THREE.ConeGeometry(0.55, 1.3, 10), white, 0, 5.45, 0);
+    g.add(upper, nose);
     g.add(mesh(new THREE.CylinderGeometry(0.2, 0.32, 0.3, 8), dark, 0, 2.45, 0)); // upper-stage engine, hidden until staging
     const booster: THREE.Object3D[] = [];
     const part = (o: THREE.Object3D) => (booster.push(o), g.add(o), o);
-    part(mesh(new THREE.CylinderGeometry(0.585, 0.62, 2.2, 10), white, 0, 1.5, 0));
+    const lower = mesh(new THREE.CylinderGeometry(0.585, 0.62, 2.2, 10), white, 0, 1.5, 0);
+    part(lower);
+    for (const m of [upper, nose, lower]) rocketUV(m);
     part(mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.14, 10), dark, 0, 2.6, 0));
     part(mesh(new THREE.CylinderGeometry(0.3, 0.45, 0.35, 8), dark, 0, 0.22, 0));
     const finMat = mat(C.oxide);
+    this.rocketFins = finMat;
     for (let i = 0; i < 4; i++) {
       const fin = mesh(new THREE.BoxGeometry(0.1, 0.9, 0.7), finMat, Math.cos((i * Math.PI) / 2) * 0.62, 0.85, Math.sin((i * Math.PI) / 2) * 0.62);
       fin.rotation.y = -(i * Math.PI) / 2;
@@ -732,11 +761,14 @@ export class Diorama {
 
   private buildAstronaut(i: number) {
     const g = new THREE.Group();
-    const suit = mat(i % 2 ? C.orange : C.white);
-    g.add(mesh(new THREE.CapsuleGeometry(0.16, 0.3, 2, 6), suit, 0, 0.35, 0));
-    g.add(mesh(new THREE.IcosahedronGeometry(0.17, 0), mat(C.white), 0, 0.72, 0));
-    g.add(mesh(new THREE.BoxGeometry(0.18, 0.1, 0.05), mat('#202838', { emissive: new THREE.Color(C.amber), emissiveIntensity: 0.4 }), 0, 0.73, 0.15));
-    g.add(mesh(new THREE.BoxGeometry(0.22, 0.26, 0.12), mat(C.habShade), 0, 0.42, -0.17));
+    const suit = mesh(new THREE.CapsuleGeometry(0.16, 0.3, 2, 6), this.suitMats[i % 2], 0, 0.35, 0);
+    suit.name = 'suit';
+    g.add(suit);
+    g.add(mesh(new THREE.IcosahedronGeometry(0.17, 0), this.helmetMat, 0, 0.72, 0));
+    g.add(mesh(new THREE.BoxGeometry(0.18, 0.1, 0.05), this.visorMat, 0, 0.73, 0.15));
+    const pack = mesh(new THREE.BoxGeometry(0.22, 0.26, 0.12), this.packMat, 0, 0.42, -0.17);
+    pack.name = 'suit-pack';
+    g.add(pack);
     g.visible = false;
     this.group.add(g);
     const p = this.waypoint(i);
@@ -817,8 +849,7 @@ export class Diorama {
     if (this.moonGround) this.moonGround.visible = moon;
     if (this.arcadiaGround) this.arcadiaGround.visible = ice;
     // Hulls look a little whiter on the Moon: no red dust settling on them.
-    const white = new THREE.Color('#ffffff');
-    for (const { m, base } of this.hull) m.color.copy(base).lerp(white, moon ? 0.35 : 0);
+    for (const h of this.hull) this.applyTint(h);
     this.ambient.groundColor.set(moon ? '#3a3a40' : '#6b2e16');
     // No air, no dust.
     if (moon) (this.dust.material as THREE.PointsMaterial).opacity = 0;
@@ -833,6 +864,87 @@ export class Diorama {
 
   get currentSite(): Site {
     return this.site;
+  }
+
+  /** A white hull color is a little brighter on the Moon (no red dust on it); other colors stay as painted. */
+  private applyTint(h: { m: THREE.MeshPhongMaterial; base: THREE.Color }) {
+    h.m.color.copy(h.base).lerp(WHITE, this.site === 'moon' && HULL_COLORS.has(h.base.getHex()) ? 0.35 : 0);
+  }
+
+  /** Repaint a material, keeping the Moon's brighter-white-hulls rule. */
+  private tint(m: THREE.MeshPhongMaterial, color: THREE.ColorRepresentation) {
+    let h = this.hull.find((e) => e.m === m);
+    if (!h) this.hull.push((h = { m, base: new THREE.Color() }));
+    h.base.set(color);
+    this.applyTint(h);
+  }
+
+  // ------------------------------------------------------------------ the Hangar's looks
+
+  /** Suit colors for the whole crew, the rocket's paint job, the rover pet (or none) and the base lights. */
+  setCosmetics(c: Cosmetics) {
+    for (const m of this.suitMats) {
+      this.tint(m, c.suit.body);
+      m.emissive.set(c.suit.body);
+    }
+    this.tint(this.packMat, c.suit.trim);
+    this.suitGlow = !!c.suit.glow;
+    this.setNight(this.night);
+
+    this.paintRocket(c.rocket);
+
+    if (c.pet) {
+      if (!this.pet) {
+        // A new pet rolls out of the habitat door.
+        this.pet = new RoverPet();
+        this.pet.place(PET_HOME.x, PET_HOME.z, this.heightAt);
+        this.group.add(this.pet.group);
+      }
+      this.pet.setLook(c.pet);
+    } else if (this.pet) {
+      this.group.remove(this.pet.group);
+      this.pet.dispose();
+      this.pet = null;
+    }
+
+    for (const m of [...this.glow.hab, ...this.glow.shelter, ...this.glow.battery]) m.emissive.set(c.lights);
+  }
+
+  /** The paint picture becomes a tiny texture (nearest-neighbor, no mipmaps: crisp, blocky pixels). */
+  private paintRocket(p: Cosmetics['rocket']) {
+    const tex = new THREE.DataTexture(paintPixels(p), PAINT_W, PAINT_H, THREE.RGBAFormat);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.magFilter = tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.needsUpdate = true;
+    const hull = this.rocketHull;
+    if (!hull.map) hull.needsUpdate = true; // the shader needs its texture slot, once
+    this.rocketPaint?.dispose();
+    this.rocketPaint = tex;
+    hull.map = tex;
+    this.tint(hull, '#ffffff'); // the picture has the colors
+    hull.shininess = p.shiny ? 60 : 4;
+    hull.specular.set(p.shiny ? '#fff0b0' : '#111111');
+    this.tint(this.rocketFins, p.fins);
+  }
+
+  /** The rover pet, if the player has one (for tests). */
+  get roverPet(): RoverPet | null {
+    return this.pet;
+  }
+
+  /** The astronaut the pet follows: the first one outside. */
+  private petLeader(): THREE.Vector3 | null {
+    for (const c of this.crew) if (c.obj.visible) return c.obj.position;
+    return null;
+  }
+
+  /** Let go of the paint texture and the pet (the 3D view is closing). */
+  disposeCosmetics() {
+    this.rocketPaint?.dispose();
+    this.rocketPaint = null;
+    this.pet?.dispose();
   }
 
   /** Where on Mars the base is shown ('gale' on the Moon too). */
@@ -981,6 +1093,8 @@ export class Diorama {
   setNight(night: number) {
     this.night = night;
     this.glow.hab.forEach((m) => (m.emissiveIntensity = 0.3 + night * 1.2));
+    // Glow-in-the-dark suits: a soft glow by day, bright as the sky darkens.
+    for (const m of this.suitMats) m.emissiveIntensity = this.suitGlow ? 0.3 + night * 1.4 : 0;
   }
 
   /** 0 = sunrise, 0.5 = sunset (as the stage's setTimeOfDay). Dust devils come out on clear afternoons. */
@@ -1081,6 +1195,8 @@ export class Diorama {
     const alarm = this.rush > 0 || stormHide;
     const door = alarm ? (reduced ? 2 : 1.4 + Math.abs(Math.sin(time * 6)) * 1.4) : s.alloc.shelter ? 1.2 : 0;
     for (const m of this.glow.shelter) m.emissiveIntensity = door;
+    // The rover pet trails after whoever is outside, or naps by the habitat door.
+    this.pet?.update(dt, time, this.petLeader(), this.heightAt, reduced, this.night);
 
     // Pop-in animation for freshly built pieces.
     this.pops = this.pops.filter((p) => {

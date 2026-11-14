@@ -10,7 +10,7 @@ import { Diorama, FOCUS_LABELS, LAUNCH_TIMELINE } from './diorama';
 import { SNAP, makePostMaterial, makeSkyMaterial } from './retro';
 import { POINT_SCALE } from './fx';
 import { CameraMove, framePose, overviewPose, isTap, OVERVIEW_TARGET, OVERVIEW_POSITION, OVERVIEW_MIN_DISTANCE, FOCUS_MIN_DISTANCE } from './focus';
-import type { FocusKey, Stage, StageCue, StageScene } from './stage';
+import type { Cosmetics, FocusKey, Stage, StageCue, StageScene } from './stage';
 
 const TARGET_HEIGHT = 400;
 const _tag = new THREE.Vector3();
@@ -34,6 +34,8 @@ export class ThreeStage implements Stage {
   private dayT = 0.25;
   private flash = 0;
   private sceneInfo?: StageScene;
+  /** The Hangar's looks, kept so they can be painted once the diorama exists. */
+  private looks?: Cosmetics;
   private launching: { start: number; dur: number; resolve: () => void } | null = null;
   private resizeObs?: ResizeObserver;
   private overlay = document.createElement('div');
@@ -107,6 +109,7 @@ export class ThreeStage implements Stage {
 
     this.diorama = new Diorama();
     this.scene.add(this.diorama.group);
+    if (this.looks) this.diorama.setCosmetics(this.looks);
 
     this.camera.position.copy(OVERVIEW_POSITION);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -260,6 +263,12 @@ export class ThreeStage implements Stage {
 
   cue(cue: StageCue) {
     this.diorama?.cue(cue);
+  }
+
+  /** Suit colors, rocket paint, the rover pet and base lights (painted right away, or once mounted). */
+  setCosmetics(c: Cosmetics) {
+    this.looks = c;
+    this.diorama?.setCosmetics(c);
   }
 
   focusModule(key: FocusKey | null) {
@@ -498,6 +507,7 @@ export class ThreeStage implements Stage {
     window.removeEventListener('keydown', this.onKey, true);
     this.controls?.removeEventListener('start', this.onControlsStart);
     this.controls?.dispose();
+    this.diorama?.disposeCosmetics();
     this.renderer.dispose();
     this.renderer.domElement.remove();
     this.overlay.remove();

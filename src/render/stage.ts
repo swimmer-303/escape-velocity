@@ -39,6 +39,27 @@ export interface StageScene {
   warning?: 'monitor' | 'earth' | null;
 }
 
+/** Rocket paint patterns (render/paint.ts draws them, for the 3D rocket and for the Hangar's previews). */
+export type RocketPattern = 'solid' | 'stripes' | 'checker' | 'gradient' | 'flames' | 'dots' | 'stars' | 'bolt';
+
+/**
+ * How the crew, the rocket and the base look: the player's Hangar choices, unlocked by playing. The 3D stage
+ * paints them; the simple stage ignores them. Colors are CSS hex strings ('#5ef2e6').
+ */
+export interface Cosmetics {
+  /** Every astronaut's suit: the main color and the trim (backpack, belt, gloves, boots). `glow`: it glows in the dark. */
+  suit: { body: string; trim: string; glow?: boolean };
+  /**
+   * The rocket's paint: a pattern and its colors (bottom to top for 'gradient'), the fins' color, an optional
+   * nose cone color, and `shiny` for a polished metal look.
+   */
+  rocket: { pattern: RocketPattern; colors: string[]; fins: string; nose?: string; shiny?: boolean };
+  /** A little robot rover that trundles after the crew (null: no pet). `glow`: it glows in the dark. */
+  pet: { body: string; trim: string; eyes: string; glow?: boolean } | null;
+  /** The color of the base's lights: habitat windows, the shelter door and the battery lamps (amber by default). */
+  lights: string;
+}
+
 export interface Stage {
   mount(el: HTMLElement): void;
   setScene(scene: StageScene): void;
@@ -54,6 +75,8 @@ export interface Stage {
   cue?(cue: StageCue): void;
   /** Set by the game: the player tapped a part of the base in 3D or picked one from the "Look at" menu (null = whole base). */
   onPick?: (key: FocusKey | null) => void;
+  /** Suit colors, rocket paint, rover pet and base lights from the Hangar. */
+  setCosmetics?(c: Cosmetics): void;
   setReducedMotion(on: boolean): void;
   dispose(): void;
 }
@@ -131,9 +154,10 @@ export class CssStage implements Stage {
     /* the 3D stage has the real cinematic */
   }
 
-  /* Nothing to look at or act out in the flat view. */
+  /* Nothing to look at, act out or paint in the flat view. */
   focusModule() {}
   cue() {}
+  setCosmetics() {}
 
   setReducedMotion() {}
   dispose() {
@@ -150,12 +174,13 @@ function mix(a: string, b: string, t: number): string {
 
 /**
  * Starts with a lightweight stage and swaps in the 3D one once it has loaded,
- * replaying the latest scene so nothing is lost.
+ * replaying the latest scene (and the Hangar's cosmetics) so nothing is lost.
  */
 export class SwappableStage implements Stage {
   private inner: Stage;
   private el?: HTMLElement;
   private last?: StageScene;
+  private looks?: Cosmetics;
   private t = 0.25;
   private reduced = false;
   /** The game's pick handler; whichever stage is inside reports to it. */
@@ -186,6 +211,7 @@ export class SwappableStage implements Stage {
     next.setReducedMotion(this.reduced);
     if (this.last) next.setScene(this.last);
     next.setTimeOfDay(this.t);
+    if (this.looks) next.setCosmetics?.(this.looks);
   }
 
   mount(el: HTMLElement) {
@@ -211,6 +237,10 @@ export class SwappableStage implements Stage {
   }
   cue(cue: StageCue) {
     this.inner.cue?.(cue);
+  }
+  setCosmetics(c: Cosmetics) {
+    this.looks = c;
+    this.inner.setCosmetics?.(c);
   }
   setReducedMotion(on: boolean) {
     this.reduced = on;

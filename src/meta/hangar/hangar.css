@@ -1,0 +1,61 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* The Hangar: a side panel (a bottom sheet on narrow screens) so the 3D base stays in view while you equip things. */
+
+/* Only while the Hangar is open: a lighter backdrop that leaves the base visible, and the dialog at the side. */
+#modal-root:has(> .hangar-modal) { place-items: stretch end; padding: 12px; background: linear-gradient(90deg, transparent 0 30%, #0b0a1880); }
+.modal.hangar-modal { width: min(480px, 100%); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); background: #15122bf2; }
+@media (max-width: 720px) {
+  #modal-root:has(> .hangar-modal) { place-items: end stretch; padding: 8px; background: linear-gradient(transparent 0 35%, #0b0a1880); }
+  .modal.hangar-modal { width: 100%; max-height: 62vh; max-height: 62dvh; }
+}
+
+.hangar h2 { margin-bottom: 4px; }
+.hangar-sub { font-size: 15px; color: var(--muted); }
+.hangar .hangar-count { font-family: var(--font-px); font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+
+/* Sections: the chosen one is raised with a thick amber underline (a shape, not just a color). */
+.hangar-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+.hangar-tab { flex: 1 1 auto; position: relative; }
+.hangar-tab.on { background: var(--panel-2); box-shadow: inset 0 -5px 0 var(--amber), inset 3px 3px 0 #ffffff22; color: var(--amber); }
+.hangar-tab .hangar-new { margin-left: 2px; }
+
+/* Tiles. */
+.hangar-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.hangar-tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  padding: 10px 6px 8px; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line);
+}
+.hangar-tile.on { box-shadow: inset 0 0 0 3px var(--cyan); }
+.hangar-tile.locked { background: var(--panel); }
+.hangar-tile.locked .hangar-px { filter: brightness(0.6) saturate(0.7); }
+.hangar-name { font-family: var(--font-px); font-size: 13px; line-height: 1.2; color: var(--ink); min-height: 2.4em; display: flex; align-items: center; }
+.hangar-equip { width: 100%; min-height: 44px; }
+.hangar-lock { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; color: var(--muted); font-size: 13px; line-height: 1.15; text-align: left; }
+.hangar-lock small { display: block; font-size: 11px; }
+.hangar-lock b { font-family: var(--font-px); font-weight: 400; color: var(--amber); }
+.hangar-lock-icon { line-height: 0; color: var(--muted); }
+.hangar .hangar-fact { margin: 12px 0 0; padding: 8px 10px; font-size: 15px; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); }
+.hangar-fact b { color: var(--cyan); }
+
+/* "New" badges: words, not just a color. */
+.hangar-new { font-family: var(--font-px); font-size: 11px; line-height: 1.2; padding: 1px 5px; background: var(--amber); color: #000; border: 2px solid #000; text-transform: uppercase; white-space: nowrap; }
+.hangar-tile > .hangar-new { position: absolute; top: -8px; left: -6px; z-index: 1; }
+
+/* Pixel previews: tiny canvases scaled up by whole numbers, so the pixels stay crisp. */
+.hangar-px { display: inline-grid; place-items: center; flex: none; width: 76px; height: 76px; border: 2px solid #000; background: linear-gradient(#e9bd8c, #d9a066 70%, #b2552a 70%); }
+.hangar-px.slot-lights { background: linear-gradient(#0b0a18, #1d1836 70%, #5a2a18 70%); }
+.hangar-px canvas { display: block; height: 64px; width: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+.hangar-px.small { width: 38px; height: 38px; border-width: 2px; }
+.hangar-px.small canvas { height: 32px; }
+.hangar-px-fallback { display: block; width: 60%; height: 60%; border: 2px solid #000; }
+
+/* The title screen's Hangar button. */
+.hangar-strip { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 10px; margin: 6px auto; }
+.hangar-open { padding: 3px 10px 3px 4px; gap: 8px; }
+.hangar-open .hangar-px.small { border-width: 2px; }
+.hangar-strip-note { font-size: 14px; color: var(--muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.reduce-motion) .hangar-tile > .hangar-new, html:not(.reduce-motion) .hangar-open.has-new .hangar-new { animation: hangar-blink 1.2s steps(2) infinite; }
+  @keyframes hangar-blink { 50% { filter: brightness(1.35); } }
+}
