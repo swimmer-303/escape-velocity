@@ -89,6 +89,26 @@ async function play(app: App, done: () => boolean, opts: { noSolWord?: boolean }
 }
 
 describe('UI smoke test', () => {
+  it('"Suggest a plan" fills every cell with reasons, "Clear" takes them back, and the briefing leads with TODAY', async () => {
+    new App(new CssStage());
+    (await waitFor(() => button(/Quick mission/))).click();
+    const start = await waitFor(() => button(/Start quick mission/) ?? button(/Land the crew/));
+    start.click();
+    const land = await waitFor(() => button(/Land the crew/) ?? button(/Plan the day/));
+    if (/Land the crew/.test(land.textContent ?? '')) land.click();
+    await waitFor(() => button(/Plan the day/));
+    expect(document.querySelector('.today')?.textContent).toMatch(/Today/i);
+    button(/Plan the day/)!.click();
+    expect(button(/^Run sol/)).toBeNull();
+    button(/Suggest a plan/)!.click();
+    expect(document.querySelector('.line.advice')?.textContent).toMatch(/Suggested plan/);
+    expect(button(/^Run sol/)).not.toBeNull();
+    expect(document.querySelector('.brief-mini')?.textContent).toMatch(/At this pace/);
+    button(/^Clear$/)!.click();
+    expect(button(/^Run sol/)).toBeNull();
+    expect(document.querySelector('.line.advice')).toBeNull();
+  }, 20000);
+
   it('guides a first-time player through the first sol, and can be skipped', async () => {
     new App(new CssStage());
     (await waitFor(() => button(/Quick mission/))).click();

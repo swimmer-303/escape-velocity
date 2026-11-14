@@ -38,7 +38,8 @@ import { renderCredits } from './credits';
 import { meetCrew, crewSays } from './crew';
 import { sunPanel } from './sunpanel';
 import { Coach, type CoachPhase } from './tutorial';
-import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange } from './views';
+import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange, planWarnings, adviceLines, todayBanner } from './views';
+import { advise } from '../sim/advisor';
 import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
 import { missionChartFor, crewCharts } from './charts';
@@ -134,6 +135,8 @@ export class App {
   private lastReport: SolReport | null = null;
   private ff = false;
   private coach = new Coach();
+  /** Reasons behind a "Suggest a plan" fill, shown until the player changes something. */
+  private advice: Array<{ id: string; text: string }> = [];
   /** The class code new campaigns and quick missions use (from `?code=` or typed in). */
   private codes = new ClassCodes();
   /** Mars or the Moon, as picked in the mission chooser. */
@@ -147,6 +150,21 @@ export class App {
     this.budget = new BudgetDock(this.dock, {
       onChange: (a) => {
         this.alloc = a;
+        this.advice = [];
+        this.renderPlan();
+      },
+      onSuggest: () => {
+        if (!this.mission) return;
+        const advice = advise(this.mission);
+        this.alloc = advice.alloc;
+        this.advice = advice.reasons;
+        this.audio.sfx('place');
+        this.renderPlan();
+      },
+      onClear: () => {
+        this.alloc = emptyAlloc();
+        this.advice = [];
+        this.audio.sfx('remove');
         this.renderPlan();
       },
       onRun: () => this.run(),
@@ -798,6 +816,7 @@ export class App {
     const m = this.mission!;
     this.phase = 'briefing';
     this.alloc = emptyAlloc();
+    this.advice = [];
     this.crate = undefined;
     const b = getBriefing(m);
     const t = siteText(m.config);
@@ -950,6 +969,7 @@ export class App {
     this.modal(
       [
         h('div', { class: 'kicker' }, `${this.hudLabel(m)} · ${t.Turn} ${m.sol} of ${windowSol(m)} · Morning briefing`),
+        todayBanner(m, b),
         art ? h('div', { class: 'art' }, h('img', { src: `/art/${art}.png`, alt: "Illustration of today's conditions (AI-generated)" })) : null,
         ...cards,
         crateRow,
@@ -1049,7 +1069,9 @@ export class App {
     const preview = previewSol(m, this.alloc, this.crate);
     this.refreshHud(preview.after);
     this.stageScene();
-    this.budget.set(m, b, this.alloc, preview, briefMini(m, b, check.remaining));
+    const mini = briefMini(m, b, check.remaining);
+    const side = [mini[0], ...planWarnings(m, b, this.alloc, preview.after), ...adviceLines(this.advice), ...mini.slice(1)];
+    this.budget.set(m, b, this.alloc, preview, side);
     this.coachUpdate();
   }
 

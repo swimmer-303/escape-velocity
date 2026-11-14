@@ -549,3 +549,19 @@ table.mc-players td { vertical-align: middle; }
   .mc-room-chip { font-size: 11px; padding: 6px 8px; }
   .mc-ping-text { font-size: 17px; }
 }
+
+/* ---------- Easier planning ---------- */
+.tray-actions { display: flex; gap: 6px; margin-left: 8px; }
+.slot-row.tappable { cursor: pointer; }
+.slot-row.tappable:hover { background: #ffffff0a; }
+.brief-mini .line.good { color: var(--green); }
+.brief-mini .line.advice { display: block; background: #0f1f2a; border: 2px solid #1f6f6a; padding: 6px 8px; }
+.brief-mini .line.advice ul { margin: 4px 0; padding-left: 18px; font-size: 13px; }
+.today { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; padding: 10px 12px; border: 3px solid #000; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--line); }
+.today b { display: block; font-size: 20px; line-height: 1.25; }
+.today .kicker { margin: 0; }
+.today-bad { box-shadow: inset 0 0 0 3px var(--red); }
+.today-bad b { color: var(--red); }
+.today-event { box-shadow: inset 0 0 0 3px var(--amber); }
+.today-calm { box-shadow: inset 0 0 0 3px var(--green); }
+@media (max-width: 900px) { .tray-actions { margin-left: 0; width: 100%; } }

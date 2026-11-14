@@ -38,7 +38,7 @@ export function nightsAhead(state: MissionState): number {
 }
 
 /** Moon only: extra days of air and food to stock before (and through) the lunar night. */
-function nightStock(state: MissionState, lookahead: number): number {
+export function nightStock(state: MissionState, lookahead: number): number {
   const b = getBriefing(state);
   if (b.night) return b.nightLeft ?? 0;
   return b.nightIn != null && b.nightIn <= lookahead ? nightsAhead(state) : 0;

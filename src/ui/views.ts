@@ -8,6 +8,7 @@ import { REAL, SUN_EARTH_LIGHT_MIN, EARTH_PROCESSING_MIN } from '../sim/constant
 import type { Allocation, Briefing, MissionState, SolReport, SpaceWeatherEvent } from '../sim/types';
 import type { ScienceFact } from '../data/science';
 import { RADLAB_ISS, RADLAB_ISS_MAY2024 } from '../data/radlab';
+import { windowSol } from '../sim/sim';
 import { siteText, type Site } from '../sim/site';
 
 export function shortRange(a: string, b: string) {
@@ -250,4 +251,71 @@ function moonCompareCard(m: MissionState): HTMLElement | null {
       "µGy (microgray) measures radiation energy absorbed by a detector. ISS: DOSTEL detector, NASA OSDR RadLab (archived readings). Moon: Chang'e 4 LND, 13.2 µGy per hour (Zhang et al., Science Advances 2020). Mars: Curiosity RAD (Hassler et al. 2014).",
     ),
   );
+}
+
+/**
+ * Plain warnings about TODAY's plan, shown next to the Run button: the things a first-time
+ * player most often misses, plus the fuel pace against the launch window.
+ */
+export function planWarnings(m: MissionState, b: Briefing, alloc: Allocation, after: { air: number; food: number; fuel: number }): HTMLElement[] {
+  const t = siteText(m.config);
+  const out: HTMLElement[] = [];
+  const placed = Object.values(alloc).reduce((a, c) => a + c, 0) > 0;
+  if (!placed) return out;
+  if (after.air < 1) out.push(h('div', { class: 'line bad' }, icon('air', 16), after.air < 0 ? 'Not enough air for today! Add AIR.' : `Air runs out ${t.turn === 'day' ? 'tomorrow' : 'next sol'}! Add AIR.`));
+  if (after.food < 1) out.push(h('div', { class: 'line bad' }, icon('food', 16), after.food < 0 ? 'Not enough food for today! Add GREENHOUSE.' : 'Food runs out soon! Add GREENHOUSE.'));
+  if (alloc.heaters < b.heaterNeed) out.push(h('div', { class: 'line bad' }, icon('heater', 16), `Heaters short: ${b.heaterNeed - alloc.heaters} fewer cell${b.heaterNeed - alloc.heaters === 1 ? '' : 's'} tomorrow.`));
+  if (b.warning && alloc.shelter === 0) out.push(h('div', { class: 'line bad' }, icon('radiation', 16), 'Storm today and the shelter is off!'));
+  // Fuel pace.
+  const perTurn = after.fuel - m.fuel;
+  const win = windowSol(m);
+  if (perTurn <= 0) out.push(h('div', { class: 'line warn' }, icon('rocket', 16), 'No rocket fuel today.'));
+  else {
+    const turnsToFill = Math.ceil((100 - m.fuel) / perTurn);
+    const fillOn = m.sol + turnsToFill - 1;
+    out.push(
+      h(
+        'div',
+        { class: `line ${fillOn > win ? 'warn' : 'good'}` },
+        icon('rocket', 16),
+        fillOn > win
+          ? `At this pace the tank fills on ${t.turn} ${fillOn}, but the window closes on ${t.turn} ${win}.`
+          : `At this pace the tank fills by ${t.turn} ${fillOn} (window: ${t.turn} ${win}).`,
+      ),
+    );
+  }
+  return out;
+}
+
+/** The "why" behind a suggested plan. */
+export function adviceLines(reasons: Array<{ id: string; text: string }>): HTMLElement[] {
+  if (!reasons.length) return [];
+  return [
+    h(
+      'div',
+      { class: 'line advice' },
+      h('b', null, 'Suggested plan: '),
+      h('ul', { class: 'clean' }, reasons.map((r) => h('li', null, r.text))),
+      h('span', { class: 'title-foot' }, 'Change anything you like.'),
+    ),
+  ];
+}
+
+/** The one thing that matters most this morning, in big friendly words. */
+export function todayBanner(m: MissionState, b: Briefing): HTMLElement {
+  const t = siteText(m.config);
+  const extra = b as unknown as { night?: boolean; nightIn?: number | null };
+  let tone = 'calm';
+  let text = `A calm ${t.turn}: a good time to make fuel or build.`;
+  let ic: Parameters<typeof icon>[0] = 'sun';
+  if (b.warning) [tone, text, ic] = ['bad', 'Storm today! Power the storm shelter.', 'radiation'];
+  else if (b.resupply) [tone, text, ic] = ['event', 'A cargo lander is coming: pick one crate.', 'crate'];
+  else if (extra.night) [tone, text, ic] = ['event', 'Lunar night: no sunlight. Keep the base warm.', 'heater'];
+  else if (b.weather !== 'clear') [tone, text, ic] = ['event', 'Dust storm: less solar power today.', 'dust'];
+  else if (b.dustTomorrow) [tone, text, ic] = ['event', 'Dust storm tomorrow: stock up today.', 'dust'];
+  else if (extra.nightIn != null && extra.nightIn <= 2) [tone, text, ic] = ['event', 'Night is coming soon: stock up today.', 'sun'];
+  else if (b.coldSnap) [tone, text, ic] = ['event', `Freezing night: heaters need ${b.heaterNeed} cells.`, 'heater'];
+  else if (m.air / m.crew < 1.5 || m.food / m.crew < 1.5) [tone, text, ic] = ['bad', 'Supplies are low: make air and food first.', 'air'];
+  else if (b.outlook === 'active') [tone, text, ic] = ['event', 'The Sun is active: a storm could come soon.', 'sun'];
+  return h('div', { class: `today today-${tone}`, role: 'status' }, icon(ic, 28), h('div', null, h('span', { class: 'kicker' }, 'Today'), h('b', null, text)));
 }

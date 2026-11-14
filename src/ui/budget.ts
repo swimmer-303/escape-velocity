@@ -21,6 +21,8 @@ interface ModuleDef {
   name: string;
   icon: IconName;
   desc: string;
+  /** A few plain words shown on the card; the long text is the hover tooltip. */
+  short?: string;
   slots: SlotDef[];
   /** Only shown once built. */
   needs?: 'monitor' | 'battery';
@@ -33,6 +35,7 @@ export const MODULES: ModuleDef[] = [
     key: 'o2',
     name: 'O2 Plant',
     icon: 'o2',
+    short: 'Makes AIR to breathe, or FUEL for the rocket home.',
     desc: 'Pulls oxygen out of Mars air. Same machine, two jobs: air to breathe OR oxygen for the rocket.',
     moonDesc: 'Bakes oxygen out of Moon soil (regolith). Same machine, two jobs: air to breathe OR oxygen for the rocket.',
     slots: [
@@ -40,20 +43,22 @@ export const MODULES: ModuleDef[] = [
       { id: 'fuel', label: 'Fuel', icon: 'rocket' },
     ],
   },
-  { key: 'greenhouse', name: 'Greenhouse', icon: 'greenhouse', desc: 'Grow lights make food, plus a little air.', slots: [{ id: 'greenhouse', label: 'Grow', icon: 'food' }] },
+  { key: 'greenhouse', name: 'Greenhouse', icon: 'greenhouse', short: 'Grows food (and a little air).', desc: 'Grow lights make food, plus a little air.', slots: [{ id: 'greenhouse', label: 'Grow', icon: 'food' }] },
   {
     key: 'heaters',
     name: 'Heaters',
     icon: 'heater',
+    short: 'Stops the batteries freezing tonight.',
     desc: 'Keep the batteries warm through the freezing night.',
     moonDesc: 'Keep the base and batteries warm. The lunar night is far colder, so heaters need more then.',
     slots: [{ id: 'heaters', label: 'Heat', icon: 'heater' }],
   },
-  { key: 'shelter', name: 'Storm Shelter', icon: 'shelter', desc: 'Shields the crew from solar storms. Only works when powered.', slots: [{ id: 'shelter', label: 'Shield', icon: 'shelter' }] },
+  { key: 'shelter', name: 'Storm Shelter', icon: 'shelter', short: 'Blocks solar storms, only when powered.', desc: 'Shields the crew from solar storms. Only works when powered.', slots: [{ id: 'shelter', label: 'Shield', icon: 'shelter' }] },
   {
     key: 'monitor',
     name: 'Radiation Monitor',
     icon: 'monitor',
+    short: 'Warns you about tomorrow\'s storms.',
     desc: 'Watches the Sun tonight: your own storm warning tomorrow.',
     slots: [{ id: 'monitor', label: 'Watch', icon: 'monitor' }],
     needs: 'monitor',
@@ -62,6 +67,7 @@ export const MODULES: ModuleDef[] = [
     key: 'battery',
     name: 'Battery',
     icon: 'cell',
+    short: 'Saves power cells for later.',
     desc: 'Store cells today, get them back tomorrow.',
     moonDesc: `Save cells for the lunar night (holds ${MOON_BATTERY.capacity}). Each night it gives back up to ${MOON_BATTERY.releasePerNight}.`,
     slots: [{ id: 'battery', label: 'Store', icon: 'cell' }],
@@ -86,6 +92,10 @@ export interface BudgetCallbacks {
   onRun(): void;
   onOpenWorkshop(): void;
   sfx?(name: 'place' | 'remove' | 'deny'): void;
+  /** Fill the board with a suggested plan (single player). */
+  onSuggest?(): void;
+  /** Take every cell back to the tray. */
+  onClear?(): void;
   /** Mission Control: may this player move cells in this module? Others are shown locked. Default: every module. */
   canEdit?(id: ModuleId): boolean;
   /** Mission Control: what goes under the side panel instead of the Run button (e.g. a Ready button). */
@@ -268,7 +278,15 @@ export class BudgetDock {
             }),
           )
         : h('span', { class: 'tray-empty' }, `All cells placed. Ready to run the ${siteText(this.site).turn}!`),
-      h('span', { class: 'tray-hint' }, left > 0 ? 'Drag a cell onto a module, or tap a slot.' : ''),
+      h('span', { class: 'tray-hint' }, left > 0 ? 'Drag a cell onto a module, or tap a module.' : ''),
+      this.cb.onSuggest || this.cb.onClear
+        ? h(
+            'span',
+            { class: 'tray-actions' },
+            this.cb.onSuggest ? h('button', { class: 'btn small cyan', onclick: () => this.cb.onSuggest!(), title: 'Fill the board with a sensible plan you can change' }, 'Suggest a plan') : null,
+            this.cb.onClear && left < this.briefing.cells ? h('button', { class: 'btn small', onclick: () => this.cb.onClear!() }, 'Clear') : null,
+          )
+        : null,
     );
 
     const visible = MODULES.filter((m) => !m.needs || (m.needs === 'monitor' ? this.briefing.hasMonitor : this.briefing.hasBattery));
@@ -294,7 +312,11 @@ export class BudgetDock {
                 project ? this.progressBar() : null,
                 mine ? h('button', { class: 'btn small', style: 'margin-top:6px', onclick: () => this.cb.onOpenWorkshop() }, 'Choose project') : null,
               )
-            : h('div', { class: 'module-desc' }, this.site === 'moon' && m.moonDesc ? m.moonDesc : m.desc),
+            : h(
+                'div',
+                { class: 'module-desc', title: this.site === 'moon' && m.moonDesc ? m.moonDesc : m.desc },
+                m.short && !(this.site === 'moon' && m.moonDesc) ? m.short : this.site === 'moon' && m.moonDesc ? m.moonDesc : m.desc,
+              ),
           m.slots.map((s) => this.slotRow(s, m.slots.length > 1)),
         );
       }),
@@ -370,13 +392,21 @@ export class BudgetDock {
         return box;
       }),
     );
-    return h(
+    const row = h(
       'div',
-      { class: 'slot-row', 'data-drop': s.id },
+      { class: `slot-row ${editable && cap ? 'tappable' : ''}`, 'data-drop': s.id },
       showLabel ? h('span', { class: 'slot-label' }, icon(s.icon, 16), s.label.toUpperCase()) : null,
       cap ? boxes : h('span', { class: 'split-note' }, s.id === 'build' ? 'Nothing to build right now.' : ''),
       h('div', { class: `effect ${eff.cls}`, style: 'flex-basis:100%' }, eff.text),
     );
+    // Bigger target for small fingers: tapping anywhere on the row (not a box or button) adds a cell.
+    if (editable && cap) {
+      row.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('button')) return;
+        this.add(s.id);
+      });
+    }
+    return row;
   }
 
   // ---------------- Drag and drop ----------------
