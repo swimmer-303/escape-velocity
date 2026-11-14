@@ -6,6 +6,9 @@ SITE_HOST="$1"
 DEPLOY_PUBKEY="$2"
 
 export DEBIAN_FRONTEND=noninteractive
+# A fresh droplet runs its own first-boot updates: wait for them to release the package lock.
+cloud-init status --wait >/dev/null 2>&1 || true
+while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 5; done
 apt-get update -y
 apt-get upgrade -y
 apt-get install -y curl gnupg ufw rsync unattended-upgrades debian-keyring debian-archive-keyring apt-transport-https
