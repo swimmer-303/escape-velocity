@@ -79,6 +79,13 @@ export function drawArt(canvas: HTMLCanvasElement, c: CardFacts): boolean {
   const ctx = g;
   canvas.width = ART_W;
   canvas.height = ART_H;
+  // Each picture is drawn once and copied after that (a binder can hold hundreds).
+  const key = [c.id, c.kind, c.classType, c.location, c.severity, c.speedKms].join('|');
+  const done = artCache.get(key);
+  if (done && typeof ctx.putImageData === 'function') {
+    ctx.putImageData(done, 0, 0);
+    return true;
+  }
   const r = rng(hash(c.id));
   const px = (x: number, y: number, col: string) => {
     const ix = Math.round(x);
@@ -139,8 +146,15 @@ export function drawArt(canvas: HTMLCanvasElement, c: CardFacts): boolean {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) px(sx + dx, sy + dy, glow);
     }
   }
+  try {
+    if (typeof ctx.getImageData === 'function') artCache.set(key, ctx.getImageData(0, 0, ART_W, ART_H));
+  } catch {
+    /* no copy: it is simply drawn again next time */
+  }
   return true;
 }
+
+const artCache = new Map<string, ImageData>();
 
 type Px = (x: number, y: number, col: string) => void;
 

@@ -137,7 +137,7 @@ export function renderCollection(col: Collection, o: CollectionOpts): HTMLElemen
         h(
           'div',
           { class: 'sc-missing-head' },
-          h('h3', { class: 'sc-sub' }, `Not found yet (${missing.length.toLocaleString('en-US')})`),
+          h('h3', { class: 'sc-sub', tabindex: '-1' }, `Not found yet (${missing.length.toLocaleString('en-US')})`),
           h(
             'label',
             { class: 'sc-check' },
@@ -192,6 +192,7 @@ export function renderCollection(col: Collection, o: CollectionOpts): HTMLElemen
                 onclick: () => {
                   view.allMissing = true;
                   draw();
+                  host.querySelector<HTMLElement>('.sc-missing-head h3')?.focus();
                 },
               },
               `Show all ${missing.length.toLocaleString('en-US')}`,
