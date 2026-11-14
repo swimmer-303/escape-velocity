@@ -198,7 +198,7 @@ export class App {
       // Refresh the title screen with the new data only if it is the dialog on screen right now:
       // never redraw over the difficulty/site chooser (or any other dialog) the player opened.
       const onTitle = this.modalRoot.querySelector('[aria-label="Escape Velocity title screen"]');
-      if (this.phase === 'title' && onTitle) this.showTitle();
+      if (this.phase === 'title' && onTitle && !this.demoActive) this.showTitle();
       else this.refreshHud();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
@@ -208,7 +208,11 @@ export class App {
     const dash = dashboardParams(location.search);
     if (dash) this.openDashboard(dash);
     else if (room) this.openRoom(room);
-    else this.showTitle();
+    else {
+      this.showTitle();
+      // ?demo: the attract mode for an event table or a screen recording.
+      if (new URLSearchParams(location.search).has('demo')) void this.startDemo();
+    }
   }
 
   // ------------------------------------------------------------------ helpers
@@ -398,6 +402,7 @@ export class App {
 
   // ------------------------------------------------------------------ title
   showTitle() {
+    if (this.demoActive) this.stopDemo();
     if (this.coach.active) this.coach.stop(false);
     this.phase = 'title';
     this.mission = null;
@@ -449,6 +454,7 @@ export class App {
             h('button', { class: 'btn small go', onclick: () => void this.startDaily() }, 'Daily challenge'),
             h('button', { class: 'btn small', onclick: () => this.showTodaysBest(() => this.showTitle()) }, "Today's best"),
             h('button', { class: 'btn small', onclick: () => this.startHistory(), disabled: MAY2024_SNAPSHOT ? undefined : true }, 'May 2024 storms'),
+            h('button', { class: 'btn small', title: 'The game plays itself for about 30 seconds', onclick: () => void this.startDemo() }, 'Watch a demo'),
           ),
           h(
             'section',
@@ -800,6 +806,107 @@ export class App {
   }
 
   /** Quick mission: first pick Mars or the Moon. */
+  // ------------------------------------------------------------------ demo (attract mode)
+  /** The game plays itself with the "Suggest a plan" advisor: for demo videos and event tables. */
+  private demoActive = false;
+  private demoTimer = 0;
+  private demoRunTimer = 0;
+  private demoBanner: HTMLElement | null = null;
+  private demoStopper: ((e: Event) => void) | null = null;
+  /** Tests speed the demo up. */
+  private demoSpeed = 1;
+
+  private async startDemo() {
+    this.stopDemo();
+    this.audio.sfx('click');
+    this.demoActive = true;
+    this.mode = 'quick';
+    const pool = await this.pool();
+    // The player picked something else on the title screen while the data loaded.
+    if (!this.demoActive || this.phase !== 'title') {
+      this.demoActive = false;
+      return;
+    }
+    // A short showcase: the robot O2 plant has already filled half the tank, so the crew launches in a few sols.
+    const c = { ...newCampaign(`demo-${Math.random().toString(36).slice(2, 7)}`, 'cadet'), prefillPct: 55 };
+    this.campaign = c;
+    this.campaignAtStart = c;
+    this.mission = createMission(missionConfigFor(c, this.light.oneWayMinutes, pool));
+    this.demoBanner?.remove();
+    this.demoBanner = h('div', { class: 'demo-banner', role: 'status' }, h('b', null, 'DEMO'), ' The game is playing itself. Tap or press any key to play.');
+    document.body.append(this.demoBanner);
+    const stop = (e: Event) => {
+      if (!this.demoActive) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.stopDemo();
+      this.showTitle();
+    };
+    this.demoStopper = stop;
+    window.setTimeout(() => {
+      if (this.demoStopper !== stop) return;
+      window.addEventListener('pointerdown', stop, true);
+      window.addEventListener('keydown', stop, true);
+    }, 0);
+    this.showBriefing();
+    this.demoStep();
+  }
+
+  private stopDemo() {
+    this.demoActive = false;
+    window.clearTimeout(this.demoTimer);
+    window.clearTimeout(this.demoRunTimer);
+    this.demoBanner?.remove();
+    this.demoBanner = null;
+    if (this.demoStopper) {
+      window.removeEventListener('pointerdown', this.demoStopper, true);
+      window.removeEventListener('keydown', this.demoStopper, true);
+      this.demoStopper = null;
+    }
+  }
+
+  private demoStep() {
+    if (!this.demoActive) return;
+    const later = (ms: number, fn: () => void) => {
+      window.clearTimeout(this.demoTimer);
+      this.demoTimer = window.setTimeout(() => this.demoActive && fn(), ms * this.demoSpeed);
+    };
+    const m = this.mission;
+    switch (this.phase) {
+      case 'briefing':
+        if (m && getBriefing(m).resupply && !this.crate) this.crate = 'food';
+        return later(2200, () => {
+          this.plan();
+          this.demoStep();
+        });
+      case 'plan':
+        if (m) {
+          const advice = advise(m);
+          this.alloc = advice.alloc;
+          this.advice = advice.reasons;
+          this.renderPlan();
+        }
+        return later(2200, () => {
+          window.clearTimeout(this.demoRunTimer);
+          // Let each sol play for a few seconds, then skip to its end.
+          this.demoRunTimer = window.setTimeout(() => (this.ff = true), 3500 * this.demoSpeed);
+          void this.run();
+          this.demoStep();
+        });
+      case 'debrief':
+        return later(2600, () => {
+          if (this.mission && this.mission.status !== 'playing') void this.showEnd(true);
+          else this.showBriefing();
+          this.demoStep();
+        });
+      case 'end':
+        // Loop for event tables: after the ending, start a fresh demo.
+        return later(11000, () => void this.startDemo());
+      default:
+        return later(400, () => this.demoStep());
+    }
+  }
+
   private startQuick() {
     this.chooseDifficulty('quick');
   }
@@ -1233,6 +1340,8 @@ export class App {
     let fired = 0;
     await new Promise<void>((resolve) => {
       const tick = (now: number) => {
+        // The player left mid-sol (back to the title, or tapped out of the demo): stop drawing.
+        if (this.phase !== 'running' || this.mission !== m) return resolve();
         let t = Math.min(1, (now - start) / duration);
         if (this.ff) t = 1;
         this.stage.setTimeOfDay(site === 'moon' ? moonSky(m, m.sol, t) : t);
@@ -1274,6 +1383,7 @@ export class App {
       };
       requestAnimationFrame(tick);
     });
+    if (this.phase !== 'running' || this.mission !== m) return;
 
     this.mission = next;
     if (report.built) this.audio.sfx('good');
