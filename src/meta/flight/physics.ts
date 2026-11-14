@@ -41,7 +41,7 @@ export const NO_INPUT: FlightInput = { thrust: false, left: false, right: false 
 
 export interface LandingParams {
   g: number;
-  /** Main engine acceleration at full power, m/s² (thrust-to-weight about 2.4 to 2.6). */
+  /** Main engine acceleration at full power, m/s² (thrust-to-weight about 2 on Mars, 2.6 on the Moon). */
   thrust: number;
   /** Side thrusters, m/s². */
   rcs: number;
@@ -59,7 +59,7 @@ export interface LandingParams {
 }
 
 export const LANDING: Record<FlightSite, LandingParams> = {
-  mars: { g: GRAVITY.mars, thrust: 9, rcs: 2, burnSeconds: 26, startAlt: 420, startVy: -38, startX: -55, startVx: 4, chuteSeconds: 2.6, chuteTerminal: 26 },
+  mars: { g: GRAVITY.mars, thrust: 7.5, rcs: 2, burnSeconds: 26, startAlt: 420, startVy: -38, startX: -55, startVx: 4, chuteSeconds: 2.6, chuteTerminal: 26 },
   moon: { g: GRAVITY.moon, thrust: 4.2, rcs: 1.2, burnSeconds: 32, startAlt: 240, startVy: -10, startX: 50, startVx: -3, chuteSeconds: 0, chuteTerminal: 0 },
 };
 /** Touching down slower than this (m/s) is safe. */
@@ -174,15 +174,32 @@ export function stepLanding(s: LandingState, input: FlightInput, dt: number): La
   return n;
 }
 
+/** The gentle touchdown speed the speed gauge steers toward, m/s (well under the safe limit: room for a late reaction). */
+export const AIM_SPEED = 1.2;
+
 /**
- * The autopilot real landers use, simplified: fall no faster than the engine can still stop before the ground,
- * slow to about 1 m/s near the ground, and steer over the pad.
+ * The fastest it is wise to fall at this height: from this speed the engine, using under half its braking, still
+ * slows the lander to AIM_SPEED by the ground (v² = v_aim² + 2·a·h). The speed gauge shows it, so "SLOW DOWN means
+ * hold the engine" teaches the efficient way down: fall fast up high, slow down near the ground.
+ */
+export function speedLimit(site: FlightSite, y: number): number {
+  const p = LANDING[site];
+  return Math.sqrt(AIM_SPEED * AIM_SPEED + 2 * 0.45 * (p.thrust - p.g) * Math.max(0, y));
+}
+
+/** The speed the gauge judges: falling and sideways speed (climbing doesn't count: then you should let go). */
+export function descentSpeed(s: Pick<LandingState, 'vx' | 'vy'>): number {
+  return Math.hypot(s.vx, Math.min(0, s.vy));
+}
+
+/**
+ * The autopilot real landers use, simplified: fall no faster than the engine can comfortably stop before the
+ * ground, slow to about 1 m/s near the ground, and steer over the pad.
  */
 export function landingAutopilot(s: LandingState): FlightInput {
   if (s.phase !== 'flying') return NO_INPUT;
-  const p = LANDING[s.site];
-  const brake = p.thrust - p.g;
-  const target = -Math.min(40, 0.9 + Math.sqrt(2 * 0.5 * brake * Math.max(0, s.y - 0.5)));
+  // It obeys the same speed gauge the player sees, staying just under the limit.
+  const target = -Math.max(0.8, speedLimit(s.site, s.y) - 0.4);
   const vxTarget = s.y < 6 ? 0 : clamp(-s.x * 0.12, -5, 5);
   return { thrust: s.vy < target, left: s.vx > vxTarget + 0.2, right: s.vx < vxTarget - 0.2 };
 }

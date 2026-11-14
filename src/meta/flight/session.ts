@@ -98,8 +98,8 @@ export async function playFlight(setup: FlightSetup, env: FlightEnv): Promise<Fl
       inert: env.inert,
     });
     const hint = setup.game === 'landing' ? landingHint(setup) : launchHint(setup);
-    const best = bestFor(setup.game, setup.site);
-    if (best) hint.append(h('p', { class: 'ev-flight-best' }, `Your best ${setup.game} here: `, medalIcon(best.medal), ` ${MEDAL_NAME[best.medal]}`));
+    const bestSoFar = bestFor(setup.game, setup.site);
+    if (bestSoFar) hint.append(h('p', { class: 'ev-flight-best' }, `Your best ${setup.game} here: `, medalIcon(bestSoFar.medal), ` ${MEDAL_NAME[bestSoFar.medal]}`));
     const go = await shell.choose(hint, [{ id: 'fly', label: setup.game === 'landing' ? 'Start landing' : 'Start launch', primary: true }], 'How to fly');
     if (go === ABORT) return out;
     let autopilot = false;
@@ -117,7 +117,7 @@ export async function playFlight(setup: FlightSetup, env: FlightEnv): Promise<Fl
               h('div', { class: 'kicker' }, `${where} landing`),
               h('h2', null, 'Too fast!'),
               h('p', null, `The lander bumped down at ${(run.state.touchdown ?? 0).toFixed(1)} m/s. Safe is under ${SAFE_SPEED} m/s. Let's rewind time and try again.`),
-              h('p', { class: 'ev-flight-fact' }, 'Tip: let it fall for a while, then hold the engine long enough to slow down before the ground. Short bursts near the bottom.'),
+              h('p', { class: 'ev-flight-fact' }, 'Tip: watch the SPEED gauge. When it says SLOW DOWN, hold the engine. When it says OK, let go. Touch down when it says SAFE. (Up high you can fall fast; near the ground, go slow.)'),
               h('p', { class: 'ev-flight-note' }, 'Real landers land themselves, so you can also let the autopilot do it.'),
             ),
             [

@@ -4,7 +4,7 @@
 // the player can rewind and try again, or let the autopilot land, as real landers do.
 
 import { h } from '../../ui/dom';
-import { EARTH_GRAVITY, GRAVITY, PAD_HALF, SAFE_SPEED, createLanding, landingAutopilot, landingSpeed, stepLanding, type LandingScore, type LandingState } from './physics';
+import { EARTH_GRAVITY, GRAVITY, PAD_HALF, SAFE_SPEED, createLanding, descentSpeed, landingAutopilot, landingSpeed, speedLimit, stepLanding, type FlightSite, type LandingScore, type LandingState } from './physics';
 import { Particles, type FlightShell } from './engine';
 import { drawBase, drawChute, drawFlame, drawGround, drawLander, drawPad, landingBackdrop, LANDER_SIZE, sx, sy, type Scenery, type View } from './scenery';
 import type { FlightSetup } from './session';
@@ -35,7 +35,7 @@ export function landingHint(setup: FlightSetup): HTMLElement {
       { class: 'ev-flight-howto' },
       h('li', null, h('span', { class: 'keys' }, kbd('Space'), kbd('Up')), h('span', null, 'Hold to fire the engine. On a touch screen, hold the THRUST button or anywhere on the picture.')),
       h('li', null, h('span', { class: 'keys' }, kbd('Left'), kbd('Right')), h('span', null, 'Side thrusters: slide over the pad.')),
-      h('li', null, h('span', { class: 'keys' }, h('span', { class: 'ev-key wide' }, 'Tip')), h('span', null, 'Fire in short bursts and watch the SPEED gauge. Fuel runs out!')),
+      h('li', null, h('span', { class: 'keys' }, h('span', { class: 'ev-key wide' }, 'Tip')), h('span', null, 'Watch the SPEED gauge. SLOW DOWN: hold the engine. OK: let go. Touch down when it says SAFE. Fuel runs out!')),
     ),
     h(
       'p',
@@ -53,15 +53,20 @@ interface HudParts {
   update(s: LandingState): void;
 }
 
-function landingHud(): HudParts {
+/** Speed gauge position, %: a square-root scale, so slow speeds (where landing happens) get most of the bar. */
+const gaugePct = (v: number) => Math.min(100, Math.sqrt(Math.max(0, v) / 40) * 100);
+
+function landingHud(site: FlightSite): HudParts {
   const speedVal = h('b', null, '0.0');
   const speedState = h('span', { class: 'state' }, '');
   const speedFill = h('div', { class: 'fill' });
+  // The white line: the fastest wise speed at this height (see speedLimit).
+  const limitTick = h('div', { class: 'limit', title: 'Fastest safe speed for this height' });
   const speedBox = h(
     'div',
     { class: 'ev-gauge speed' },
     h('div', { class: 'lbl' }, 'Speed'),
-    h('div', { class: 'bar' }, h('div', { class: 'zone', style: `width:${(SAFE_SPEED / 15) * 100}%` }, 'safe'), speedFill),
+    h('div', { class: 'bar' }, h('div', { class: 'zone', style: `width:${gaugePct(SAFE_SPEED)}%` }, 'safe'), speedFill, limitTick),
     h('div', { class: 'val' }, speedVal, ' m/s ', speedState),
   );
   const altVal = h('b', null, '0');
@@ -88,13 +93,31 @@ function landingHud(): HudParts {
     el,
     update(s) {
       const v = s.touchdown ?? landingSpeed(s);
+      const down = s.touchdown ?? descentSpeed(s);
+      const limit = s.touchdown !== undefined ? SAFE_SPEED : speedLimit(site, s.y);
       set('speed', v.toFixed(1), (t) => (speedVal.textContent = t));
-      const state = v <= SAFE_SPEED ? 'safe' : s.y < 40 || s.touchdown !== undefined ? 'danger' : 'warn';
+      // SLOW DOWN: hold the engine. OK / SAFE / GOING UP: let go.
+      const state =
+        s.touchdown !== undefined
+          ? s.touchdown <= SAFE_SPEED
+            ? 'safe'
+            : 'danger'
+          : down > limit
+            ? s.y < 40
+              ? 'danger'
+              : 'warn'
+            : s.vy > 0.3
+              ? 'up'
+              : down <= SAFE_SPEED
+                ? 'safe'
+                : 'ok';
       set('state', state, (t) => {
-        speedBox.dataset.state = t;
-        speedState.textContent = t === 'safe' ? 'SAFE' : t === 'danger' ? 'TOO FAST' : 'FAST';
+        speedBox.dataset.state = t === 'up' ? 'ok' : t;
+        speedState.textContent =
+          t === 'safe' ? 'SAFE' : t === 'ok' ? 'OK' : t === 'up' ? 'GOING UP' : s.touchdown !== undefined ? 'TOO FAST' : 'SLOW DOWN';
       });
-      set('speedW', Math.min(100, (v / 15) * 100).toFixed(0), (t) => (speedFill.style.width = `${t}%`));
+      set('speedW', gaugePct(v).toFixed(1), (t) => (speedFill.style.width = `${t}%`));
+      set('limit', gaugePct(limit).toFixed(1), (t) => (limitTick.style.left = `calc(${t}% - 1px)`));
       set('alt', Math.max(0, s.y).toFixed(0), (t) => (altVal.textContent = t));
       const f = Math.round(s.fuel * 100);
       set('fuel', String(f), (t) => {
@@ -116,7 +139,7 @@ export function runLanding(shell: FlightShell, setup: FlightSetup, autopilot: bo
     const sc: Scenery = setup.scenery;
     let s = createLanding(setup.site);
     const parts = new Particles(shell.reduced ? 90 : 240);
-    const hud = landingHud();
+    const hud = landingHud(setup.site);
     shell.setHud(hud.el);
     if (autopilot) {
       shell.hideControls();

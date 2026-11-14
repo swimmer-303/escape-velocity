@@ -29,6 +29,9 @@ import {
   scoreLaunch,
   stepLanding,
   stepLaunch,
+  speedLimit,
+  descentSpeed,
+  AIM_SPEED,
   type FlightSite,
   type LandingState,
   type LaunchState,
@@ -115,6 +118,34 @@ describe('landing', () => {
       expect(auto.fuel).toBeGreaterThan(0.2);
       expect(auto.t).toBeGreaterThan(12);
       expect(auto.t).toBeLessThan(40);
+    }
+  });
+
+  it('the speed gauge: a young pilot who just obeys SLOW DOWN (hold) and OK (let go) lands safely, even reacting late', () => {
+    for (const site of SITES) {
+      expect(speedLimit(site, 0)).toBe(AIM_SPEED);
+      expect(speedLimit(site, 50)).toBeGreaterThan(speedLimit(site, 10));
+      // React to what the gauge showed `delay` seconds ago; slide toward the pad using the PAD readout.
+      for (const delay of [0, 0.2, 0.3]) {
+        let s = createLanding(site);
+        const seen: LandingState[] = [];
+        while (s.phase === 'chute' || s.phase === 'flying') {
+          seen.push(s);
+          const v = seen[Math.max(0, seen.length - 1 - Math.round(delay / DT))];
+          const wantVx = Math.abs(v.x) < 4 ? 0 : -Math.sign(v.x) * 3;
+          s = stepLanding(s, { thrust: v.vy < 0.3 && descentSpeed(v) > speedLimit(site, v.y), left: v.vx > wantVx + 0.5, right: v.vx < wantVx - 0.5 }, DT);
+        }
+        expect(s.phase, `${site}, reacting ${delay} s late`).toBe('landed');
+        expect(s.fuel).toBeGreaterThan(0.2);
+        expect(s.t).toBeLessThan(40);
+        expect(scoreLanding(s)!.onPad).toBe(true);
+      }
+      // The autopilot stays under the limit once the rockets are on.
+      let s = createLanding(site);
+      while (s.phase === 'chute' || s.phase === 'flying') {
+        if (s.phase === 'flying') expect(Math.max(0, -s.vy)).toBeLessThanOrEqual(speedLimit(site, s.y) + 0.3);
+        s = stepLanding(s, landingAutopilot(s), DT);
+      }
     }
   });
 

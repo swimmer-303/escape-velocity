@@ -115,7 +115,7 @@ export function runLaunch(shell: FlightShell, setup: FlightSetup): Promise<Launc
     const streaks = new Particles(shell.reduced ? 10 : 40);
     const hud = launchHud(site);
     shell.setHud(hud.el);
-    shell.showControls({ left: 'Tip left', right: 'Tip right', thrust: 'Thrust' });
+    shell.showControls({ left: 'Left', right: 'Right', thrust: 'Thrust' });
     shell.say('Hold THRUST to lift off!', { ms: 0, tone: 'big', speak: 'Ready on the pad. Hold thrust to lift off!' });
 
     const zoom = shell.H >= 330 ? 2 : 1;
