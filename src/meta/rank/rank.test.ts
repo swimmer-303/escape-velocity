@@ -375,6 +375,8 @@ describe('screens', () => {
     expect(first.classList.contains('done')).toBe(true);
     expect(first.textContent).toContain('Done');
     expect(strip.textContent).toContain('1 of 3 done');
+    seedDaily(['play-sols', 'shelter', 'build'], [5, 1, 1]);
+    expect(renderTitleExtras()[0].textContent).toContain('All 3 done! New missions tomorrow');
   });
 
   it('opens the missions and rank dialog, and Back returns to the title', () => {

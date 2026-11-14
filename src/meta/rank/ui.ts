@@ -154,7 +154,7 @@ export function titleStrip(): HTMLElement {
     h(
       'div',
       { class: 'rs-dhead' },
-      h('span', { class: 'rs-kicker' }, `Today's missions: ${done} of 3 done`),
+      h('span', { class: 'rs-kicker' }, done >= missions.length ? 'All 3 done! New missions tomorrow' : `Today's missions: ${done} of 3 done`),
       streak >= 2 ? h('span', { class: 'rs-streak' }, `${streak} days in a row`) : null,
     ),
     h('ul', { class: 'rs-list' }, missions.map(missionRow)),

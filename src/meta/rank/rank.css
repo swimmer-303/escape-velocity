@@ -23,6 +23,14 @@
   font-family: var(--font-px); font-size: 14px; line-height: 1; background: var(--amber); color: #15122b; border: 2px solid #000;
 }
 .rs-badge.big .rs-lv { font-size: 18px; min-width: 30px; }
+/* A pixel glint that sweeps across the badge now and then (motion only, see the bottom of this file). */
+.rs-badge > .rank-badge { position: relative; }
+.rs-badge > .rank-badge::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  clip-path: polygon(25% 0, 75% 0, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0 75%, 0 25%);
+  background: linear-gradient(110deg, transparent 40%, #ffffff4d 40% 52%, transparent 52%) no-repeat 0 0 / 250% 100%;
+  opacity: 0;
+}
 .rs-who { min-width: 0; flex: 1; }
 .rs-kicker { font-family: var(--font-px); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .rs-rank { font-family: var(--font-px); font-size: 22px; line-height: 1.1; color: var(--amber); text-shadow: 2px 2px 0 var(--rust); overflow-wrap: anywhere; }
@@ -170,6 +178,8 @@
   html:not(.reduce-motion) .ev-lu-burst i { animation-name: ev-lu-fall; animation-timing-function: steps(14); animation-iteration-count: 2; animation-fill-mode: both; }
   html:not(.reduce-motion) .rank-chip.bump .rk-fill { animation: ev-rc-glow 0.6s steps(3); }
   html:not(.reduce-motion) .rank-chip.lvl { animation: ev-rc-lvl 0.5s steps(2) 4; }
+  html:not(.reduce-motion) .rank-strip .rs-badge > .rank-badge::after { animation: ev-rs-glint 6s steps(10) 1s infinite; }
+  @keyframes ev-rs-glint { 0% { background-position: 0 0; opacity: 1; } 16% { background-position: 100% 0; opacity: 1; } 17%, 100% { background-position: 100% 0; opacity: 0; } }
   @keyframes ev-lu-pop { from { transform: scale(0.5); opacity: 0; } to { transform: none; opacity: 1; } }
   @keyframes ev-lu-flash { 50% { color: #fff; } }
   @keyframes ev-lu-spin { to { transform: rotate(360deg); } }
