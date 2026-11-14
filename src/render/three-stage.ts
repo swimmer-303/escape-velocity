@@ -120,8 +120,11 @@ export class ThreeStage implements Stage {
   }
 
   setScene(scene: StageScene) {
+    const siteChanged = (scene.site ?? 'mars') !== (this.sceneInfo?.site ?? 'mars');
     this.sceneInfo = scene;
     this.diorama?.setScene(scene);
+    // A new world needs a new sky and new light right away.
+    if (siteChanged && this.sky) this.setTimeOfDay(this.dayT);
   }
 
   setTimeOfDay(t: number) {
@@ -134,30 +137,55 @@ export class ThreeStage implements Stage {
     const elev = Math.max(0, sunDir.y);
     const dusk = day ? Math.max(0, 1 - Math.min(t, 0.5 - t) / 0.07) : 0;
     const night = day ? 0 : Math.min(1, Math.min(t - 0.5, 1 - t) / 0.05);
+    const u = this.sky.uniforms;
+    const fog = this.scene.fog as THREE.Fog;
+    (u.uSunDir.value as THREE.Vector3).copy(sunDir);
+    this.diorama.sunLight.position.copy(sunDir).multiplyScalar(40);
+    this.diorama.setNight(night);
+
+    if (this.sceneInfo?.site === 'moon') {
+      // No air: a black sky with stars all day, a hard white Sun, no blue sunset, no haze or dust,
+      // and only a little fill light, so shadows are dark and sharp.
+      (u.uZenith.value as THREE.Color).set('#000000');
+      (u.uHorizon.value as THREE.Color).set('#06060a');
+      (u.uSunGlow.value as THREE.Color).set('#4a4a4a');
+      u.uBlue.value = 0;
+      u.uNight.value = night;
+      u.uStars.value = 1;
+      u.uSunDisc.value = day ? 1 : 0;
+      fog.color.set('#000000');
+      fog.near = 300;
+      fog.far = 600;
+      this.diorama.sunLight.intensity = day ? 0.9 + elev * 2.6 : 0;
+      this.diorama.sunLight.color.set('#ffffff');
+      this.diorama.ambient.intensity = 0.12 + (1 - night) * 0.28;
+      this.diorama.ambient.color.set(night > 0.5 ? '#3a4766' : '#c9ccd6');
+      this.post.uniforms.uDust.value = 0;
+      return;
+    }
+
     const dust = this.sceneInfo?.weather === 'storm' ? 0.65 : this.sceneInfo?.weather === 'dusty' ? 0.35 : 0;
 
     const zenithDay = new THREE.Color('#b98a5d');
     const horizonDay = new THREE.Color('#e9bd8c');
     const zenithNight = new THREE.Color('#0b0a18');
     const horizonNight = new THREE.Color('#1d1836');
-    const u = this.sky.uniforms;
     (u.uZenith.value as THREE.Color).copy(zenithDay).lerp(new THREE.Color('#3a3a5a'), dusk * 0.6).lerp(zenithNight, night);
     (u.uHorizon.value as THREE.Color).copy(horizonDay).lerp(new THREE.Color('#c28b6a'), dusk * 0.5).lerp(horizonNight, night);
-    (u.uSunDir.value as THREE.Vector3).copy(sunDir);
+    (u.uSunGlow.value as THREE.Color).set('#f6e7c8');
     u.uBlue.value = dusk;
     u.uNight.value = night;
+    u.uStars.value = 0;
+    u.uSunDisc.value = 0;
 
-    const fog = this.scene.fog as THREE.Fog;
     fog.color.copy(u.uHorizon.value as THREE.Color).lerp(new THREE.Color('#c98a52'), dust);
     fog.near = 40 - dust * 34;
     fog.far = 150 - dust * 110;
 
-    this.diorama.sunLight.position.copy(sunDir).multiplyScalar(40);
     this.diorama.sunLight.intensity = day ? (0.4 + elev * 2.2) * (1 - dust * 0.6) : 0;
     this.diorama.sunLight.color.set(dusk > 0.3 ? '#9fb6e8' : '#fff1d6');
     this.diorama.ambient.intensity = 0.25 + (1 - night) * 0.85 * (1 - dust * 0.3);
     this.diorama.ambient.color.set(night > 0.5 ? '#4a4f7a' : '#f2d2a8');
-    this.diorama.setNight(night);
     this.post.uniforms.uDust.value = dust * 0.45;
   }
 

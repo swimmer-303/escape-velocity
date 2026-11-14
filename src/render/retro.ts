@@ -5,6 +5,18 @@
 
 import * as THREE from 'three';
 
+/** Seeded random numbers (0..1), so the scenery comes out the same every time. */
+export function rand(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** Shared uniform: the snap grid, in half-pixels of the internal resolution. */
 export const SNAP = { value: new THREE.Vector2(160, 90) };
 
@@ -95,7 +107,11 @@ export function makePostMaterial(target: THREE.WebGLRenderTarget) {
   });
 }
 
-/** Sky dome: horizon and zenith colors, a sun glow, and Mars' blue glow around the setting Sun. */
+/**
+ * Sky dome: horizon and zenith colors, a sun glow, and Mars' blue glow around the setting Sun.
+ * For an airless sky (the Moon), uStars = 1 shows steady stars all day and uSunDisc = 1 draws a hard
+ * white Sun. Both default to 0, which leaves the Mars sky exactly as it was.
+ */
 export function makeSkyMaterial() {
   return new THREE.ShaderMaterial({
     side: THREE.BackSide,
@@ -107,6 +123,8 @@ export function makeSkyMaterial() {
       uSunGlow: { value: new THREE.Color('#f6e7c8') },
       uBlue: { value: 0 },
       uNight: { value: 0 },
+      uStars: { value: 0 },
+      uSunDisc: { value: 0 },
       uTime: { value: 0 },
     },
     vertexShader: /* glsl */ `
@@ -118,6 +136,7 @@ export function makeSkyMaterial() {
     fragmentShader: /* glsl */ `
       uniform vec3 uZenith; uniform vec3 uHorizon; uniform vec3 uSunDir; uniform vec3 uSunGlow;
       uniform float uBlue; uniform float uNight; uniform float uTime;
+      uniform float uStars; uniform float uSunDisc;
       varying vec3 vDir;
       float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
       void main() {
@@ -127,10 +146,14 @@ export function makeSkyMaterial() {
         c += uSunGlow * pow(s, 24.0) * (1.0 - uNight);
         // Mars sunsets are blue: fine dust scatters blue light forward, around the Sun.
         c = mix(c, vec3(0.36, 0.52, 0.80), uBlue * pow(s, 4.0));
-        // Stars at night.
+        // No air (the Moon): the Sun is a sharp white disc (drawn bigger than real, so it shows up).
+        c = mix(c, vec3(1.0), uSunDisc * smoothstep(0.99990, 0.99993, s));
+        // Stars at night; with no air they shine all day, all the way down, and do not twinkle.
         vec3 cell = floor(vDir * 180.0);
-        float star = step(0.9975, hash(cell)) * smoothstep(0.0, 0.2, h);
-        c += vec3(star) * uNight * (0.7 + 0.3 * sin(uTime * 3.0 + hash(cell) * 40.0));
+        float fade = mix(smoothstep(0.0, 0.2, h), step(-0.05, vDir.y), uStars);
+        float star = step(0.9975, hash(cell)) * fade;
+        float twinkle = mix(0.7 + 0.3 * sin(uTime * 3.0 + hash(cell) * 40.0), 1.0, uStars);
+        c += vec3(star) * max(uNight, uStars) * twinkle;
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`,
