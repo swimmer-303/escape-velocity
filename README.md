@@ -21,6 +21,18 @@ The same machine makes the **air your crew breathes** and the **oxygen your rock
 
 A **campaign** follows three crews (4, then 5, then 6 astronauts) and takes about 35 minutes, with built-in "Talk about it" breaks between crews. Each crew must fill its rocket and launch before the window closes. Then the base sits empty for **26 months** (the real gap between Earth-Mars launch windows) while the robot O2 plant pre-fills the next crew's rocket, just like real Mars propellant plans. Everything a crew builds stays with the base, so every crew builds for the next one. The game saves after every sol, so a class can stop and continue later. A printable **Teacher Guide** (`/teacher/`) has a 45 to 55 minute lesson plan, NGSS connections, vocabulary, discussion questions and a student worksheet.
 
+## Built to keep kids playing
+
+A lesson is one session; curiosity is many. Everything below rewards *playing well* (sheltering a crew, building for the next one, launching on time), so the more a kid plays, the more they practice the real trade-offs. Nothing is bought; there are no ads and no accounts.
+
+- **Astronaut rank:** XP for every sol, storm survived, upgrade built and rocket launched; 50 levels and 11 ranks (Cadet to Legend), with a level-up celebration and something new unlocked at almost every level (`src/meta/rank`).
+- **Daily missions:** three small goals a day, the same for everyone on a given date (for example "Shelter your crew from a big storm"), plus a gentle streak (`src/meta/rank/daily.ts`).
+- **Storm Cards:** every real NASA solar storm a crew faces becomes a collectible card, with rarity from the real flare class (C common, M rare, X epic, X5+ legendary) and a link to its NASA DONKI record. The live feed means new real storms appear as the real Sun erupts (`src/meta/cards`).
+- **The Hangar:** suit colors, rocket paint jobs, base lights and a rover pet, all shown in the 3D outpost and unlocked by rank (`src/meta/hangar`).
+- **Flight mini-games:** land the crew with real Mars or Moon gravity, and fly the rocket to escape velocity; medals and bonus XP for skill, never a penalty for the mission (`src/meta/flight`).
+
+The features plug into the game through one small module (`src/meta/hooks.ts`): the game announces what happened, and each feature listens. Progress is stored only in the browser.
+
 ## From Mars to Earth
 
 Running a Mars base means living within limits: a tiny power budget, no water to waste, food grown under lights. At the end of every mission the game links what the crew did to NASA technology that already improves lives and protects the environment on Earth (space-station water recycling, NASA's first vertical farm and today's indoor farming, NASA-invented flow batteries storing solar power for communities), each with its NASA Spinoff source (`src/data/earth.ts`).
