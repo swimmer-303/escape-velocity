@@ -51,6 +51,7 @@ import { loadDaily, type DailySession } from './daily/net';
 import { dailyBadge, dailyEndPanel, dailyHudLabel, dailyIntroCard, dailyKicker, todaysBest } from './daily/screens';
 import { initAccess, decorateDialog, statusButton, accessPanel, accessButtonText, ACCESS_DEFAULTS, type AccessSettings } from './access';
 import { certForMission, certForCampaign, certificateView, type CertData } from './certificate';
+import { tripHomeLine } from './planner/tiein';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room' | 'dashboard';
 type Mode = 'campaign' | 'quick' | 'history' | 'daily';
@@ -449,6 +450,7 @@ export class App {
           ),
           h('button', { class: 'btn', onclick: () => this.openRoom() }, 'Class mission: Mission Control'),
           h('button', { class: 'btn cyan', onclick: () => this.showRadar() }, 'Space weather radar'),
+          h('button', { class: 'btn cyan', onclick: () => this.showPlanner(() => this.showTitle()) }, 'Trip planner: the way home'),
           h(
             'div',
             { class: 'menu-row' },
@@ -623,6 +625,14 @@ export class App {
         this.modal(renderRadar({ feed: this.feed, replay, reducedMotion: this.settings.reducedMotion }), { wide: true, label: 'Space weather radar', onClose: () => this.resume() }),
       )
       .catch(() => undefined);
+  }
+
+  /** The Trip planner (real Mars-to-Earth trajectories), loaded only when opened. */
+  showPlanner(back: () => void) {
+    this.audio.sfx('click');
+    import('./planner/planner')
+      .then(({ renderPlanner }) => this.modal(renderPlanner({ reducedMotion: this.settings.reducedMotion, back }).el, { wide: true, label: 'Trip planner', onClose: back }))
+      .catch(() => back());
   }
 
   showMenu() {
@@ -1350,6 +1360,7 @@ export class App {
                 : `Mars' escape velocity is about ${REAL.marsEscapeKms.toFixed(1)} km/s: the speed your rocket needs to break free of Mars' gravity.`,
             )
           : null,
+        won && siteOf(m.config) !== 'moon' && this.mode !== 'history' ? tripHomeLine(this.mode === 'campaign' ? m.config.expedition : 1) : null,
         crewSays(m.config.expedition, won),
         this.mode !== 'history' ? starRow(stars) : null,
         this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
@@ -1440,6 +1451,7 @@ export class App {
               'Earth and Mars line up for a quick trip only about every 26 months, so that is how long the base sits empty between crews. ',
               `By ${future.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, messages from Earth will take about ${Math.round(lt.oneWayMinutes)} minutes to arrive (calculated from JPL orbit data).`,
             ),
+        moon ? null : h('button', { class: 'btn small cyan', onclick: () => this.showPlanner(() => this.showInterlude()) }, 'Why 26 months? Open the trip planner'),
         h(
           'div',
           { class: 'card good' },
