@@ -1,5 +1,5 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Pure DONKI normalizing code, shared by the browser, the Vercel proxy (api/spaceweather.ts)
+// Pure DONKI normalizing code, shared by the browser, our server's proxy (api/spaceweather.ts)
 // and tests. No Vite-only features here.
 
 export interface DonkiFlare {

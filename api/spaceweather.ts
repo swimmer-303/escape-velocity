@@ -1,7 +1,7 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Vercel Function: GET /api/spaceweather?days=30
+// GET /api/spaceweather?days=30 (run by deploy/server.ts on our droplet)
 // Fetches real solar flares (FLR) and particle storms (SEP) from NASA DONKI, normalizes them,
-// and lets Vercel's CDN cache the answer for an hour so players never hit NASA rate limits.
+// and marks the answer cacheable; the server caches it for an hour so players never hit NASA rate limits.
 // Uses the keyless CCMC DONKI host (ccmc.gsfc.nasa.gov); if NASA_API_KEY is set, api.nasa.gov is used as a backup.
 
 import { normalizeDonki } from '../src/data/donki-normalize.js';

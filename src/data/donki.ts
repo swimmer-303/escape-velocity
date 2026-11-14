@@ -120,7 +120,7 @@ export async function loadSpaceWeather(days = 30): Promise<SpaceWeatherFeed> {
   const endDate = ymd(end);
   const errors: string[] = [];
 
-  // 1) Our Vercel proxy (keeps the API key server-side and caches for an hour).
+  // 1) Our server's proxy (keeps any API key server-side and caches for an hour).
   try {
     const snap = (await fetchJson(`/api/spaceweather?days=${days}`, 8000)) as DonkiSnapshot;
     if (snap && Array.isArray(snap.flares)) return { status: 'live', snapshot: snap, fetchedAt: snap.fetchedAt, via: 'proxy' };

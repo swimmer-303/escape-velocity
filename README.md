@@ -5,7 +5,7 @@ NASA Space Apps Challenge 2026, Charlotte, NC · Team Sendy1 (Spencer Hedges and
 
 > Build a base in Gale Crater on Mars, crew after crew. Keep each crew breathing, fed and safe from solar storms, make enough oxygen to fill the rocket that flies them home, and leave the base better for the next crew. Fill the tank and you hit **escape velocity**.
 
-**Play it:** https://143-110-195-117.sslip.io (backup: https://escape-velocity-seven.vercel.app) · no download, no account, works on Chromebooks, desktops and tablets.
+**Play it:** https://143-110-195-117.sslip.io · no download, no account, works on Chromebooks, desktops and tablets.
 
 ## The challenge
 
@@ -48,7 +48,7 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 
 | Data | Used for | Live or archive |
 |---|---|---|
-| **NASA DONKI** solar flares (FLR) and particle storms (SEP) | Every radiation storm in a mission is a real event. Flare class sets storm size (C small, M medium, X big). Event cards show the real class, date, sunspot region and a link to the DONKI record. | **LIVE** (last 30 days, through our cached Vercel proxy or directly from NASA), with a stored snapshot as **ARCHIVE** fallback. The badge always says which. |
+| **NASA DONKI** solar flares (FLR) and particle storms (SEP) | Every radiation storm in a mission is a real event. Flare class sets storm size (C small, M medium, X big). Event cards show the real class, date, sunspot region and a link to the DONKI record. | **LIVE** (last 30 days, through our cached server or directly from NASA), with a stored snapshot as **ARCHIVE** fallback. The badge always says which. |
 | **NASA DONKI** May 2024 (FLR, SEP, CME, GST) | Replay History mode: AR 13664's X-class flares, the Kp 9 storm at Earth on May 10, and the 2,678 km/s far-side CME of May 20. | ARCHIVE |
 | **JPL Solar System Dynamics** orbital elements | Earth to Mars light time for the comm-delay mechanic, calculated live in the browser. Checked against JPL Horizons: 11.01 min on Nov 14, 2026 (exact to 2 decimals). | Calculated now |
 | **Curiosity RAD** (Hassler et al. 2014; NASA/JPL 2024) | The steady background dose on every sol (0.67 mSv/sol, the real Gale Crater average) and the model for a "big" storm (8,100 µGy on May 20, 2024). | Published figures |
@@ -82,7 +82,7 @@ src/sim/      Pure, deterministic, seeded simulation. No rendering imports. The 
 src/data/     DONKI loader (proxy -> direct -> snapshot), light-time calculator, OSDR + RadLab snapshots, Real Science facts
 src/render/   Stage interface (3D diorama plugs in here)
 src/ui/       HUD, power-budget dock (drag and drop, tap, keyboard), briefing, debrief, Science Log, credits, audio
-api/          spaceweather.ts: the DONKI proxy handler (used by the droplet server and by Vercel)
+api/          spaceweather.ts: the DONKI proxy handler (run by the droplet's server)
 deploy/       droplet server (server.ts), Caddyfile, systemd service, one-time setup script
 scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark)
 ```
@@ -101,7 +101,7 @@ npm run build        # typecheck + production build into dist/
 
 Every push to `main` runs the tests, builds the game, and deploys it to our DigitalOcean droplet through GitHub Actions (`.github/workflows/deploy.yml`), so any teammate with push access can ship. On the droplet, **Caddy** serves the static game with automatic HTTPS and forwards `/api/spaceweather` to a tiny Node service (`deploy/server.ts`) that fetches NASA DONKI and caches it for an hour. One-time server setup lives in `deploy/setup.sh`; the GitHub secrets it needs are `DEPLOY_HOST`, `DEPLOY_URL`, `DEPLOY_SSH_KEY` (a deploy-only key) and `DEPLOY_KNOWN_HOSTS`. To use a real domain, point its DNS at the droplet and change `SITE_HOST` in `/etc/default/caddy`, then `systemctl restart caddy`.
 
-A Vercel deployment (`api/spaceweather.ts` as a Vercel Function) is kept as a backup. Optional environment variable `NASA_API_KEY` lets either proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
+Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to let the proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
 
 ### Tests
 

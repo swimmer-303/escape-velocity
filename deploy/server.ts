@@ -1,5 +1,5 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Tiny Node server for the droplet: serves /api/spaceweather (the same handler Vercel uses)
+// Tiny Node server for the droplet: serves /api/spaceweather (handler in api/spaceweather.ts)
 // with a 1-hour in-memory cache so players never hit NASA rate limits.
 // Caddy serves the static game and reverse-proxies /api/* to this process.
 
