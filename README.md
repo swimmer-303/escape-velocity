@@ -3,7 +3,7 @@
 **A retro 3D Mars outpost game for kids aged 7 to 12, powered by real NASA data.**
 NASA Space Apps Challenge 2026, Charlotte, NC · Team Sendy1 (Spencer Hedges and Sandeep Talari)
 
-> Command a tiny outpost in Gale Crater on Mars. Keep your 4-person crew breathing, fed and safe from solar storms, while making enough oxygen to fill the rocket that flies them home. Fill the tank and you hit **escape velocity**.
+> Build a base in Gale Crater on Mars, crew after crew. Keep each crew breathing, fed and safe from solar storms, make enough oxygen to fill the rocket that flies them home, and leave the base better for the next crew. Fill the tank and you hit **escape velocity**.
 
 **Play it:** https://escape-velocity-seven.vercel.app · no download, no account, works on Chromebooks, desktops and tablets.
 
@@ -17,6 +17,10 @@ Challenge page: https://www.spaceappschallenge.org/2026/challenges/junior-astron
 
 The same machine makes the **air your crew breathes** and the **oxygen your rocket burns**. NASA's MOXIE experiment on the Perseverance rover proved you can pull oxygen out of Mars' carbon-dioxide air, and the main reason NASA wants that technology is rocket propellant. So every power cell you spend on heat, food or a radiation shelter is a cell that is not filling the fuel tank. **No choice is free**, and our tests prove it (see below).
 
+## A game a teacher can build a lesson on
+
+A **campaign** follows three crews (4, then 5, then 6 astronauts) and takes about 35 minutes, with built-in "Talk about it" breaks between crews. Each crew must fill its rocket and launch before the window closes. Then the base sits empty for **26 months** (the real gap between Earth-Mars launch windows) while the robot O2 plant pre-fills the next crew's rocket, just like real Mars propellant plans. Everything a crew builds stays with the base, so every crew builds for the next one. The game saves after every sol, so a class can stop and continue later. A printable **Teacher Guide** (`/teacher/`) has a 45 to 55 minute lesson plan, NGSS connections, vocabulary, discussion questions and a student worksheet.
+
 ## How to play
 
 One turn is one **sol** (a Mars day, 24 h 39 min).
@@ -27,14 +31,18 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
    - **Greenhouse**: food, plus a little air. Grow lights are power-hungry.
    - **Heaters**: skip them and the batteries freeze: fewer cells tomorrow, and repeated cold nights damage batteries for good.
    - **Storm Shelter**: blocks most of a solar storm's radiation, but only when it's powered.
-   - **Radiation Monitor**: costs a cell, and warns you about tomorrow's storm, even the fast ones that beat Earth's warning to Mars.
+   - **Workshop**: cells here build upgrades that last for every later crew: solar panels, a radiation monitor, a battery bank, a regolith berm, a second greenhouse dome, a bigger O2 plant, and a fission reactor. Each costs power today, and some have a catch (more panels lose more power in dust; a second dome needs more heat).
+   - **Radiation Monitor** (once built): costs a cell, and warns you about tomorrow's storm, even the fast ones that beat Earth's warning to Mars.
+   - **Battery** (once built): store cells today, get them back tomorrow. Handy before a forecast dust storm.
 3. **Run the sol.** Watch the day play out.
 4. **Debrief.** One plain sentence of cause and effect, plus an optional Real Science card.
 
 **HUD:** POWER, LIFE SUPPORT (days of air and food), RADIATION (dose against the mission budget), and the goal: **FUEL TANK**.
 **Win:** fill the tank before the launch window closes. **Mission over** (never "death"): if air or food runs out or the dose budget is spent, the flight surgeon sends the crew home early, and the game shows what happened and one thing to try next time.
 
-**Modes:** Cadet (forgiving), Commander (less power, more storms, a solar-conjunction blackout), and **Replay History: May 2024**, where the real storms of May 2024 hit your outpost on their real dates, ending with the far-side eruption of May 20, 2024 that Curiosity measured at Gale Crater.
+**Stars:** up to 3 per crew: Launch, Safe crew (dose under 60% of budget), and Builder (finish an upgrade for the next crew).
+
+**Modes:** a 3-crew **campaign** (Cadet or Commander), a **Quick mission** (one crew, about 10 minutes), and **Replay History: May 2024**, where the real storms of May 2024 hit your outpost on their real dates, ending with the far-side eruption of May 20, 2024 that Curiosity measured at Gale Crater.
 
 ## NASA data (and how each piece is used)
 
@@ -66,6 +74,8 @@ The game time-compresses and scales real numbers so a mission fits in about 10 m
 ```
 src/sim/      Pure, deterministic, seeded simulation. No rendering imports. The heart of the game.
   sim.ts        briefing, previews, running a sol, win/lose
+  campaign.ts   three crews, the inherited base, the 26-month gap and pre-filled tank, stars, saves
+  upgrades.ts   the Workshop's upgrades (costs, effects, catches, real science)
   plan.ts       turns a seed + real DONKI events into the day-by-day mission plan
   explain.ts    plain-language debriefs, endings, badges
   strategies.ts scripted players used by the balance tests
@@ -91,8 +101,9 @@ Deployment: Vercel (Vite preset). Optional environment variable `NASA_API_KEY` l
 ### Tests
 
 - **No free choices:** for thousands of game states, moving any useful power cell from one module to another always makes at least one thing worse (air, food, fuel, dose, tomorrow's power, equipment wear, or early warning).
-- **Balance:** a balanced strategy wins on Cadet (100%) and usually on Commander; pure greed (all power to fuel) always loses.
-- **Headless UI test:** boots the real interface and clicks through whole missions, including the May 2024 scenario, offline.
+- **Balance:** a player who builds up the base wins every Cadet expedition; never building makes the last crew's mission much harder (the generational lesson); pure greed (all power to fuel) always loses. Run `npm run balance` for the full report.
+- **Campaign:** the base and Workshop progress pass to the next crew, even after an early return; saves round-trip.
+- **Headless UI test:** boots the real interface and clicks through a whole 3-crew campaign, a save-and-resume, and the May 2024 scenario, offline.
 
 ## Use of AI tools
 

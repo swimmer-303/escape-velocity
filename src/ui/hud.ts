@@ -15,6 +15,9 @@ export interface HudModel {
   /** Projected values after the sol (shown as ghost bars), if planning. */
   next?: Snapshot;
   doseBudget: number;
+  crew: number;
+  /** e.g. "CREW 2 OF 3" */
+  label: string;
 }
 
 const LIFE_SCALE = 8; // days shown as a full bar
@@ -80,7 +83,13 @@ export function renderHud(root: HTMLElement, m: HudModel, right: HTMLElement[]) 
     h('div', { class: 'meter-sub' }, 'Fill it to launch home'),
   );
 
-  const sol = h('div', { class: 'sol-chip', 'aria-label': `Sol ${m.sol} of ${m.windowSol}` }, `SOL ${m.sol}`, h('small', null, `window: sol ${m.windowSol}`));
+  const sol = h(
+    'div',
+    { class: 'sol-chip', 'aria-label': `${m.label}, ${m.crew} astronauts, sol ${m.sol} of ${m.windowSol}` },
+    h('small', null, m.label),
+    `SOL ${m.sol}`,
+    h('small', null, `${m.crew} crew · window sol ${m.windowSol}`),
+  );
 
   root.append(power, life, dose, fuel, h('div', { class: 'hud-right' }, sol, ...right));
 }

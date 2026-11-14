@@ -3,6 +3,7 @@
 // 3D diorama (Three.js) and the lightweight fallback are interchangeable.
 
 import type { Allocation, Weather } from '../sim/types';
+import type { Levels } from '../sim/upgrades';
 
 export interface StageScene {
   sol: number;
@@ -10,6 +11,10 @@ export interface StageScene {
   alloc: Allocation;
   fuel: number;
   sheltered: boolean;
+  /** Upgrades built: the diorama grows with them. */
+  levels: Levels;
+  /** Astronauts walking around (0 while the base is empty between crews). */
+  crew: number;
 }
 
 export interface Stage {

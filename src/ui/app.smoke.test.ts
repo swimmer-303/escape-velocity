@@ -1,13 +1,15 @@
 // @vitest-environment happy-dom
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Headless smoke test: boots the real UI and clicks through whole missions like a player would.
+// Headless smoke test: boots the real UI and clicks through whole games like a player would.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App } from './app';
 import { CssStage } from '../render/stage';
-import { balanced } from '../sim/strategies';
+import { builder } from '../sim/strategies';
 import { MODULE_LABEL } from './budget';
 import { MODULE_IDS, type MissionState } from '../sim/types';
+import { UPGRADES } from '../sim/upgrades';
+import type { Campaign } from '../sim/campaign';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -28,27 +30,35 @@ async function waitFor<T>(fn: () => T | null | undefined, ms = 3000): Promise<T>
 beforeEach(() => {
   document.body.innerHTML = `<div id="app"><div id="stage"></div><header id="hud"></header><main id="dock"></main></div><div id="modal-root"></div>`;
   vi.stubGlobal('fetch', () => Promise.reject(new Error('offline in tests')));
+  try {
+    localStorage.clear();
+  } catch {
+    /* ignore */
+  }
 });
 
-async function playMission(startLabel: RegExp) {
-  const app = new App(new CssStage());
-  (await waitFor(() => button(startLabel))).click();
+type AppInternals = { mission: MissionState; campaign: Campaign };
+
+/** Plays until `done()` says stop. Uses the builder strategy, picking Workshop projects through the UI. */
+async function play(app: App, done: () => boolean) {
+  const internals = app as unknown as AppInternals;
   let sols = 0;
-  for (let guard = 0; guard < 80; guard++) {
-    const mission = (app as unknown as { mission: MissionState }).mission;
+  for (let guard = 0; guard < 400 && !done(); guard++) {
+    if (document.querySelector('.crates .crate') && !button(/Plan the day/)) {
+      document.querySelector<HTMLButtonElement>('.crates .crate')!.click();
+      continue;
+    }
     const planBtn = button(/Plan the day/);
-    const crate = document.querySelector<HTMLButtonElement>('.crate[aria-pressed="false"]');
-    if (crate && button(/Choose a crate first/) === null && !planBtn) {
-      crate.click();
-      continue;
-    }
-    if (document.querySelector('.crates') && !planBtn) {
-      document.querySelector<HTMLButtonElement>('.crate')!.click();
-      continue;
-    }
     if (planBtn) {
       planBtn.click();
-      const { alloc } = balanced(mission);
+      const want = builder(internals.mission).project;
+      if (want && want !== internals.mission.base.project) {
+        button(/Choose project/)!.click();
+        const card = [...document.querySelectorAll('.upgrade')].find((c) => c.textContent?.includes(UPGRADES[want].name.toUpperCase()));
+        card!.querySelector<HTMLButtonElement>('button')!.click();
+        button(/^Done$/)!.click();
+      }
+      const { alloc } = builder(internals.mission);
       for (const id of MODULE_IDS) {
         for (let k = 0; k < alloc[id]; k++) {
           const box = document.querySelector<HTMLButtonElement>(`button[aria-label="Add a cell to ${MODULE_LABEL[id]}"]`);
@@ -56,36 +66,56 @@ async function playMission(startLabel: RegExp) {
           box!.click();
         }
       }
-      const run = await waitFor(() => button(/^Run sol/));
-      run.click();
+      (await waitFor(() => button(/^Run sol/))).click();
       (await waitFor(() => button(/Skip/))).click();
       sols++;
       continue;
     }
-    const next = button(/Start sol|Launch!|See what happened/);
+    const next = button(/Start sol|Launch!|See what happened|Land the crew|Send the next crew|Meet the next crew|See your base/);
     if (next) {
       next.click();
+      await sleep(0);
       continue;
     }
-    if (button(/Play again/)) return { app, sols, mission: (app as unknown as { mission: MissionState }).mission };
     await sleep(20);
   }
-  throw new Error('mission did not finish');
+  return sols;
 }
 
 describe('UI smoke test', () => {
-  it('plays a full Cadet mission from title to the end screen', async () => {
-    const { sols, mission } = await playMission(/Start mission/);
-    expect(sols).toBeGreaterThan(5);
-    expect(mission.status).not.toBe('playing');
-    expect(document.querySelector('.modal h2')?.textContent).toBeTruthy();
-    // Data honesty: offline, so the badge must not say LIVE.
+  it('plays a whole 3-crew campaign from title to the finale, with saving', async () => {
+    const app = new App(new CssStage());
+    (await waitFor(() => button(/New campaign/))).click();
+    (await waitFor(() => button(/Cadet/))).click();
+    const sols = await play(app, () => !!document.querySelector('[aria-label="Campaign complete"]'));
+    expect(sols).toBeGreaterThan(20);
+    const c = (app as unknown as AppInternals).campaign;
+    expect(c.results.length).toBe(3);
+    expect(Object.values(c.base.levels).reduce((a, b) => a + b, 0)).toBeGreaterThan(2);
     expect(document.querySelector('.data-badge')?.textContent ?? '').not.toMatch(/LIVE/);
-  }, 20000);
+  }, 60000);
+
+  it('resumes a saved campaign mid-expedition', async () => {
+    const app = new App(new CssStage());
+    (await waitFor(() => button(/New campaign/))).click();
+    (await waitFor(() => button(/Cadet/))).click();
+    const internals = app as unknown as AppInternals;
+    await play(app, () => !!internals.mission && internals.mission.sol >= 4);
+    const sol = internals.mission.sol;
+    // Reload the page.
+    document.body.innerHTML = `<div id="app"><div id="stage"></div><header id="hud"></header><main id="dock"></main></div><div id="modal-root"></div>`;
+    const app2 = new App(new CssStage());
+    const cont = await waitFor(() => button(/Continue: crew 1 of 3/));
+    cont.click();
+    expect((app2 as unknown as AppInternals).mission.sol).toBe(sol);
+  }, 30000);
 
   it('plays the May 2024 history scenario', async () => {
-    const { mission } = await playMission(/May 2024 storms/);
-    expect(mission.config.scenario).toBe('may2024');
-    expect(mission.log.some((r) => r.storm?.event.kind === 'cme' || r.storm?.event.classType?.startsWith('X'))).toBe(true);
-  }, 20000);
+    const app = new App(new CssStage());
+    (await waitFor(() => button(/May 2024 storms/))).click();
+    await play(app, () => !!button(/Play again/));
+    const m = (app as unknown as AppInternals).mission;
+    expect(m.config.scenario).toBe('may2024');
+    expect(m.log.some((r) => r.storm?.event.kind === 'cme' || r.storm?.event.classType?.startsWith('X'))).toBe(true);
+  }, 30000);
 });

@@ -95,7 +95,7 @@ a { color: var(--cyan); }
 .pip.used { background: #3a3150; }
 .hud-right { display: flex; gap: 8px; margin-left: auto; align-items: flex-start; }
 .sol-chip { font-family: var(--font-px); background: var(--panel); border: 3px solid var(--line); padding: 6px 10px; box-shadow: 4px 4px 0 var(--shadow); font-size: 14px; text-align: center; min-width: 92px; }
-.sol-chip small { display: block; color: var(--muted); font-size: 11px; }
+.sol-chip small { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; }
 
 .data-badge {
   display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-px); font-size: 12px;
@@ -153,7 +153,8 @@ a { color: var(--cyan); }
 .cell-ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -50%) rotate(-6deg) scale(1.15); }
 .tray-empty { font-size: 15px; color: var(--green); }
 
-.modules { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: 8px; }
+.modules { display: grid; grid-template-columns: 1.5fr repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.tray-hint { margin-left: auto; font-size: 14px; color: var(--muted); }
 .module {
   background: var(--panel-2); border: 3px solid #000; padding: 8px; display: flex; flex-direction: column; gap: 6px;
   box-shadow: inset 0 0 0 2px var(--line); min-width: 0;
@@ -238,6 +239,18 @@ ul.clean li { margin: 4px 0; }
 .science { background: #0f1f2a; border: 3px solid #000; box-shadow: inset 0 0 0 2px #1f6f6a; padding: 10px 12px; margin-top: 12px; }
 .science .kicker { color: var(--cyan); }
 .science .src { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.stars { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.stars.compact { gap: 2px; margin: 0; }
+.star { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 13px; color: var(--muted); opacity: 0.35; filter: grayscale(1); }
+.star.on { opacity: 1; filter: none; color: var(--amber); }
+.stars:not(.compact) .star { border: 3px solid #000; background: var(--panel-2); padding: 6px 10px; }
+.stars:not(.compact) .star.on { box-shadow: inset 0 0 0 2px var(--amber); }
+.upgrade-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0 10px; }
+.upgrade-list .card { display: flex; flex-direction: column; gap: 6px; }
+.upgrade-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.upgrade-head .cost { margin-left: auto; font-family: var(--font-px); font-size: 13px; }
+.upgrade-list .btn { align-self: flex-start; }
+a.btn { text-decoration: none; }
 .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .badge { border: 3px solid #000; background: var(--panel-3); padding: 6px 10px; box-shadow: inset 0 0 0 2px var(--amber); }
 .badge b { font-family: var(--font-px); font-weight: 400; color: var(--amber); display: block; }

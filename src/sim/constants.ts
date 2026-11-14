@@ -42,99 +42,147 @@ export const REAL = {
 
 export type Difficulty = 'cadet' | 'commander';
 
+/**
+ * Units: air and food are counted in PERSON-DAYS (1 = one astronaut for one sol).
+ * The HUD shows "days left" = stock / crew size.
+ */
+
 export interface Tuning {
-  /** Power cells on a clear sol. */
+  /** Solar power cells on a clear sol before any upgrades. */
   baseCells: number;
-  /** Starting reserves, in "crew-days" (1 = enough for the whole crew for one sol). */
-  startAir: number;
-  startFood: number;
-  /** Mission radiation dose budget, mSv. Much stricter than NASA's real 600 mSv career limit, so radiation choices matter in a short game. */
+  /** Starting reserves, in days for the whole crew (cargo lands with each crew). */
+  startAirDays: number;
+  startFoodDays: number;
+  /** Mission radiation dose budget per crew, mSv. Much stricter than NASA's real 600 mSv career limit, so radiation choices matter in a short game. */
   doseBudget: number;
-  /** Fuel tank % added per power cell on the FUEL side of the O2 plant. */
-  fuelPerCell: number;
-  /** Launch window closes at the end of this sol. */
-  windowSol: number;
-  /** How many real space-weather events get dealt into the mission. */
+  /** Extra sols added to every expedition's launch window. */
+  windowBonus: number;
+  /** Real space-weather events dealt into each expedition. */
   stormCount: number;
-  /** Max major (X-class) storms in the deck. */
+  /** Max major (X-class) storms per expedition. */
   maxMajor: number;
   dustStorms: number;
   coldSnaps: number;
   blackout: boolean;
-  resupplySol: number;
 }
 
 export const TUNING: Record<Difficulty, Tuning> = {
   cadet: {
     baseCells: 7,
-    startAir: 4,
-    startFood: 6,
+    startAirDays: 4,
+    startFoodDays: 6,
     doseBudget: 27,
-    fuelPerCell: 2.7,
-    windowSol: 26,
+    windowBonus: 3,
     stormCount: 3,
     maxMajor: 1,
     dustStorms: 1,
     coldSnaps: 2,
     blackout: false,
-    resupplySol: 8,
   },
   commander: {
     baseCells: 7,
-    startAir: 3,
-    startFood: 5,
-    doseBudget: 28,
-    fuelPerCell: 2.3,
-    windowSol: 24,
+    startAirDays: 3,
+    startFoodDays: 5,
+    doseBudget: 27,
+    windowBonus: 1,
     stormCount: 4,
     maxMajor: 2,
     dustStorms: 2,
     coldSnaps: 3,
     blackout: true,
-    resupplySol: 9,
   },
 };
 
-/** Production per power cell (game units, crew-days). Same on every difficulty. */
+/** The campaign: each expedition is a new crew that inherits the base the last crew built. */
+export interface ExpeditionSpec {
+  n: number;
+  name: string;
+  crew: number;
+  /** Fuel units needed to fill this expedition's ascent vehicle (1 unit = 1 cell on FUEL before upgrades). */
+  fuelNeeded: number;
+  /** Launch window closes at the end of this sol (before difficulty bonus). */
+  windowSol: number;
+  resupplySol: number;
+  blurb: string;
+}
+
+export const EXPEDITIONS: ExpeditionSpec[] = [
+  {
+    n: 1,
+    name: 'First Footprints',
+    crew: 4,
+    fuelNeeded: 40,
+    windowSol: 18,
+    resupplySol: 7,
+    blurb: 'Four astronauts land at a brand-new outpost in Gale Crater. Make enough rocket oxygen to get home, and start building a base for the crews who come after you.',
+  },
+  {
+    n: 2,
+    name: 'The Builders',
+    crew: 5,
+    fuelNeeded: 52,
+    windowSol: 20,
+    resupplySol: 8,
+    blurb: 'Twenty-six months later, Earth and Mars line up again and a crew of five arrives. More people means more air and food. Can your base keep up?',
+  },
+  {
+    n: 3,
+    name: 'Home Away From Home',
+    crew: 6,
+    fuelNeeded: 58,
+    windowSol: 23,
+    resupplySol: 9,
+    blurb: 'Six astronauts: the biggest crew yet. Everything the earlier crews built is now keeping this one alive.',
+  },
+];
+
+/** Production per power cell, in person-days. */
 export const RATES = {
-  /** 1 cell on the AIR side of the O2 plant = 1 day of air for the crew. */
-  airPerCell: 1,
-  /** Grow lights are power-hungry: 1 cell = half a day of food... */
-  foodPerGreenhouseCell: 0.5,
+  /** 1 cell on AIR = 1 day of air for 4 people (about 3.6 kg of oxygen). */
+  airPerCell: 4,
+  /** Grow lights are power-hungry: 1 cell = food for 2 people for a day... */
+  foodPerGreenhouseCell: 2,
   /** ...plus a little oxygen from the plants. */
-  airPerGreenhouseCell: 0.15,
-  /** The crew eats and breathes 1 crew-day of each per sol. */
-  airUsePerSol: 1,
-  foodUsePerSol: 1,
+  airPerGreenhouseCell: 0.6,
+  /** Each astronaut breathes and eats 1 person-day per sol. */
+  usePerPersonPerSol: 1,
 } as const;
 
-/** Heaters needed per sol (cold snaps need 2). */
-export const HEATER_NEED = { normal: 1, coldSnap: 2 } as const;
+/** Heaters needed per sol (cold snaps need 1 more; a second greenhouse dome needs 1 more). */
+export const HEATER_NEED = { normal: 1, coldSnap: 1 } as const;
 
 /** Cold damage: every 3 un-heated nights permanently costs 1 power cell (damaged batteries). */
 export const WEAR_PER_DAMAGE = 3;
 
-/** Power lost to dust. */
-export const DUST_CELL_LOSS = { regional: 2, global: 3 } as const;
-export const DUST_STORM_LENGTH = { regional: 3, global: 3 } as const;
+/** Fraction of SOLAR power lost to dust (the reactor doesn't care about dust). */
+export const DUST_LOSS = { dusty: 0.3, storm: 0.4 } as const;
+export const DUST_STORM_LENGTH = 3;
 
 /** Radiation dose added by an unsheltered storm, mSv (scaled game values). */
 export const STORM_DOSE = { minor: 0.5, moderate: 3, major: 8 } as const;
 
-/** Fraction of storm dose blocked by shelter with 0, 1 or 2 cells. */
+/** Fraction of storm dose blocked by shelter with 0, 1 or 2 cells. The regolith berm upgrade makes 1 cell enough. */
 export const SHELTER_BLOCK = [0, 0.5, 0.9] as const;
 
-/** Most cells each module can take. */
+/** Most cells each module can take in one sol. */
 export const MODULE_CAP = {
-  air: 3,
-  fuel: 6,
-  greenhouse: 4,
-  heaters: 2,
+  air: 4,
+  fuel: 8,
+  greenhouse: 6,
+  heaters: 3,
   shelter: 2,
   monitor: 1,
+  build: 3,
+  battery: 2,
 } as const;
 
 /** Earth-side detection + forecaster time before a warning is sent, minutes (game assumption). */
 export const EARTH_PROCESSING_MIN = 10;
 /** Light time Sun to Earth, minutes. */
 export const SUN_EARTH_LIGHT_MIN = 8.3;
+
+/** Sols between expeditions on the real calendar: Earth-Mars launch windows come every ~26 months. */
+export const SYNODIC_MONTHS = 26;
+/** While the base is empty, the robot O2 plant pre-fills the next crew's tank (percent per power cell, capped). */
+export const PREFILL_PCT_PER_CELL = 2;
+export const PREFILL_MAX_PCT = 25;

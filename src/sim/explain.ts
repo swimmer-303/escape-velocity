@@ -2,9 +2,10 @@
 // Turns sim results into plain-language cause and effect for kids.
 
 import { TUNING } from './constants';
+import { UPGRADES } from './upgrades';
 import type { MissionState, SolReport, SpaceWeatherEvent } from './types';
 
-export type ScienceTopic = 'shelter' | 'monitor' | 'greenhouse' | 'o2' | 'dust' | 'cold' | 'crew' | 'comm';
+export type ScienceTopic = 'shelter' | 'monitor' | 'greenhouse' | 'o2' | 'dust' | 'cold' | 'crew' | 'comm' | 'build';
 
 export interface Debrief {
   headline: string;
@@ -70,6 +71,11 @@ export function explainSol(r: SolReport): Debrief {
       tone = 'bad';
     }
     if (s.warnedBy === 'monitor') details.push('Your own radiation monitor spotted it coming.');
+  } else if (r.built) {
+    const u = UPGRADES[r.built];
+    headline = `Your crew finished building: ${u.name}! ${u.effect} It stays with the base for every crew after you.`;
+    topic = r.built === 'panel' || r.built === 'reactor' || r.built === 'battery' ? 'build' : r.built === 'monitor' ? 'monitor' : r.built === 'berm' ? 'shelter' : r.built === 'dome2' ? 'greenhouse' : 'o2';
+    tone = 'good';
   } else if (r.newDamage) {
     headline = 'Too many cold nights damaged a battery: you will have 1 fewer power cell every sol from now on.';
     topic = 'cold';
@@ -101,6 +107,9 @@ export function explainSol(r: SolReport): Debrief {
   }
 
   if (headline !== fuelLine) details.push(fuelLine);
+  if (r.built && r.storm) details.push(`Your crew also finished building: ${UPGRADES[r.built].name}.`);
+  if (r.alloc.build && !r.built && r.buildProject) details.push(`${cells(r.alloc.build)} went into the Workshop: ${UPGRADES[r.buildProject].name} is getting closer.`);
+  if (r.stored) details.push(`You stored ${cells(r.stored)} in the battery for tomorrow.`);
   if (r.crate === 'food') details.push('The cargo lander brought 3 days of food.');
   if (r.crate === 'parts') details.push('The cargo lander brought spare parts: repairs done.');
   if (r.crate === 'panel') details.push('The cargo lander brought a new solar panel: +1 cell from tomorrow.');
@@ -138,10 +147,12 @@ export function endingFor(state: MissionState): Ending {
     title = 'ESCAPE VELOCITY REACHED: 5.0 km/s';
     happened.push(`You filled the tank and launched on sol ${lastSol}.`);
     happened.push(
-      `Your crew finished with ${days(Math.min(state.air, state.food))} of supplies and a radiation dose of ${n1(state.dose)} out of ${state.doseBudget}.`,
+      `Your crew finished with ${days(Math.min(state.air, state.food) / state.crew)} of supplies and a radiation dose of ${n1(state.dose)} out of ${state.doseBudget}.`,
     );
     if (storms.length) happened.push(`You sheltered from ${storms.length - unsheltered.length} of ${storms.length} solar storms.`);
-    tip = state.config.difficulty === 'cadet' ? 'Ready for more? Try Commander: less power, more storms.' : 'Can you launch sooner, or with a smaller dose? Try a new seed.';
+    tip = state.builtThisExpedition.length
+      ? 'The next crew inherits everything you built. What should they build next?'
+      : 'You left the base the same as you found it. Next time, put a few spare cells into the Workshop so the next crew has more power.';
   } else {
     title = 'The flight surgeon calls it: your crew heads home early.';
     switch (state.loseReason) {

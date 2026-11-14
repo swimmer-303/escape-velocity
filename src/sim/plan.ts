@@ -3,7 +3,7 @@
 // space-weather events. The player's choices never change the plan; they change
 // how well the outpost copes with it.
 
-import { TUNING, DUST_STORM_LENGTH } from './constants';
+import { TUNING, DUST_STORM_LENGTH, EXPEDITIONS } from './constants';
 import { makeRng, randInt, shuffle, type Rng } from './rng';
 import type { MissionConfig, SolPlan, SpaceWeatherEvent, Severity } from './types';
 
@@ -63,10 +63,11 @@ function blankPlan(windowSol: number): SolPlan[] {
 
 export function buildPlan(config: MissionConfig): SolPlan[] {
   const t = TUNING[config.difficulty];
-  const rng = makeRng(`${config.seed}|plan`);
-  const plan = blankPlan(t.windowSol);
+  const spec = EXPEDITIONS[Math.max(0, Math.min(EXPEDITIONS.length - 1, config.expedition - 1))];
+  const rng = makeRng(`${config.seed}|plan|${config.expedition}`);
+  const W = spec.windowSol + t.windowBonus;
+  const plan = blankPlan(W);
   const at = (sol: number) => plan[sol - 1];
-  const W = t.windowSol;
 
   // --- Radiation storms from real DONKI events -------------------------------
   const stormSols: number[] = [];
@@ -80,10 +81,12 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
       }
     }
   } else {
-    const storms = chooseStorms(rng, config.eventPool, t.stormCount, t.maxMajor);
+    const used = new Set(config.usedEventIds ?? []);
+    const fresh = config.eventPool.filter((e) => !used.has(e.id));
+    const storms = chooseStorms(rng, fresh.length >= t.stormCount ? fresh : config.eventPool, t.stormCount, t.maxMajor);
     // Spread them over sols 3..W-3, at least 3 sols apart.
     const first = 3;
-    const last = Math.min(W - 4, 16);
+    const last = Math.min(W - 4, 15);
     const span = last - first;
     const step = storms.length > 1 ? span / storms.length : span;
     storms.forEach((e, i) => {
@@ -108,7 +111,7 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
   let lastDustEnd = 0;
   for (let i = 0; i < dustKinds.length; i++) {
     const kind = dustKinds[i];
-    const len = kind === 'storm' ? DUST_STORM_LENGTH.global : DUST_STORM_LENGTH.regional;
+    const len = DUST_STORM_LENGTH;
     const segLo = Math.max(4, lastDustEnd + 3);
     const segHi = Math.min(W - len - 2, segLo + Math.floor((W - 6) / dustKinds.length));
     if (segHi < segLo) break;
@@ -140,7 +143,7 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
   }
 
   // --- Cargo resupply -----------------------------------------------------------
-  at(Math.min(t.resupplySol, W)).resupply = true;
+  at(Math.min(spec.resupplySol, W)).resupply = true;
 
   return plan;
 }

@@ -1,8 +1,9 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 import type { Difficulty } from './constants';
+import type { BaseState, UpgradeId } from './upgrades';
 
-export type ModuleId = 'air' | 'fuel' | 'greenhouse' | 'heaters' | 'shelter' | 'monitor';
-export const MODULE_IDS: readonly ModuleId[] = ['air', 'fuel', 'greenhouse', 'heaters', 'shelter', 'monitor'];
+export type ModuleId = 'air' | 'fuel' | 'greenhouse' | 'heaters' | 'shelter' | 'monitor' | 'build' | 'battery';
+export const MODULE_IDS: readonly ModuleId[] = ['air', 'fuel', 'greenhouse', 'heaters', 'shelter', 'monitor', 'build', 'battery'];
 
 export type Allocation = Record<ModuleId, number>;
 
@@ -61,6 +62,14 @@ export interface MissionConfig {
   eventPool: SpaceWeatherEvent[];
   /** Fixed history scenario (e.g. May 2024) instead of a random deal. */
   scenario?: 'may2024';
+  /** Which expedition of the campaign (1-based). */
+  expedition: number;
+  /** The base this crew inherits. */
+  base: BaseState;
+  /** Fuel tank % pre-filled by the robot O2 plant before the crew arrived. */
+  prefillPct: number;
+  /** Real events already used by earlier expeditions (so each crew meets new storms). */
+  usedEventIds?: string[];
 }
 
 export interface Warning {
@@ -83,6 +92,14 @@ export interface Briefing {
   dustTomorrow: boolean;
   resupply: boolean;
   monitorOnline: boolean;
+  /** Cells stored in the battery yesterday, included in `cells`. */
+  fromBattery: number;
+  /** Which modules exist yet. */
+  hasMonitor: boolean;
+  hasBattery: boolean;
+  /** Cells the Workshop can still use on its current project today. */
+  buildRoom: number;
+  shelterBlock: readonly number[];
 }
 
 export interface SolReport {
@@ -110,10 +127,15 @@ export interface SolReport {
   crate?: CrateId;
   blackout: boolean;
   cleaning: boolean;
+  /** Upgrade finished this sol. */
+  built?: UpgradeId;
+  buildProject?: UpgradeId | null;
+  stored: number;
   before: Snapshot;
   after: Snapshot;
 }
 
+/** What the HUD shows. air/food are in DAYS for the whole crew (stock / crew size). */
 export interface Snapshot {
   air: number;
   food: number;
@@ -126,6 +148,8 @@ export type LoseReason = 'air' | 'food' | 'dose' | 'window';
 export interface MissionState {
   config: MissionConfig;
   sol: number;
+  crew: number;
+  /** Person-days of air and food in storage. */
   air: number;
   food: number;
   dose: number;
@@ -136,6 +160,12 @@ export interface MissionState {
   coldPenalty: number;
   monitorOnline: boolean;
   bonusCells: number;
+  /** Cells in the battery for tomorrow. */
+  stored: number;
+  /** The base: upgrades built, Workshop progress. Carries to the next crew. */
+  base: BaseState;
+  /** Upgrades finished during this expedition. */
+  builtThisExpedition: UpgradeId[];
   plan: SolPlan[];
   log: SolReport[];
   status: 'playing' | 'won' | 'lost';

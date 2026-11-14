@@ -1,12 +1,13 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // The power-budget dock: drag chunky power cells onto modules (mouse, touch),
-// or tap empty/filled slots, or use the +/- buttons (keyboard).
+// or tap empty/filled slots, or use the keyboard.
 
 import { h, clear, fmt1 } from './dom';
 import { icon, type IconName } from './icons';
-import { MODULE_CAP, RATES, SHELTER_BLOCK, TUNING } from '../sim/constants';
+import { RATES } from '../sim/constants';
+import { moduleCap, airPerCell, foodPerGreenhouseCell, fuelPctPerCell, type Preview } from '../sim/sim';
+import { UPGRADES, nextCost } from '../sim/upgrades';
 import type { Allocation, Briefing, ModuleId, MissionState } from '../sim/types';
-import type { Preview } from '../sim/sim';
 
 interface SlotDef {
   id: ModuleId;
@@ -19,6 +20,8 @@ interface ModuleDef {
   icon: IconName;
   desc: string;
   slots: SlotDef[];
+  /** Only shown once built. */
+  needs?: 'monitor' | 'battery';
 }
 
 export const MODULES: ModuleDef[] = [
@@ -35,7 +38,23 @@ export const MODULES: ModuleDef[] = [
   { key: 'greenhouse', name: 'Greenhouse', icon: 'greenhouse', desc: 'Grow lights make food, plus a little air.', slots: [{ id: 'greenhouse', label: 'Grow', icon: 'food' }] },
   { key: 'heaters', name: 'Heaters', icon: 'heater', desc: 'Keep the batteries warm through the freezing night.', slots: [{ id: 'heaters', label: 'Heat', icon: 'heater' }] },
   { key: 'shelter', name: 'Storm Shelter', icon: 'shelter', desc: 'Shields the crew from solar storms. Only works when powered.', slots: [{ id: 'shelter', label: 'Shield', icon: 'shelter' }] },
-  { key: 'monitor', name: 'Radiation Monitor', icon: 'monitor', desc: 'Watches the Sun tonight, so you get your own storm warning tomorrow.', slots: [{ id: 'monitor', label: 'Watch', icon: 'monitor' }] },
+  {
+    key: 'monitor',
+    name: 'Radiation Monitor',
+    icon: 'monitor',
+    desc: 'Watches the Sun tonight: your own storm warning tomorrow.',
+    slots: [{ id: 'monitor', label: 'Watch', icon: 'monitor' }],
+    needs: 'monitor',
+  },
+  {
+    key: 'battery',
+    name: 'Battery',
+    icon: 'cell',
+    desc: 'Store cells today, get them back tomorrow.',
+    slots: [{ id: 'battery', label: 'Store', icon: 'cell' }],
+    needs: 'battery',
+  },
+  { key: 'build', name: 'Workshop', icon: 'crate', desc: 'Build upgrades that stay with the base for every crew after you.', slots: [{ id: 'build', label: 'Build', icon: 'crate' }] },
 ];
 
 export const MODULE_LABEL: Record<ModuleId, string> = {
@@ -45,11 +64,14 @@ export const MODULE_LABEL: Record<ModuleId, string> = {
   heaters: 'Heaters',
   shelter: 'Storm shelter',
   monitor: 'Radiation monitor',
+  build: 'Workshop',
+  battery: 'Battery',
 };
 
 export interface BudgetCallbacks {
   onChange(alloc: Allocation): void;
   onRun(): void;
+  onOpenWorkshop(): void;
   sfx?(name: 'place' | 'remove' | 'deny'): void;
 }
 
@@ -84,8 +106,12 @@ export class BudgetDock {
     return this.briefing.cells - Object.values(this.alloc).reduce((a, b) => a + b, 0);
   }
 
+  private cap(id: ModuleId) {
+    return moduleCap(this.state, id);
+  }
+
   add(id: ModuleId) {
-    if (this.left() <= 0 || this.alloc[id] >= MODULE_CAP[id]) {
+    if (this.left() <= 0 || this.alloc[id] >= this.cap(id)) {
       this.cb.sfx?.('deny');
       return false;
     }
@@ -105,7 +131,7 @@ export class BudgetDock {
 
   move(from: ModuleId, to: ModuleId) {
     if (from === to) return;
-    if (this.alloc[to] >= MODULE_CAP[to]) {
+    if (this.alloc[to] >= this.cap(to)) {
       this.cb.sfx?.('deny');
       return;
     }
@@ -116,15 +142,20 @@ export class BudgetDock {
 
   private effectFor(id: ModuleId): { text: HTMLElement | string; cls: string } {
     const a = this.alloc[id];
-    const t = TUNING[this.state.config.difficulty];
+    const s = this.state;
+    const crew = s.crew;
     switch (id) {
-      case 'air':
-        return { text: a ? h('span', null, h('b', null, `+${a}`), ` day${a === 1 ? '' : 's'} of air`) : 'No air made', cls: a ? 'good' : 'warn' };
+      case 'air': {
+        const d = (a * airPerCell(s)) / crew;
+        return { text: a ? h('span', null, h('b', null, `+${fmt1(d)}`), ` day${Math.abs(d - 1) < 0.05 ? '' : 's'} of air (crew uses 1 a sol)`) : 'No air made', cls: a ? 'good' : 'warn' };
+      }
       case 'fuel':
-        return { text: a ? h('span', null, h('b', null, `+${fmt1(a * t.fuelPerCell)}%`), ' rocket fuel') : 'No fuel made', cls: a ? 'good' : '' };
+        return { text: a ? h('span', null, h('b', null, `+${fmt1(a * fuelPctPerCell(s))}%`), ' rocket fuel') : 'No fuel made', cls: a ? 'good' : '' };
       case 'greenhouse':
         return {
-          text: a ? h('span', null, h('b', null, `+${fmt1(a * RATES.foodPerGreenhouseCell)}`), ` food, `, h('b', null, `+${fmt1(a * RATES.airPerGreenhouseCell)}`), ' air') : 'No food grown',
+          text: a
+            ? h('span', null, h('b', null, `+${fmt1((a * foodPerGreenhouseCell(s)) / crew)}`), ' days food, ', h('b', null, `+${fmt1((a * RATES.airPerGreenhouseCell) / crew)}`), ' air')
+            : 'No food grown',
           cls: a ? 'good' : 'warn',
         };
       case 'heaters': {
@@ -133,7 +164,8 @@ export class BudgetDock {
         return { text: h('span', null, h('b', null, `${a}/${need}`), ` Cold! −${need - a} cell${need - a === 1 ? '' : 's'} tomorrow`), cls: 'bad' };
       }
       case 'shelter': {
-        const pct = Math.round(SHELTER_BLOCK[Math.min(a, SHELTER_BLOCK.length - 1)] * 100);
+        const block = this.briefing.shelterBlock;
+        const pct = Math.round(block[Math.min(a, block.length - 1)] * 100);
         const full = this.preview?.stormDoseIfMajorUnsheltered ?? 0;
         const taken = this.preview?.stormDoseIfMajor ?? full;
         return {
@@ -145,6 +177,18 @@ export class BudgetDock {
       }
       case 'monitor':
         return { text: a ? 'ON: warns you tomorrow' : 'Off', cls: a ? 'good' : '' };
+      case 'battery':
+        return { text: a ? h('span', null, h('b', null, `+${a}`), ` cell${a === 1 ? '' : 's'} tomorrow, nothing today`) : 'Empty', cls: a ? 'good' : '' };
+      case 'build': {
+        const p = s.base.project;
+        if (!p) return { text: 'Everything is built!', cls: 'good' };
+        const cost = nextCost(p, s.base.levels) ?? 0;
+        const done = s.base.progress[p] + a;
+        return {
+          text: h('span', null, h('b', null, `${done}/${cost}`), done >= cost ? ' Finishes tonight!' : ' cells built'),
+          cls: done >= cost ? 'good' : a ? 'good' : '',
+        };
+      }
     }
   }
 
@@ -166,19 +210,31 @@ export class BudgetDock {
             }),
           )
         : h('span', { class: 'tray-empty' }, 'All cells placed. Ready to run the sol!'),
-      h('span', { style: 'margin-left:auto; font-size:14px; color: var(--muted)' }, left > 0 ? 'Drag a cell onto a module, or tap a slot.' : ''),
+      h('span', { class: 'tray-hint' }, left > 0 ? 'Drag a cell onto a module, or tap a slot.' : ''),
     );
 
+    const visible = MODULES.filter((m) => !m.needs || (m.needs === 'monitor' ? this.briefing.hasMonitor : this.briefing.hasBattery));
     const modules = h(
       'div',
-      { class: 'modules' },
-      MODULES.map((m) => {
+      { class: 'modules', style: `--cols:${visible.length}` },
+      visible.map((m) => {
         const short = m.key === 'heaters' && this.alloc.heaters < this.briefing.heaterNeed;
+        const isBuild = m.key === 'build';
+        const project = this.state.base.project;
         return h(
           'section',
           { class: `module ${m.key} ${short ? 'short' : ''}`, 'data-drop': m.slots[0].id, 'aria-label': m.name },
           h('div', { class: 'module-head' }, icon(m.icon, 22), m.name.toUpperCase()),
-          h('div', { class: 'module-desc' }, m.desc),
+          isBuild
+            ? h(
+                'div',
+                { class: 'module-desc' },
+                project ? h('b', null, UPGRADES[project].name) : 'All projects done',
+                project ? h('div', null, UPGRADES[project].effect) : null,
+                project ? this.progressBar() : null,
+                h('button', { class: 'btn small', style: 'margin-top:6px', onclick: () => this.cb.onOpenWorkshop() }, 'Choose project'),
+              )
+            : h('div', { class: 'module-desc' }, m.desc),
           m.slots.map((s) => this.slotRow(s, m.slots.length > 1)),
         );
       }),
@@ -202,8 +258,22 @@ export class BudgetDock {
     );
   }
 
+  private progressBar() {
+    const p = this.state.base.project;
+    if (!p) return null;
+    const cost = nextCost(p, this.state.base.levels) ?? 1;
+    const done = this.state.base.progress[p];
+    const adding = this.alloc.build;
+    return h(
+      'div',
+      { class: 'bar', style: 'margin-top:6px', 'aria-label': `${done} of ${cost} cells built` },
+      h('div', { class: 'ghost', style: `width:${Math.min(100, ((done + adding) / cost) * 100)}%; background: var(--green)` }),
+      h('div', { class: 'fill', style: `width:${Math.min(100, (done / cost) * 100)}%; background: var(--green)` }),
+    );
+  }
+
   private slotRow(s: SlotDef, showLabel: boolean) {
-    const cap = MODULE_CAP[s.id];
+    const cap = this.cap(s.id);
     const a = this.alloc[s.id];
     const need = s.id === 'heaters' ? this.briefing.heaterNeed : 0;
     const eff = this.effectFor(s.id);
@@ -235,7 +305,7 @@ export class BudgetDock {
       'div',
       { class: 'slot-row', 'data-drop': s.id },
       showLabel ? h('span', { class: 'slot-label' }, icon(s.icon, 16), s.label.toUpperCase()) : null,
-      boxes,
+      cap ? boxes : h('span', { class: 'split-note' }, s.id === 'build' ? 'Nothing to build right now.' : ''),
       h('div', { class: `effect ${eff.cls}`, style: 'flex-basis:100%' }, eff.text),
     );
   }
@@ -280,7 +350,6 @@ export class BudgetDock {
     d.srcEl.classList.remove('dragging');
     this.root.querySelectorAll('.drop-hot').forEach((n) => n.classList.remove('drop-hot'));
     if (!d.moved) {
-      // A tap on a filled slot removes it; a tap on a tray cell does nothing.
       if (d.from !== 'tray') this.remove(d.from);
       return;
     }

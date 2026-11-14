@@ -1,35 +1,55 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Game flow: title -> (briefing -> budget -> run -> debrief) x N sols -> launch or early return.
+// Game flow.
+//   Campaign:  title -> [expedition intro -> (briefing -> budget -> run -> debrief) x sols -> expedition end -> 26 months later] x 3 -> campaign end
+//   Quick:     one expedition.   History: the real May 2024 storms.
 
-import { h, clear, $, fmt1, prefersReducedMotion, type Child } from './dom';
+import { h, clear, $, prefersReducedMotion, type Child } from './dom';
 import { icon } from './icons';
 import { renderHud } from './hud';
 import { BudgetDock } from './budget';
 import { GameAudio } from './audio';
-import { createMission, emptyAlloc, getBriefing, previewSol, runSol, windowSol, checkAlloc } from '../sim/sim';
-import { explainSol, endingFor, eventName, eventDate, type Debrief } from '../sim/explain';
-import { REAL, TUNING, SUN_EARTH_LIGHT_MIN, EARTH_PROCESSING_MIN, type Difficulty } from '../sim/constants';
-import type { Allocation, Briefing, CrateId, MissionConfig, MissionState, Snapshot, SolReport, SpaceWeatherEvent } from '../sim/types';
+import { createMission, emptyAlloc, getBriefing, previewSol, runSol, windowSol, checkAlloc, setProject, expeditionSpec } from '../sim/sim';
+import { explainSol, endingFor, eventDate, type Debrief } from '../sim/explain';
+import { REAL, EXPEDITIONS, SYNODIC_MONTHS, TUNING, type Difficulty } from '../sim/constants';
+import { UPGRADES, UPGRADE_IDS, nextCost, maxLevel, emptyLevels, type UpgradeId } from '../sim/upgrades';
+import {
+  newCampaign,
+  missionConfigFor,
+  finishExpedition,
+  campaignDone,
+  totalStars,
+  starsFor,
+  serialize,
+  deserialize,
+  STAR_INFO,
+  type Campaign,
+  type StarId,
+} from '../sim/campaign';
+import type { Allocation, CrateId, MissionConfig, MissionState, Snapshot, SolReport, SpaceWeatherEvent } from '../sim/types';
 import { earthMarsLightTime, type LightTime } from '../data/lighttime';
 import { loadSpaceWeather, buildEventPool, may2024Pool, countByClass, earthStormsOn, type SpaceWeatherFeed, MAY2024_SNAPSHOT } from '../data/donki';
 import { MAY2024_START } from '../sim/plan';
-import { factFor, FACTS, type ScienceFact } from '../data/science';
+import { factFor, FACTS } from '../data/science';
 import type { Stage } from '../render/stage';
-import { RADLAB_ISS, RADLAB_ISS_MAY2024 } from '../data/radlab';
 import { renderScienceLog } from './sciencelog';
 import { renderCredits } from './credits';
+import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange } from './views';
 
-type Phase = 'title' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end';
+type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale';
+type Mode = 'campaign' | 'quick' | 'history';
 
 interface Settings {
   muted: boolean;
   reducedMotion: boolean;
 }
 
+const SETTINGS_KEY = 'ev-settings';
+const SAVE_KEY = 'ev-save-v1';
+
 function loadSettings(): Settings {
   const base = { muted: false, reducedMotion: prefersReducedMotion() };
   try {
-    const raw = localStorage.getItem('ev-settings');
+    const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...base, ...JSON.parse(raw) } : base;
   } catch {
     return base;
@@ -37,11 +57,47 @@ function loadSettings(): Settings {
 }
 function saveSettings(s: Settings) {
   try {
-    localStorage.setItem('ev-settings', JSON.stringify(s));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   } catch {
     /* private mode: fine */
   }
 }
+
+interface SaveGame {
+  campaign: Campaign;
+  mission: MissionState | null;
+}
+
+function readSave(): SaveGame | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { campaign: string; mission: MissionState | null };
+    const campaign = deserialize(parsed.campaign);
+    return campaign ? { campaign, mission: parsed.mission ?? null } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Questions for the class at each break between crews. */
+export const TALK_ABOUT_IT: Record<number, string[]> = {
+  1: [
+    'What did your crew spend the most power on? Was that a good choice?',
+    'The O2 plant makes air to breathe AND oxygen for the rocket. Why is that a hard choice?',
+    'If you could leave one message for the next crew, what would it say?',
+  ],
+  2: [
+    'Did the upgrades from the first crew help the second crew? How?',
+    'What would happen if no crew ever built anything for the next one?',
+    'Why might a Mars base want a nuclear reactor instead of only solar panels?',
+  ],
+  3: [
+    'Real NASA planners make these same trade-offs. Which one was hardest for you, and why?',
+    'How did messages from Earth arriving late change your decisions?',
+    'If you were designing the next Mars base, what would you build first?',
+  ],
+};
 
 export class App {
   private hud = $('#hud');
@@ -57,6 +113,10 @@ export class App {
   private light: LightTime = earthMarsLightTime();
 
   private phase: Phase = 'title';
+  private mode: Mode | null = null;
+  private campaign: Campaign | null = null;
+  /** Campaign as it was when the current expedition started (for "try again"). */
+  private campaignAtStart: Campaign | null = null;
   private mission: MissionState | null = null;
   private alloc: Allocation = emptyAlloc();
   private crate: CrateId | undefined;
@@ -74,6 +134,7 @@ export class App {
         this.renderPlan();
       },
       onRun: () => this.run(),
+      onOpenWorkshop: () => this.showWorkshop(() => this.closeModalAndPlan()),
       sfx: (n) => this.audio.sfx(n),
     });
     this.feedReady = loadSpaceWeather().then((f) => {
@@ -108,30 +169,47 @@ export class App {
     clear(this.modalRoot);
   }
 
+  private closeModalAndPlan() {
+    this.closeModal();
+    if (this.phase === 'plan') this.renderPlan();
+    else if (this.phase === 'briefing') this.showBriefing();
+  }
+
+  private save() {
+    if (this.mode !== 'campaign' || !this.campaign) return;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ campaign: serialize(this.campaign), mission: this.mission?.status === 'playing' ? this.mission : null }));
+    } catch {
+      /* storage full or blocked: the game still works, it just can't resume later */
+    }
+  }
+
+  private clearSave() {
+    try {
+      localStorage.removeItem(SAVE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
   private dataBadge(): HTMLElement {
     const f = this.feed;
     let text: string;
-    if (f.status === 'live') {
+    let cls: string = f.status;
+    if (this.mode === 'history') {
+      text = 'ARCHIVE · real DONKI data from May 2024';
+      cls = 'archive';
+    } else if (f.status === 'live') {
       const t = new Date(f.fetchedAt ?? Date.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       text = `LIVE from NASA DONKI · fetched ${t}`;
     } else if (f.status === 'archive' && f.snapshot) {
-      text = `ARCHIVE · real DONKI data ${shortRange(f.snapshot.startDate, f.snapshot.endDate)}`;
+      text = `ARCHIVE · real DONKI data, ${shortRange(f.snapshot.startDate, f.snapshot.endDate)}`;
     } else if (f.status === 'none' && f.error) {
       text = 'NO SPACE-WEATHER DATA · offline';
     } else {
       text = 'Checking NASA DONKI...';
     }
-    if (this.mission?.config.scenario === 'may2024' && MAY2024_SNAPSHOT) text = 'ARCHIVE · real DONKI data from May 2024';
-    return h(
-      'button',
-      {
-        class: `data-badge ${this.mission?.config.scenario === 'may2024' ? 'archive' : f.status}`,
-        title: 'Where the space-weather data comes from',
-        onclick: () => this.showScienceLog(),
-      },
-      h('span', { class: 'dot' }),
-      text,
-    );
+    return h('button', { class: `data-badge ${cls}`, title: 'Where the space-weather data comes from', onclick: () => this.showScienceLog() }, h('span', { class: 'dot' }), text);
   }
 
   private hudButtons(): HTMLElement[] {
@@ -158,6 +236,10 @@ export class App {
     this.refreshHud();
   }
 
+  private hudLabel(m: MissionState) {
+    return this.mode === 'history' ? 'MAY 2024' : this.mode === 'campaign' ? `CREW ${m.config.expedition} OF ${EXPEDITIONS.length}` : 'QUICK MISSION';
+  }
+
   private refreshHud(next?: Snapshot) {
     const m = this.mission;
     if (!m) {
@@ -174,47 +256,71 @@ export class App {
         windowSol: windowSol(m),
         cellsTotal: b.cells,
         cellsLeft: this.phase === 'plan' ? b.cells - used : this.phase === 'running' ? 0 : b.cells,
-        now: { air: m.air, food: m.food, dose: m.dose, fuel: m.fuel },
+        now: { air: m.air / m.crew, food: m.food / m.crew, dose: m.dose, fuel: m.fuel },
         next,
         doseBudget: m.doseBudget,
+        crew: m.crew,
+        label: this.hudLabel(m),
       },
       this.hudButtons(),
     );
   }
 
   private onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape' && this.modalRoot.firstChild && this.phase !== 'briefing' && this.phase !== 'debrief' && this.phase !== 'title' && this.phase !== 'end') {
-      this.closeModal();
-    }
+    if (e.key === 'Escape' && this.modalRoot.firstChild && this.phase === 'plan') this.closeModalAndPlan();
     if (this.phase === 'running' && (e.key === 'f' || e.key === 'F')) this.ff = true;
+  }
+
+  private stageScene() {
+    const m = this.mission;
+    if (!m) return;
+    const b = getBriefing(m);
+    this.stage.setScene({ sol: m.sol, weather: b.weather, alloc: this.alloc, fuel: m.fuel, sheltered: this.alloc.shelter > 0, levels: m.base.levels, crew: m.crew });
   }
 
   // ------------------------------------------------------------------ title
   showTitle() {
     this.phase = 'title';
     this.mission = null;
+    this.mode = null;
     clear(this.dock);
     this.refreshHud();
     this.audio.playMusic('title');
+    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: 0, sheltered: false, levels: emptyLevels(), crew: 4 });
     const lt = this.light;
-    const pool = buildEventPool(this.feed);
     const counts = this.feed.snapshot ? countByClass(this.feed.snapshot) : null;
+    const saved = readSave();
+    const canContinue = saved && !campaignDone(saved.campaign);
     this.modal(
       h(
         'div',
         { class: 'title-screen' },
         h('div', { class: 'art' }, h('img', { src: '/art/title.png', alt: 'A tiny outpost on Mars with a rocket on its launch pad (AI-generated art)' })),
         h('h1', null, 'Escape Velocity'),
-        h('p', { class: 'tagline' }, 'Command a tiny outpost on Mars. Make air to breathe and oxygen for your rocket, then blast home.'),
+        h('p', { class: 'tagline' }, 'Build a base on Mars, crew after crew. Make air to breathe and oxygen for the rocket home, and leave the base better for the next crew.'),
         h(
           'div',
           { class: 'menu' },
-          h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.start('cadet') }, 'Start mission', h('span', { class: 'arrow' })),
+          canContinue
+            ? h(
+                'button',
+                { class: 'btn primary', 'data-autofocus': true, onclick: () => this.continueCampaign(saved) },
+                `Continue: crew ${saved.campaign.expedition} of ${EXPEDITIONS.length}${saved.mission ? `, sol ${saved.mission.sol}` : ''}`,
+                h('span', { class: 'arrow' }),
+              )
+            : null,
+          h(
+            'button',
+            { class: `btn ${canContinue ? '' : 'primary'}`, 'data-autofocus': canContinue ? undefined : true, onclick: () => this.chooseDifficulty() },
+            'New campaign: 3 crews',
+            h('span', { class: 'arrow' }),
+          ),
+          h('div', { class: 'title-foot', style: 'margin:-4px 0 4px' }, 'About 35 minutes. Saves after every sol, so a class can stop and pick up later.'),
           h(
             'div',
             { class: 'menu-row' },
-            h('button', { class: 'btn', onclick: () => this.start('commander') }, 'Commander'),
-            h('button', { class: 'btn cyan', onclick: () => this.start('cadet', 'may2024'), disabled: MAY2024_SNAPSHOT ? undefined : true }, 'May 2024 storms'),
+            h('button', { class: 'btn', onclick: () => this.startQuick() }, 'Quick mission'),
+            h('button', { class: 'btn cyan', onclick: () => this.startHistory(), disabled: MAY2024_SNAPSHOT ? undefined : true }, 'May 2024 storms'),
           ),
           h(
             'div',
@@ -222,20 +328,50 @@ export class App {
             h('button', { class: 'btn small', onclick: () => this.showHowTo(() => this.showTitle()) }, 'How to play'),
             h('button', { class: 'btn small', onclick: () => this.showScienceLog() }, 'Science Log'),
           ),
-          h('button', { class: 'btn small', onclick: () => this.showCredits() }, 'Credits and AI use'),
+          h(
+            'div',
+            { class: 'menu-row' },
+            h('a', { class: 'btn small', href: '/teacher/', target: '_blank', rel: 'noopener' }, 'For teachers'),
+            h('button', { class: 'btn small', onclick: () => this.showCredits() }, 'Credits and AI use'),
+          ),
         ),
         h(
           'p',
           { class: 'title-foot' },
           `Today Mars is about ${Math.round(lt.distanceKm / 1e6)} million km from Earth, so messages take about ${Math.round(lt.oneWayMinutes)} minutes to arrive (approximate). `,
-          counts
-            ? `${this.feed.status === 'live' ? 'Live' : 'Archived'} NASA data: ${counts.X} X-class and ${counts.M} M-class solar flares in the last 30 days.`
-            : pool.length
-              ? ''
-              : 'Space-weather data is not available right now; storms will be quiet.',
+          counts ? `${this.feed.status === 'live' ? 'Live' : 'Archived'} NASA data: ${counts.X} X-class and ${counts.M} M-class solar flares in the last 30 days.` : '',
         ),
       ),
       { label: 'Escape Velocity title screen' },
+    );
+  }
+
+  private chooseDifficulty() {
+    this.audio.sfx('click');
+    this.modal(
+      [
+        h('div', { class: 'kicker' }, 'New campaign'),
+        h('h2', null, 'Choose your difficulty'),
+        h(
+          'div',
+          { class: 'crates' },
+          h(
+            'button',
+            { class: 'crate', 'data-autofocus': true, onclick: () => this.startCampaign('cadet') },
+            h('b', null, 'Cadet'),
+            h('span', null, 'Recommended for a first game and for classes. More time, fewer storms.'),
+          ),
+          h(
+            'button',
+            { class: 'crate', onclick: () => this.startCampaign('commander') },
+            h('b', null, 'Commander'),
+            h('span', null, 'Less time, more and bigger storms, and the Sun blocks your messages for a few sols.'),
+          ),
+        ),
+        readSave() ? h('p', { class: 'title-foot' }, 'Starting a new campaign replaces your saved one.') : null,
+        h('div', { class: 'actions end' }, h('button', { class: 'btn small', onclick: () => this.showTitle() }, 'Back')),
+      ],
+      { label: 'Choose difficulty' },
     );
   }
 
@@ -249,22 +385,27 @@ export class App {
           { class: 'clean' },
           h('li', null, h('b', null, 'Read the morning briefing. '), 'Weather, power, and messages from Earth (they arrive late).'),
           h('li', null, h('b', null, 'Place your power cells. '), 'Drag them onto modules, or tap a slot. Every cell must go somewhere, and every choice costs something.'),
-          h('li', null, h('b', null, 'Watch the sol play out. '), 'Your crew breathes, eats, and the Sun does what the Sun does.'),
-          h('li', null, h('b', null, 'Read the debrief. '), 'See what your choices caused, then plan the next sol.'),
+          h('li', null, h('b', null, 'Watch the sol play out, '), 'then read the debrief to see what your choices caused.'),
+          h(
+            'li',
+            null,
+            h('b', null, 'Build the base. '),
+            'Cells in the Workshop build upgrades: solar panels, a radiation monitor, batteries, even a nuclear reactor. They stay for every crew after you.',
+          ),
         ),
         h(
           'div',
           { class: 'card' },
           h('b', null, 'The big trade-off: '),
-          'your O2 plant makes the air your crew breathes AND the oxygen your rocket needs to fly home. Every cell you spend on heat, food or shelter is a cell that is not filling the fuel tank.',
+          'your O2 plant makes the air your crew breathes AND the oxygen your rocket needs to fly home. Every cell you spend on heat, food, shelter or building is a cell that is not filling the fuel tank today.',
         ),
         h(
           'div',
           { class: 'card' },
-          h('b', null, 'Win: '),
-          'fill the fuel tank before the launch window closes. ',
-          h('b', null, 'Mission over: '),
-          'if air or food runs out, or the crew\'s radiation dose goes over budget.',
+          h('b', null, 'A campaign has 3 crews. '),
+          'Each crew must fill the rocket and fly home before the launch window closes. Then, 26 months later, a bigger crew arrives at the base you left them. Earn up to 3 stars per crew: ',
+          (Object.keys(STAR_INFO) as StarId[]).map((s, i) => [i ? '; ' : '', h('b', null, STAR_INFO[s].name), ` (${STAR_INFO[s].how.replace(/\.$/, '').toLowerCase()})`]),
+          '.',
         ),
         h('div', { class: 'actions end' }, h('button', { class: 'btn primary', onclick: back }, 'Got it')),
       ],
@@ -273,25 +414,15 @@ export class App {
   }
 
   showScienceLog() {
-    const prev = this.phase;
-    const back = () => {
-      if (prev === 'title') this.showTitle();
-      else this.resume();
-    };
     this.modal(renderScienceLog({ feed: this.feed, light: this.light, difficulty: this.mission?.config.difficulty ?? 'cadet' }), {
       wide: true,
       label: 'Science Log',
-      onClose: back,
+      onClose: () => this.resume(),
     });
   }
 
   showCredits() {
-    const prev = this.phase;
-    this.modal(renderCredits(), {
-      wide: true,
-      label: 'Credits',
-      onClose: () => (prev === 'title' ? this.showTitle() : this.resume()),
-    });
+    this.modal(renderCredits(), { wide: true, label: 'Credits', onClose: () => this.resume() });
   }
 
   showMenu() {
@@ -324,12 +455,15 @@ export class App {
           'div',
           { class: 'actions' },
           h('button', { class: 'btn primary', onclick: () => this.resume() }, 'Resume'),
+          this.mission ? h('button', { class: 'btn', onclick: () => this.showWorkshop(() => this.resume()) }, 'Workshop') : null,
           h('button', { class: 'btn', onclick: () => this.showHowTo(() => this.resume()) }, 'How to play'),
           h('button', { class: 'btn', onclick: () => this.showScienceLog() }, 'Science Log'),
           h('button', { class: 'btn', onclick: () => this.showCredits() }, 'Credits'),
-          h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Quit to title'),
+          h('button', { class: 'btn', onclick: () => this.showTitle() }, this.mode === 'campaign' ? 'Save and quit' : 'Quit to title'),
         ),
-        this.mission ? h('p', { class: 'title-foot' }, `Mission seed: ${this.mission.config.seed} (${this.mission.config.difficulty})`) : null,
+        this.mission
+          ? h('p', { class: 'title-foot' }, `Seed ${this.mission.config.seed} · ${this.mission.config.difficulty}${this.mode === 'campaign' ? ' · your campaign saves after every sol' : ''}`)
+          : null,
       ],
       { label: 'Menu', onClose: () => this.resume() },
     );
@@ -337,37 +471,159 @@ export class App {
 
   private resume() {
     this.closeModal();
-    if (this.phase === 'briefing') this.showBriefing();
-    else if (this.phase === 'debrief' && this.lastReport) this.showDebrief(this.lastReport);
-    else if (this.phase === 'end') this.showEnd();
-    else if (this.phase === 'title') this.showTitle();
+    switch (this.phase) {
+      case 'title':
+        return this.showTitle();
+      case 'intro':
+        return this.showExpeditionIntro();
+      case 'briefing':
+        return this.showBriefing();
+      case 'plan':
+        return this.renderPlan();
+      case 'debrief':
+        return this.lastReport ? this.showDebrief(this.lastReport) : undefined;
+      case 'end':
+        return void this.showEnd(false);
+      case 'interlude':
+        return this.showInterlude();
+      case 'finale':
+        return this.showFinale();
+      default:
+        return undefined;
+    }
   }
 
-  // ------------------------------------------------------------------ mission
-  private async start(difficulty: Difficulty, scenario?: 'may2024') {
-    this.audio.sfx('click');
+  // ------------------------------------------------------------------ starting
+  private seed() {
+    return new URLSearchParams(location.search).get('seed') ?? Math.random().toString(36).slice(2, 8);
+  }
+
+  private async pool(): Promise<SpaceWeatherEvent[]> {
     await Promise.race([this.feedReady, new Promise((r) => setTimeout(r, 2500))]);
-    const params = new URLSearchParams(location.search);
-    const seed = params.get('seed') ?? Math.random().toString(36).slice(2, 8);
-    const config: MissionConfig = {
-      seed,
-      difficulty,
-      lightTimeMin: this.light.oneWayMinutes,
-      eventPool: scenario === 'may2024' ? may2024Pool() : buildEventPool(this.feed),
-      scenario,
-    };
+    return buildEventPool(this.feed);
+  }
+
+  private startCampaign(difficulty: Difficulty) {
+    this.audio.sfx('click');
+    this.clearSave();
+    this.mode = 'campaign';
+    this.campaign = newCampaign(this.seed(), difficulty);
+    this.showExpeditionIntro();
+  }
+
+  private continueCampaign(saved: SaveGame) {
+    this.audio.sfx('click');
+    this.mode = 'campaign';
+    this.campaign = saved.campaign;
+    this.campaignAtStart = saved.campaign;
+    if (saved.mission && saved.mission.status === 'playing') {
+      this.mission = saved.mission;
+      this.audio.playMusic('mission');
+      this.showBriefing();
+    } else {
+      this.showExpeditionIntro();
+    }
+  }
+
+  private startQuick() {
+    this.audio.sfx('click');
+    this.mode = 'quick';
+    this.campaign = newCampaign(this.seed(), 'cadet');
+    this.showExpeditionIntro();
+  }
+
+  private startHistory() {
+    this.audio.sfx('click');
+    this.mode = 'history';
+    this.campaign = newCampaign(this.seed(), 'cadet');
+    const config: MissionConfig = { ...missionConfigFor(this.campaign, this.light.oneWayMinutes, may2024Pool()), scenario: 'may2024' };
+    this.campaignAtStart = this.campaign;
     this.mission = createMission(config);
     this.audio.playMusic('mission');
     this.showBriefing();
   }
 
+  private showExpeditionIntro() {
+    const c = this.campaign!;
+    this.phase = 'intro';
+    this.mission = null;
+    clear(this.dock);
+    this.refreshHud();
+    this.audio.playMusic('mission');
+    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: c.prefillPct, sheltered: false, levels: c.base.levels, crew: 0 });
+    const spec = expeditionSpec({ expedition: c.expedition });
+    const built = UPGRADE_IDS.filter((id) => c.base.levels[id] > 0);
+    const isCampaign = this.mode === 'campaign';
+    const windowSols = spec.windowSol + TUNING[c.difficulty].windowBonus;
+    this.modal(
+      [
+        h('div', { class: 'kicker' }, isCampaign ? `Crew ${c.expedition} of ${EXPEDITIONS.length}` : 'Quick mission'),
+        h('h2', null, spec.name),
+        h('div', { class: 'art' }, h('img', { src: c.expedition === 1 ? '/art/title.png' : '/art/event-resupply.png', alt: 'The Mars outpost (AI-generated art)' })),
+        h('p', null, spec.blurb),
+        h(
+          'div',
+          { class: 'card' },
+          h('b', null, `Crew: ${spec.crew} astronauts. `),
+          `Each one breathes about ${REAL.o2PerCrewKgPerDay.toFixed(1)} kg of oxygen a day. `,
+          h('b', null, 'Goal: '),
+          `fill the rocket and launch home by sol ${windowSols}, when the launch window closes.`,
+        ),
+        c.prefillPct
+          ? h(
+              'div',
+              { class: 'card good' },
+              icon('o2', 20),
+              ' ',
+              h('b', null, `Your tank is already ${c.prefillPct}% full. `),
+              'While the base was empty, the O2 plant kept running on solar power and pre-filled the rocket. Real Mars plans work this way: the propellant plant runs for over a year before astronauts arrive.',
+            )
+          : null,
+        h(
+          'div',
+          { class: 'card' },
+          h('b', null, 'Your base: '),
+          built.length
+            ? [built.map((id, i) => [i ? ', ' : '', `${UPGRADES[id].name}${maxLevel(id) > 1 ? ` x${c.base.levels[id]}` : ''}`]), ', plus the basics.']
+            : 'just the basics: a habitat, an O2 plant, a greenhouse, heaters, a storm shelter and a solar array.',
+        ),
+        isCampaign
+          ? h(
+              'div',
+              { class: 'card' },
+              h('b', null, 'Earn stars: '),
+              (Object.keys(STAR_INFO) as StarId[]).map((s) => h('div', null, icon('sun', 14), ' ', h('b', null, STAR_INFO[s].name), `: ${STAR_INFO[s].how}`)),
+            )
+          : null,
+        h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
+      ],
+      { label: `${spec.name} introduction` },
+    );
+  }
+
+  private landing = false;
+
+  private async landCrew() {
+    if (this.landing) return;
+    this.landing = true;
+    const c = this.campaign!;
+    this.audio.sfx('click');
+    this.modalRoot.querySelectorAll('button').forEach((b) => b.setAttribute('disabled', ''));
+    const pool = await this.pool().finally(() => (this.landing = false));
+    this.campaignAtStart = c;
+    this.mission = createMission(missionConfigFor(c, this.light.oneWayMinutes, pool));
+    this.save();
+    this.showBriefing();
+  }
+
+  // ------------------------------------------------------------------ one sol
   private showBriefing() {
     const m = this.mission!;
     this.phase = 'briefing';
     this.alloc = emptyAlloc();
     this.crate = undefined;
     const b = getBriefing(m);
-    this.stage.setScene({ sol: m.sol, weather: b.weather, alloc: this.alloc, fuel: m.fuel, sheltered: false });
+    this.stageScene();
     this.stage.setTimeOfDay(0.02);
     clear(this.dock);
     this.refreshHud();
@@ -382,13 +638,13 @@ export class App {
         icon(b.weather === 'clear' ? 'sun' : 'dust', 20),
         ' ',
         h('b', null, weatherLine(b)),
-        ` Your solar panels make `,
+        ' You have ',
         h('b', null, `${b.cells} power cells`),
         ' today.',
         b.powerNotes.length ? h('div', { class: 'title-foot', style: 'margin-top:4px' }, b.powerNotes.join(' · ')) : null,
       ),
     );
-    if (m.config.scenario === 'may2024') {
+    if (this.mode === 'history') {
       const day = new Date(MAY2024_START + (m.sol - 1) * 86_400_000).toISOString().slice(0, 10);
       for (const g of earthStormsOn(day)) {
         cards.push(
@@ -406,13 +662,31 @@ export class App {
         );
       }
     }
-    if (b.coldSnap) cards.push(h('div', { class: 'card event' }, icon('heater', 20), ' ', h('b', null, 'Extra-cold night ahead. '), 'The heaters need 2 cells tonight.'));
-    if (b.dustTomorrow) cards.push(h('div', { class: 'card event' }, icon('dust', 20), ' ', h('b', null, 'Orbiters spot a dust storm coming. '), 'Tomorrow you will have less solar power.'));
+    if (b.coldSnap) cards.push(h('div', { class: 'card event' }, icon('heater', 20), ' ', h('b', null, 'Extra-cold night ahead. '), `The heaters need ${b.heaterNeed} cells tonight.`));
+    if (b.dustTomorrow)
+      cards.push(
+        h(
+          'div',
+          { class: 'card event' },
+          icon('dust', 20),
+          ' ',
+          h('b', null, 'Orbiters spot a dust storm coming. '),
+          b.hasBattery ? 'Tomorrow you will have less solar power. Store cells in the battery today?' : 'Tomorrow you will have less solar power. Stock up on air and food today.',
+        ),
+      );
 
-    // Messages from Earth.
     const delay = `Messages from Earth take about ${Math.round(m.config.lightTimeMin)} minutes to reach you (approximate).`;
     if (b.outlook === 'none') {
-      cards.push(h('div', { class: 'card danger' }, icon('antenna', 20), ' ', h('b', null, 'No messages from Earth. '), 'The Sun is between Earth and Mars (solar conjunction), so radio signals cannot get through. Only your own radiation monitor can warn you now.'));
+      cards.push(
+        h(
+          'div',
+          { class: 'card danger' },
+          icon('antenna', 20),
+          ' ',
+          h('b', null, 'No messages from Earth. '),
+          'The Sun is between Earth and Mars (solar conjunction), so radio signals cannot get through. Only your own radiation monitor can warn you now.',
+        ),
+      );
     } else {
       const region = upcomingRegion(m);
       cards.push(
@@ -423,7 +697,7 @@ export class App {
           ' ',
           h('b', null, 'Space weather from Earth: '),
           b.outlook === 'active'
-            ? `forecasters say the Sun is active${region ? ` (sunspot region ${region} is busy)` : ''}. A solar storm could come in the next few sols.`
+            ? `forecasters say the Sun is active${region ? ` (sunspot region ${region} is busy)` : ''}. A solar storm could come in the next few sols.${b.hasMonitor ? ' Power your monitor tonight?' : ''}`
             : 'forecasters say the Sun looks quiet for now.',
           h('div', { class: 'title-foot', style: 'margin-top:4px' }, delay),
         ),
@@ -448,9 +722,9 @@ export class App {
     let crateRow: HTMLElement | null = null;
     if (b.resupply) {
       const crates: Array<[CrateId, string, string]> = [
-        ['food', 'Food crates', '+3 days of food'],
+        ['food', 'Food crates', '+3 days of food for the crew'],
         ['parts', 'Spare parts', 'Repair 1 damaged battery and reset wear'],
-        ['panel', 'Solar panel', '+1 power cell every sol from tomorrow'],
+        ['panel', 'Solar panel', '+1 power cell every sol, for this crew'],
       ];
       crateRow = h(
         'div',
@@ -471,7 +745,7 @@ export class App {
                 onclick: () => {
                   this.crate = id;
                   this.audio.sfx('click');
-                  this.showBriefing2(art, cards, crateRow);
+                  this.renderBriefing(art, cards, crateRow);
                 },
               },
               h('b', null, name),
@@ -481,23 +755,32 @@ export class App {
         ),
       );
     }
-    this.showBriefing2(art, cards, crateRow);
+    this.renderBriefing(art, cards, crateRow);
   }
 
-  private showBriefing2(art: string, cards: HTMLElement[], crateRow: HTMLElement | null) {
+  private renderBriefing(art: string, cards: HTMLElement[], crateRow: HTMLElement | null) {
     const m = this.mission!;
     const b = getBriefing(m);
-    // Re-render crate pressed state.
     crateRow?.querySelectorAll<HTMLButtonElement>('.crate').forEach((btn, i) => {
       btn.setAttribute('aria-pressed', String((['food', 'parts', 'panel'] as const)[i] === this.crate));
     });
     const needCrate = b.resupply && !this.crate;
+    const p = m.base.project;
     this.modal(
       [
-        h('div', { class: 'kicker' }, `Sol ${m.sol} of ${windowSol(m)} · Morning briefing`),
-        h('div', { class: 'art' }, h('img', { src: `/art/${art}.png`, alt: 'Illustration of today\'s conditions (AI-generated)' })),
+        h('div', { class: 'kicker' }, `${this.hudLabel(m)} · Sol ${m.sol} of ${windowSol(m)} · Morning briefing`),
+        h('div', { class: 'art' }, h('img', { src: `/art/${art}.png`, alt: "Illustration of today's conditions (AI-generated)" })),
         ...cards,
         crateRow,
+        h(
+          'div',
+          { class: 'card' },
+          icon('crate', 20),
+          ' ',
+          h('b', null, 'Workshop: '),
+          p ? `building ${UPGRADES[p].name} (${m.base.progress[p]} of ${nextCost(p, m.base.levels)} cells). ` : 'everything is built! ',
+          h('button', { class: 'btn small', onclick: () => this.showWorkshop(() => this.showBriefing()) }, 'Change'),
+        ),
         h(
           'div',
           { class: 'actions end' },
@@ -510,6 +793,60 @@ export class App {
         ),
       ],
       { label: `Sol ${m.sol} morning briefing` },
+    );
+  }
+
+  private showWorkshop(back: () => void) {
+    const m = this.mission;
+    const base = m?.base ?? this.campaign?.base;
+    if (!base) return;
+    const choose = (id: UpgradeId) => {
+      if (!this.mission) return;
+      this.audio.sfx('click');
+      this.mission = setProject(this.mission, id);
+      this.alloc = { ...this.alloc, build: 0 };
+      this.save();
+      this.showWorkshop(back);
+    };
+    this.modal(
+      [
+        h('div', { class: 'kicker' }, 'Workshop'),
+        h('h2', null, 'Build the base'),
+        h(
+          'p',
+          null,
+          'Put power cells into the Workshop to build upgrades. A cell spent building is a cell not making air, food or fuel today, but upgrades last for every crew after you. You can switch projects any time; progress is kept.',
+        ),
+        h(
+          'div',
+          { class: 'upgrade-list' },
+          UPGRADE_IDS.map((id) => {
+            const u = UPGRADES[id];
+            const lvl = base.levels[id];
+            const cost = nextCost(id, base.levels);
+            const active = base.project === id;
+            return h(
+              'div',
+              { class: `card upgrade ${active ? 'event' : ''} ${cost === null ? 'good' : ''}` },
+              h(
+                'div',
+                { class: 'upgrade-head' },
+                h('b', { class: 'px' }, u.name.toUpperCase()),
+                maxLevel(id) > 1 ? h('span', { class: 'title-foot' }, `built ${lvl} of ${maxLevel(id)}`) : lvl ? h('span', { class: 'tag live' }, 'BUILT') : null,
+                cost !== null ? h('span', { class: 'cost' }, icon('cell', 16), ` ${base.progress[id]}/${cost} cells`) : null,
+              ),
+              h('div', null, u.effect),
+              u.catch ? h('div', { class: 'tone-warn', style: 'font-size:15px' }, 'The catch: ', u.catch) : null,
+              h('div', { class: 'title-foot' }, h('span', { class: 'tag real' }, 'REAL SCIENCE'), u.science),
+              cost !== null && m
+                ? h('button', { class: `btn small ${active ? 'go' : ''}`, disabled: active ? true : undefined, onclick: () => choose(id) }, active ? 'Working on it' : 'Work on this')
+                : null,
+            );
+          }),
+        ),
+        h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: back }, 'Done')),
+      ],
+      { wide: true, label: 'Workshop', onClose: back },
     );
   }
 
@@ -526,7 +863,7 @@ export class App {
     const check = checkAlloc(m, this.alloc);
     const preview = previewSol(m, this.alloc, this.crate);
     this.refreshHud(preview.after);
-    this.stage.setScene({ sol: m.sol, weather: b.weather, alloc: this.alloc, fuel: m.fuel, sheltered: this.alloc.shelter > 0 });
+    this.stageScene();
     this.budget.set(m, b, this.alloc, preview, briefMini(m, b, check.remaining));
   }
 
@@ -542,7 +879,6 @@ export class App {
     const { next, report } = runSol(m, this.alloc, this.crate);
     this.lastReport = report;
 
-    // Play the sol out.
     clear(this.dock);
     const clock = h('div', { class: 'clock' }, '06:00');
     const fill = h('div', { class: 'fill', style: 'width:0%' });
@@ -550,9 +886,9 @@ export class App {
     const ffBtn = h('button', { class: 'btn small', onclick: () => (this.ff = true) }, 'Skip', h('span', { class: 'arrow' }));
     this.dock.append(h('div', { class: 'run-bar' }, clock, h('div', { class: 'bar' }, fill), ffBtn), logLine);
     this.ff = false;
-    const duration = this.settings.reducedMotion ? 1800 : 4200;
+    const duration = this.settings.reducedMotion ? 2000 : 9000;
     const start = performance.now();
-    const events = runBeats(report);
+    const beats = runBeats(report);
     let fired = 0;
     await new Promise<void>((resolve) => {
       const tick = (now: number) => {
@@ -562,15 +898,14 @@ export class App {
         const mins = Math.floor((6 * 60 + t * 24.66 * 60) % (24 * 60));
         clock.textContent = `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
         fill.style.width = `${t * 100}%`;
-        while (fired < events.length && events[fired].at <= t) {
-          const ev = events[fired++];
+        while (fired < beats.length && beats[fired].at <= t) {
+          const ev = beats[fired++];
           logLine.textContent = ev.text;
           if (ev.storm) {
             this.stage.storm(ev.storm);
             this.audio.sfx('storm');
           }
         }
-        // Meters glide from before to after.
         const lerp = (a: number, b: number) => a + (b - a) * t;
         renderHud(
           this.hud,
@@ -586,6 +921,8 @@ export class App {
               fuel: lerp(report.before.fuel, report.after.fuel),
             },
             doseBudget: m.doseBudget,
+            crew: m.crew,
+            label: this.hudLabel(m),
           },
           this.hudButtons(),
         );
@@ -596,6 +933,8 @@ export class App {
     });
 
     this.mission = next;
+    if (report.built) this.audio.sfx('good');
+    this.save();
     this.showDebrief(report);
   }
 
@@ -604,14 +943,14 @@ export class App {
     this.phase = 'debrief';
     clear(this.dock);
     this.refreshHud();
+    this.stageScene();
     const d: Debrief = explainSol(report);
     this.audio.sfx(d.tone === 'good' ? 'good' : d.tone === 'bad' ? 'bad' : 'click');
-    const fact =
-      m.config.scenario === 'may2024' && report.storm?.event.kind === 'cme' ? FACTS[0] : factFor(d.topic, report.sol + m.config.seed.length);
+    const fact = this.mode === 'history' && report.storm?.event.kind === 'cme' ? FACTS[0] : factFor(d.topic, report.sol + m.config.seed.length + m.config.expedition);
     const over = m.status !== 'playing';
     this.modal(
       [
-        h('div', { class: 'kicker' }, `Sol ${report.sol} · Debrief`),
+        h('div', { class: 'kicker' }, `${this.hudLabel(m)} · Sol ${report.sol} · Debrief`),
         h('p', { class: `headline tone-${d.tone}`, 'aria-live': 'polite' }, d.headline),
         report.storm ? eventCard(report.storm.event, report.storm.lateByMin ? { lateBy: report.storm.lateByMin, lightMin: m.config.lightTimeMin } : undefined) : null,
         d.details.length ? h('ul', { class: 'clean' }, d.details.map((x) => h('li', null, x))) : null,
@@ -626,7 +965,7 @@ export class App {
               'data-autofocus': true,
               onclick: () => {
                 this.audio.sfx('click');
-                if (over) this.showEnd();
+                if (over) void this.showEnd(true);
                 else this.showBriefing();
               },
             },
@@ -639,190 +978,186 @@ export class App {
     );
   }
 
-  private async showEnd() {
+  // ------------------------------------------------------------------ endings
+  private async showEnd(first: boolean) {
     const m = this.mission!;
     this.phase = 'end';
     clear(this.dock);
     this.refreshHud();
-    if (m.status === 'won') {
-      this.closeModal();
-      this.audio.playMusic('launch');
-      this.audio.sfx('win');
-      await this.stage.launch();
+    const won = m.status === 'won';
+    if (first) {
+      if (won) {
+        this.closeModal();
+        this.audio.playMusic('launch');
+        this.audio.sfx('win');
+        await this.stage.launch();
+      }
+      if (this.mode === 'campaign' && this.campaign) {
+        this.campaign = finishExpedition(this.campaign, m);
+        this.save();
+      }
     }
     const end = endingFor(m);
-    const won = m.status === 'won';
+    const stars = starsFor(m);
+    const isCampaign = this.mode === 'campaign';
+    const last = isCampaign && !!this.campaign && campaignDone(this.campaign);
     this.modal(
       [
-        h('div', { class: 'art' }, h('img', { src: won ? '/art/launch.png' : '/art/lose.png', alt: won ? 'The rocket launches from Mars (AI-generated art)' : 'The crew boards a lander to head home (AI-generated art)' })),
-        h('div', { class: 'kicker' }, won ? `Mission complete · ${m.config.difficulty}` : `Mission over · ${m.config.difficulty}`),
+        h(
+          'div',
+          { class: 'art' },
+          h('img', { src: won ? '/art/launch.png' : '/art/lose.png', alt: won ? 'The rocket launches from Mars (AI-generated art)' : 'The crew boards a lander to head home (AI-generated art)' }),
+        ),
+        h('div', { class: 'kicker' }, won ? `${this.hudLabel(m)} · Mission complete` : `${this.hudLabel(m)} · Heading home early`),
         h('h2', { class: won ? 'tone-good' : '' }, end.title),
         won ? h('p', null, `Mars' escape velocity is about ${REAL.marsEscapeKms.toFixed(1)} km/s: the speed your rocket needs to break free of Mars' gravity.`) : null,
+        this.mode !== 'history' ? starRow(stars) : null,
         h('h3', null, 'What happened'),
         h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),
-        h('div', { class: 'card good' }, h('b', null, won ? 'Next challenge: ' : 'Try this next time: '), end.tip),
-        compareCard(m),
-        end.badges.length
-          ? [h('h3', null, 'Badges'), h('div', { class: 'badges' }, end.badges.map((b) => h('div', { class: 'badge' }, h('b', null, b.name), h('span', null, b.why))))]
+        m.builtThisExpedition.length
+          ? h(
+              'div',
+              { class: 'card good' },
+              h('b', null, 'Your crew built: '),
+              m.builtThisExpedition.map((id, i) => [i ? ', ' : '', UPGRADES[id].name]),
+              isCampaign && !last ? '. The next crew inherits all of it.' : '.',
+            )
           : null,
+        h('div', { class: 'card' }, h('b', null, won ? 'Next challenge: ' : 'Try this next time: '), end.tip),
+        compareCard(m),
+        end.badges.length ? [h('h3', null, 'Badges'), h('div', { class: 'badges' }, end.badges.map((b) => h('div', { class: 'badge' }, h('b', null, b.name), h('span', null, b.why))))] : null,
         h(
           'div',
           { class: 'actions' },
-          h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.start(m.config.difficulty, m.config.scenario) }, 'Play again'),
+          isCampaign && !last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showInterlude() }, 'Send the next crew', h('span', { class: 'arrow' })) : null,
+          isCampaign && last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showFinale() }, 'See your base', h('span', { class: 'arrow' })) : null,
+          isCampaign ? h('button', { class: 'btn', onclick: () => this.retryExpedition() }, 'Try this crew again') : null,
+          !isCampaign
+            ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? this.startHistory() : this.startQuick()) }, 'Play again')
+            : null,
+          !isCampaign ? h('button', { class: 'btn', onclick: () => this.chooseDifficulty() }, 'Start a campaign') : null,
           h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Title screen'),
-          h('button', { class: 'btn', onclick: () => this.showScienceLog() }, 'Science Log'),
         ),
-        h('p', { class: 'title-foot' }, `Seed ${m.config.seed} · difficulty ${m.config.difficulty} · dose budget ${TUNING[m.config.difficulty].doseBudget} mSv (game value)`),
+        h('p', { class: 'title-foot' }, `Seed ${m.config.seed} · ${m.config.difficulty} · dose budget ${m.doseBudget} mSv (game value)`),
       ],
       { label: won ? 'Mission complete' : 'Mission over' },
     );
   }
-}
 
-// ------------------------------------------------------------------ pure-ish view helpers
-
-function shortRange(a: string, b: string) {
-  const f = (s: string) => new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  return `${f(a)} to ${f(b)}`;
-}
-
-function weatherLine(b: Briefing) {
-  if (b.weather === 'storm') return 'A huge dust storm is blocking the Sun!';
-  if (b.weather === 'dusty') return 'Dust storm: the sky is hazy.';
-  return 'Clear skies.';
-}
-
-function briefingArt(b: Briefing): string {
-  if (b.warning) return 'event-flare';
-  if (b.outlook === 'none') return 'event-blackout';
-  if (b.resupply) return 'event-resupply';
-  if (b.weather !== 'clear') return 'event-dust';
-  if (b.powerNotes.some((n) => n.startsWith('Wind'))) return 'event-cleaning';
-  if (b.coldSnap) return 'event-cold';
-  return 'title';
-}
-
-function upcomingRegion(m: MissionState): number | null {
-  for (let s = m.sol; s <= m.sol + 3 && s <= m.plan.length; s++) {
-    const r = m.plan[s - 1].storm?.event.activeRegionNum;
-    if (r) return r;
+  private retryExpedition() {
+    if (!this.campaignAtStart) return;
+    this.audio.sfx('click');
+    this.campaign = this.campaignAtStart;
+    this.mission = null;
+    this.save();
+    this.showExpeditionIntro();
   }
-  return null;
-}
 
-function briefMini(m: MissionState, b: Briefing, remaining: number): HTMLElement[] {
-  const lines: HTMLElement[] = [];
-  lines.push(h('div', { class: 'line px' }, `SOL ${m.sol} PLAN`));
-  if (b.warning) lines.push(h('div', { class: 'line bad' }, icon('radiation', 16), 'Storm today: power the shelter!'));
-  else if (b.outlook === 'active') lines.push(h('div', { class: 'line warn' }, icon('sun', 16), 'Sun is active: storms possible.'));
-  else if (b.outlook === 'none') lines.push(h('div', { class: 'line warn' }, icon('antenna', 16), 'No messages from Earth.'));
-  if (b.coldSnap) lines.push(h('div', { class: 'line warn' }, icon('heater', 16), 'Cold night: heaters need 2.'));
-  if (b.weather !== 'clear') lines.push(h('div', { class: 'line warn' }, icon('dust', 16), 'Dusty: less power.'));
-  if (m.air < 2) lines.push(h('div', { class: 'line bad' }, icon('air', 16), `Air is low (${fmt1(m.air)} days).`));
-  if (m.food < 2) lines.push(h('div', { class: 'line bad' }, icon('food', 16), `Food is low (${fmt1(m.food)} days).`));
-  lines.push(h('div', { class: 'line' }, icon('cell', 16), remaining > 0 ? `${remaining} cell${remaining === 1 ? '' : 's'} left` : 'All cells placed'));
-  return lines;
-}
-
-function eventCard(e: SpaceWeatherEvent, late?: { lateBy: number; lightMin: number }): HTMLElement {
-  const where = e.activeRegionNum ? ` from sunspot region ${e.activeRegionNum}` : '';
-  const what =
-    e.kind === 'flare'
-      ? `${article(eventName(e))} erupted${where} on ${eventDate(e)}.`
-      : e.kind === 'cme'
-        ? `${article(eventName(e))} blasted off the Sun on ${eventDate(e)}.`
-        : `A solar particle storm was recorded on ${eventDate(e)}.`;
-  return h(
-    'div',
-    { class: 'card event' },
-    h('span', { class: `tag ${e.origin}` }, e.origin === 'live' ? 'LIVE' : 'ARCHIVE'),
-    h('span', { class: 'tag real' }, 'REAL EVENT'),
-    h('div', { style: 'margin-top:6px' }, what, e.linkedSep ? ' NASA also recorded a burst of fast particles from it.' : ''),
-    e.note ? h('div', { class: 'title-foot' }, h('span', { class: 'tag game' }, 'NOTE'), e.note) : null,
-    late
-      ? h(
+  private showInterlude() {
+    const c = this.campaign!;
+    const prev = c.results[c.results.length - 1];
+    this.phase = 'interlude';
+    this.mission = null;
+    clear(this.dock);
+    this.refreshHud();
+    this.audio.sfx('click');
+    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: c.prefillPct, sheltered: false, levels: c.base.levels, crew: 0 });
+    const future = new Date();
+    future.setMonth(future.getMonth() + SYNODIC_MONTHS * (c.expedition - 1));
+    const lt = earthMarsLightTime(future);
+    const questions = TALK_ABOUT_IT[prev?.n ?? 1] ?? [];
+    this.modal(
+      [
+        h('div', { class: 'kicker' }, `${SYNODIC_MONTHS} months later`),
+        h('h2', null, 'The base waits for its next crew'),
+        h(
+          'p',
+          null,
+          'Earth and Mars line up for a quick trip only about every 26 months, so that is how long the base sits empty between crews. ',
+          `By ${future.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, messages from Earth will take about ${Math.round(lt.oneWayMinutes)} minutes to arrive (calculated from JPL orbit data).`,
+        ),
+        h(
           'div',
-          { class: 'title-foot' },
-          `Why the warning was late: light from the flare took ${Math.round(SUN_EARTH_LIGHT_MIN)} minutes to reach Earth, forecasters needed about ${EARTH_PROCESSING_MIN} minutes to check it, and their message took ${Math.round(late.lightMin)} more minutes to reach Mars. The fastest particles got there about ${late.lateBy} minutes before the warning (game estimate).`,
-        )
-      : null,
-    h('div', { class: 'title-foot' }, 'Source: NASA DONKI (Space Weather Database). ', e.link ? h('a', { href: e.link, target: '_blank', rel: 'noopener' }, 'See the record') : null),
-  );
-}
-
-function article(name: string) {
-  return /^[AEFHILMNORSX]/.test(name) ? `An ${name}` : `A ${name}`;
-}
-
-function scienceCard(f: ScienceFact): HTMLElement {
-  return h(
-    'details',
-    { class: 'science' },
-    h('summary', { class: 'kicker', style: 'cursor:pointer' }, `Real Science: ${f.title}`),
-    f.art ? h('div', { class: 'art', style: 'margin-top:8px' }, h('img', { src: `/art/${f.art}.png`, alt: `${f.title} (AI-generated illustration)`, loading: 'lazy' })) : null,
-    h('p', null, f.body),
-    h('div', { class: 'src' }, 'Source: ', h('a', { href: f.url, target: '_blank', rel: 'noopener' }, f.source)),
-  );
-}
-
-interface Beat {
-  at: number;
-  text: string;
-  storm?: number;
-}
-
-function runBeats(r: SolReport): Beat[] {
-  const beats: Beat[] = [{ at: 0, text: 'Sunrise. The solar panels wake up.' }];
-  const on = (id: keyof Allocation) => r.alloc[id] > 0;
-  if (on('fuel')) beats.push({ at: 0.12, text: `The O2 plant hums: ${r.alloc.fuel} cell${r.alloc.fuel === 1 ? '' : 's'} filling the rocket.` });
-  if (on('greenhouse')) beats.push({ at: 0.22, text: 'The greenhouse glows under its grow lights.' });
-  if (r.storm) {
-    beats.push({
-      at: 0.38,
-      text: r.storm.shelterCells ? 'SOLAR STORM! The crew is safe in the shelter.' : 'SOLAR STORM! Fast particles rain down on the outpost.',
-      storm: r.storm.shelterCells >= 2 ? 0.4 : 1,
-    });
+          { class: 'card good' },
+          icon('o2', 20),
+          ' ',
+          h('b', null, `The robot O2 plant pre-filled the next rocket to ${c.prefillPct}%. `),
+          'More power at the base means a fuller tank waiting for the next crew.',
+        ),
+        h('div', { class: 'card event' }, h('div', { class: 'kicker' }, 'Talk about it'), h('ul', { class: 'clean' }, questions.map((q) => h('li', null, q)))),
+        h(
+          'div',
+          { class: 'actions end' },
+          h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showExpeditionIntro() }, 'Meet the next crew', h('span', { class: 'arrow' })),
+        ),
+      ],
+      { label: 'Between crews' },
+    );
   }
-  if (r.weather !== 'clear') beats.push({ at: 0.3, text: 'Dust dims the sky. The panels struggle.' });
-  beats.push({ at: 0.5, text: 'Sunset. Mars sunsets are blue!' });
-  beats.push({ at: 0.62, text: r.heaterShortfall ? 'Night falls. It is freezing, and the heaters are short of power...' : 'Night falls. The heaters keep the batteries warm.' });
-  if (r.alloc.monitor) beats.push({ at: 0.8, text: 'The radiation monitor watches the Sun.' });
-  beats.push({ at: 0.97, text: 'A new sol begins.' });
-  return beats.sort((a, b) => a.at - b.at);
+
+  private showFinale() {
+    const c = this.campaign!;
+    this.phase = 'finale';
+    this.mission = null;
+    clear(this.dock);
+    this.refreshHud();
+    this.audio.playMusic('title');
+    this.stage.setScene({ sol: 0, weather: 'clear', alloc: emptyAlloc(), fuel: 0, sheltered: false, levels: c.base.levels, crew: 0 });
+    const total = totalStars(c);
+    const max = EXPEDITIONS.length * 3;
+    const built = UPGRADE_IDS.filter((id) => c.base.levels[id] > 0);
+    this.modal(
+      [
+        h('div', { class: 'art' }, h('img', { src: '/art/title.png', alt: 'The Mars base (AI-generated art)' })),
+        h('div', { class: 'kicker' }, 'Campaign complete'),
+        h('h2', null, `${total} of ${max} stars`),
+        h(
+          'table',
+          { class: 'log' },
+          h('thead', null, h('tr', null, h('th', null, 'Crew'), h('th', null, 'Result'), h('th', null, 'Sols'), h('th', null, 'Stars'), h('th', null, 'Built'))),
+          h(
+            'tbody',
+            null,
+            c.results.map((r) =>
+              h(
+                'tr',
+                null,
+                h('td', null, `${r.n}: ${EXPEDITIONS[r.n - 1].name} (${EXPEDITIONS[r.n - 1].crew} crew)`),
+                h('td', null, r.status === 'won' ? 'Launched home' : 'Came home early'),
+                h('td', null, String(r.sols)),
+                h('td', null, starRow(r.stars, true)),
+                h('td', null, r.built.length ? r.built.map((id) => UPGRADES[id].name).join(', ') : 'nothing'),
+              ),
+            ),
+          ),
+        ),
+        h(
+          'div',
+          { class: 'card good' },
+          h('b', null, 'Your base today: '),
+          built.length ? built.map((id, i) => [i ? ', ' : '', `${UPGRADES[id].name}${maxLevel(id) > 1 ? ` x${c.base.levels[id]}` : ''}`]) : 'the same as the first crew found it',
+          '. Three crews, one base: every crew built on the work of the one before. That is how real space stations and bases grow.',
+        ),
+        h('div', { class: 'card event' }, h('div', { class: 'kicker' }, 'Talk about it'), h('ul', { class: 'clean' }, TALK_ABOUT_IT[3].map((q) => h('li', null, q)))),
+        h(
+          'div',
+          { class: 'actions' },
+          h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.clearSave(), this.chooseDifficulty()) }, 'New campaign'),
+          h('button', { class: 'btn', onclick: () => this.showScienceLog() }, 'Science Log'),
+          h('button', { class: 'btn', onclick: () => (this.clearSave(), this.showTitle()) }, 'Title screen'),
+        ),
+      ],
+      { label: 'Campaign complete' },
+    );
+  }
 }
 
-/** Real radiation comparison: ISS (NASA OSDR RadLab) vs. Mars surface vs. the May 2024 storm (Curiosity RAD). */
-function compareCard(m: MissionState): HTMLElement | null {
-  const iss = m.config.scenario === 'may2024' ? (RADLAB_ISS_MAY2024 ?? RADLAB_ISS) : RADLAB_ISS;
-  if (!iss) return null;
-  const rows: Array<[string, number, string]> = [
-    [`A day on the ISS (${shortRange(iss.startDate, iss.endDate)})`, iss.meanDoseRatePerDay, 'var(--air)'],
-    ['A normal day at Gale Crater, Mars', REAL.marsSurfaceUgyPerDay, 'var(--oxide)'],
-    ['The May 20, 2024 storm at Gale Crater', REAL.may2024EventUgy, 'var(--red)'],
-  ];
-  const max = Math.max(...rows.map((r) => r[1]));
-  const sols = m.log.length;
+function starRow(stars: StarId[], compact = false): HTMLElement {
   return h(
     'div',
-    { class: 'card' },
-    h('div', { class: 'kicker' }, 'Real data: how much radiation?'),
-    rows.map(([label, v, color]) =>
-      h(
-        'div',
-        { style: 'margin:6px 0' },
-        h('div', { style: 'display:flex; justify-content:space-between; gap:8px; font-size:15px' }, h('span', null, label), h('b', { class: 'px' }, `${Math.round(v).toLocaleString('en-US')} µGy`)),
-        h('div', { class: 'bar' }, h('div', { class: 'fill', style: `width:${Math.max(1.5, (v / max) * 100)}%; background:${color}` })),
-      ),
-    ),
-    h(
-      'p',
-      { style: 'margin-top:8px' },
-      `Your crew spent ${sols} sol${sols === 1 ? '' : 's'} on Mars. From the steady background alone, that is about ${(sols * REAL.marsSurfaceUgyPerDay).toLocaleString('en-US')} micrograys: similar to ${sols} days on the ISS. One big solar storm adds as much as ${Math.round(REAL.may2024EventUgy / REAL.marsSurfaceUgyPerDay)} normal days at once. That's why shelters and early warnings matter.`,
-    ),
-    h(
-      'div',
-      { class: 'title-foot' },
-      'µGy (microgray) measures radiation energy absorbed by a detector. ISS: DOSTEL detector, NASA OSDR RadLab (archived readings). Mars: Curiosity RAD (Hassler et al. 2014; NASA/JPL 2024).',
+    { class: `stars ${compact ? 'compact' : ''}`, 'aria-label': `${stars.length} of 3 stars` },
+    (Object.keys(STAR_INFO) as StarId[]).map((id) =>
+      h('span', { class: `star ${stars.includes(id) ? 'on' : ''}`, title: STAR_INFO[id].how }, icon('sun', compact ? 14 : 22), compact ? null : h('span', null, STAR_INFO[id].name)),
     ),
   );
 }

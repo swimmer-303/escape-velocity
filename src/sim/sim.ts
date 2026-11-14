@@ -8,14 +8,17 @@ import {
   REAL,
   HEATER_NEED,
   WEAR_PER_DAMAGE,
-  DUST_CELL_LOSS,
+  DUST_LOSS,
   STORM_DOSE,
   SHELTER_BLOCK,
   MODULE_CAP,
   EARTH_PROCESSING_MIN,
   SUN_EARTH_LIGHT_MIN,
+  EXPEDITIONS,
+  type ExpeditionSpec,
 } from './constants';
 import { buildPlan } from './plan';
+import { defaultNextProject, maxLevel, nextCost, type BaseState, type UpgradeId } from './upgrades';
 import {
   MODULE_IDS,
   type Allocation,
@@ -29,57 +32,118 @@ import {
   type Warning,
 } from './types';
 
-/** Minutes after a big flare that its fastest particles can reach Mars (game assumption). */
+/** Minutes after a big flare that its fastest particles can reach Mars (game estimate; NASA/JPL: "tens of minutes"). */
 export const FAST_PARTICLE_MIN = 20;
+/** Cells the reactor adds, day and night, dust or not. */
+export const REACTOR_CELLS = 3;
+/** Multiplier from the Big O2 plant and the second greenhouse dome. */
+export const UPGRADE_BOOST = 1.5;
 
 export function emptyAlloc(): Allocation {
-  return { air: 0, fuel: 0, greenhouse: 0, heaters: 0, shelter: 0, monitor: 0 };
+  return { air: 0, fuel: 0, greenhouse: 0, heaters: 0, shelter: 0, monitor: 0, build: 0, battery: 0 };
 }
 
 export function totalCells(a: Allocation): number {
   return MODULE_IDS.reduce((s, id) => s + a[id], 0);
 }
 
+export function expeditionSpec(config: Pick<MissionConfig, 'expedition'>): ExpeditionSpec {
+  return EXPEDITIONS[Math.max(0, Math.min(EXPEDITIONS.length - 1, config.expedition - 1))];
+}
+
+export function windowSol(state: MissionState): number {
+  return expeditionSpec(state.config).windowSol + TUNING[state.config.difficulty].windowBonus;
+}
+
+function cloneBase(b: BaseState): BaseState {
+  return { levels: { ...b.levels }, progress: { ...b.progress }, project: b.project };
+}
+
 export function createMission(config: MissionConfig): MissionState {
   const t = TUNING[config.difficulty];
+  const spec = expeditionSpec(config);
   return {
     config,
     sol: 1,
-    air: t.startAir,
-    food: t.startFood,
+    crew: spec.crew,
+    air: t.startAirDays * spec.crew,
+    food: t.startFoodDays * spec.crew,
     dose: 0,
     doseBudget: t.doseBudget,
-    fuel: 0,
+    fuel: Math.min(99, config.prefillPct),
     wear: 0,
     damage: 0,
     coldPenalty: 0,
     monitorOnline: false,
     bonusCells: 0,
+    stored: 0,
+    base: cloneBase(config.base),
+    builtThisExpedition: [],
     plan: buildPlan(config),
     log: [],
     status: 'playing',
   };
 }
 
-export function windowSol(state: MissionState): number {
-  return TUNING[state.config.difficulty].windowSol;
-}
-
 export function planFor(state: MissionState, sol = state.sol) {
   return state.plan[Math.min(sol, state.plan.length) - 1];
 }
 
+// ---------------------------------------------------------------- derived rates
+
+export const has = (s: MissionState, id: UpgradeId) => s.base.levels[id] > 0;
+
+export function airPerCell(s: MissionState) {
+  return RATES.airPerCell * (has(s, 'moxie2') ? UPGRADE_BOOST : 1);
+}
+export function fuelPctPerCell(s: MissionState) {
+  return (100 / expeditionSpec(s.config).fuelNeeded) * (has(s, 'moxie2') ? UPGRADE_BOOST : 1);
+}
+export function foodPerGreenhouseCell(s: MissionState) {
+  return RATES.foodPerGreenhouseCell * (has(s, 'dome2') ? UPGRADE_BOOST : 1);
+}
+export function shelterBlock(s: MissionState): readonly number[] {
+  return has(s, 'berm') ? [0, SHELTER_BLOCK[2], SHELTER_BLOCK[2]] : SHELTER_BLOCK;
+}
+
+/** Solar cells on a clear sol, from the starting array plus panels built. */
+export function solarCells(s: MissionState) {
+  return TUNING[s.config.difficulty].baseCells + s.base.levels.panel;
+}
+
+/** Most cells each module can take today. */
+export function moduleCap(s: MissionState, id: ModuleId): number {
+  switch (id) {
+    case 'monitor':
+      return has(s, 'monitor') ? MODULE_CAP.monitor : 0;
+    case 'battery':
+      return has(s, 'battery') ? MODULE_CAP.battery : 0;
+    case 'shelter':
+      return has(s, 'berm') ? 1 : MODULE_CAP.shelter;
+    case 'build': {
+      const p = s.base.project;
+      if (!p) return 0;
+      const cost = nextCost(p, s.base.levels);
+      return cost === null ? 0 : Math.min(MODULE_CAP.build, cost - s.base.progress[p]);
+    }
+    default:
+      return MODULE_CAP[id];
+  }
+}
+
 export function getBriefing(state: MissionState): Briefing {
-  const t = TUNING[state.config.difficulty];
   const p = planFor(state);
   const notes: string[] = [];
-  let cells = t.baseCells;
-  if (p.weather === 'dusty') {
-    cells -= DUST_CELL_LOSS.regional;
-    notes.push(`Dust storm: -${DUST_CELL_LOSS.regional}`);
-  } else if (p.weather === 'storm') {
-    cells -= DUST_CELL_LOSS.global;
-    notes.push(`Huge dust storm: -${DUST_CELL_LOSS.global}`);
+  const solar = solarCells(state);
+  let cells = solar;
+  if (p.weather !== 'clear') {
+    const lost = Math.round(solar * DUST_LOSS[p.weather]);
+    cells -= lost;
+    notes.push(`${p.weather === 'storm' ? 'Huge dust storm' : 'Dust storm'}: -${lost}`);
+  }
+  if (has(state, 'reactor')) {
+    cells += REACTOR_CELLS;
+    notes.push(`Reactor: +${REACTOR_CELLS}`);
   }
   if (p.cleaning) {
     cells += 1;
@@ -87,7 +151,7 @@ export function getBriefing(state: MissionState): Briefing {
   }
   if (state.bonusCells) {
     cells += state.bonusCells;
-    notes.push(`Extra solar panel: +${state.bonusCells}`);
+    notes.push(`Cargo solar panel: +${state.bonusCells}`);
   }
   if (state.coldPenalty) {
     cells -= state.coldPenalty;
@@ -98,6 +162,10 @@ export function getBriefing(state: MissionState): Briefing {
     notes.push(`Damaged batteries: -${state.damage}`);
   }
   cells = Math.max(2, cells);
+  if (state.stored) {
+    cells += state.stored;
+    notes.push(`From your battery: +${state.stored}`);
+  }
 
   let warning: Warning | null = null;
   if (p.storm) {
@@ -110,7 +178,7 @@ export function getBriefing(state: MissionState): Briefing {
     weather: p.weather,
     cells,
     powerNotes: notes,
-    heaterNeed: p.coldSnap ? HEATER_NEED.coldSnap : HEATER_NEED.normal,
+    heaterNeed: HEATER_NEED.normal + (p.coldSnap ? HEATER_NEED.coldSnap : 0) + (has(state, 'dome2') ? 1 : 0),
     coldSnap: p.coldSnap,
     warning,
     outlook: p.blackout ? 'none' : p.outlookActive ? 'active' : 'quiet',
@@ -118,6 +186,11 @@ export function getBriefing(state: MissionState): Briefing {
     dustTomorrow: p.dustTomorrow,
     resupply: p.resupply,
     monitorOnline: state.monitorOnline,
+    fromBattery: state.stored,
+    hasMonitor: has(state, 'monitor'),
+    hasBattery: has(state, 'battery'),
+    buildRoom: moduleCap(state, 'build'),
+    shelterBlock: shelterBlock(state),
   };
 }
 
@@ -133,15 +206,16 @@ export function checkAlloc(state: MissionState, alloc: Allocation): AllocCheck {
   const problems: string[] = [];
   for (const id of MODULE_IDS) {
     if (alloc[id] < 0 || !Number.isInteger(alloc[id])) problems.push(`Bad value for ${id}`);
-    if (alloc[id] > MODULE_CAP[id]) problems.push(`${id} holds at most ${MODULE_CAP[id]}`);
+    if (alloc[id] > moduleCap(state, id)) problems.push(`${id} holds at most ${moduleCap(state, id)}`);
   }
   if (used > b.cells) problems.push('You used more cells than you have.');
   if (used < b.cells) problems.push(`Place every power cell (${b.cells - used} left).`);
   return { ok: problems.length === 0, remaining: b.cells - used, problems };
 }
 
-export function snapshot(s: Pick<MissionState, 'air' | 'food' | 'dose' | 'fuel'>): Snapshot {
-  return { air: s.air, food: s.food, dose: s.dose, fuel: s.fuel };
+/** HUD view: air and food in days for the whole crew. */
+export function snapshot(s: Pick<MissionState, 'air' | 'food' | 'dose' | 'fuel' | 'crew'>): Snapshot {
+  return { air: s.air / s.crew, food: s.food / s.crew, dose: s.dose, fuel: s.fuel };
 }
 
 /** Light time from Earth plus Earth's own reaction time, compared with how fast the particles arrive. */
@@ -158,21 +232,15 @@ interface Outcome {
  * Apply one sol. `stormOverride` lets previews and tests ask "what if a storm hits / doesn't hit"
  * without revealing the hidden plan.
  */
-function applySol(
-  state: MissionState,
-  alloc: Allocation,
-  crate: CrateId | undefined,
-  stormOverride?: 'none' | 'major',
-): Outcome {
-  const t = TUNING[state.config.difficulty];
+function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undefined, stormOverride?: 'none' | 'major'): Outcome {
   const p = planFor(state);
   const b = getBriefing(state);
   const before = snapshot(state);
-  const s: MissionState = { ...state, log: state.log };
+  const s: MissionState = { ...state, base: cloneBase(state.base), builtThisExpedition: [...state.builtThisExpedition] };
 
   // Resupply crate lands first.
   if (p.resupply && crate) {
-    if (crate === 'food') s.food += 3;
+    if (crate === 'food') s.food += 3 * s.crew;
     if (crate === 'parts') {
       s.damage = Math.max(0, s.damage - 1);
       s.wear = 0;
@@ -181,12 +249,31 @@ function applySol(
   }
 
   // Production.
-  const airMade = alloc.air * RATES.airPerCell + alloc.greenhouse * RATES.airPerGreenhouseCell;
-  const foodMade = alloc.greenhouse * RATES.foodPerGreenhouseCell;
-  const fuelMade = Math.min(100 - s.fuel, alloc.fuel * t.fuelPerCell);
+  const airMade = alloc.air * airPerCell(state) + alloc.greenhouse * RATES.airPerGreenhouseCell;
+  const foodMade = alloc.greenhouse * foodPerGreenhouseCell(state);
+  const fuelAdd = alloc.fuel * fuelPctPerCell(state);
+  const fuelMade = Math.min(100 - s.fuel, fuelAdd);
   s.air += airMade;
   s.food += foodMade;
-  s.fuel = Math.min(100, s.fuel + alloc.fuel * t.fuelPerCell);
+  s.fuel = Math.min(100, s.fuel + fuelAdd);
+
+  // Workshop: invest cells in the current project.
+  let built: UpgradeId | undefined;
+  const project = s.base.project;
+  if (project && alloc.build > 0) {
+    s.base.progress[project] += alloc.build;
+    const cost = nextCost(project, s.base.levels);
+    if (cost !== null && s.base.progress[project] >= cost) {
+      s.base.levels[project] += 1;
+      s.base.progress[project] = 0;
+      built = project;
+      s.builtThisExpedition.push(project);
+      if (s.base.levels[project] >= maxLevel(project)) s.base.project = defaultNextProject(s.base.levels);
+    }
+  }
+
+  // Battery: cells stored today come back tomorrow.
+  s.stored = alloc.battery;
 
   // Heaters: every missing cell chills the batteries (fewer cells tomorrow) and wears equipment.
   const shortfall = Math.max(0, b.heaterNeed - alloc.heaters);
@@ -203,15 +290,17 @@ function applySol(
   const baseDose = REAL.marsSurfaceMsvPerDay;
   s.dose += baseDose;
   let stormInfo: SolReport['storm'];
-  const realStorm = stormOverride === undefined ? p.storm : undefined;
   const storm =
     stormOverride === 'major'
       ? { event: { id: 'what-if', kind: 'flare' as const, severity: 'major' as const, time: '', origin: 'archive' as const }, fast: true }
-      : realStorm;
+      : stormOverride === 'none'
+        ? undefined
+        : p.storm;
   if (storm) {
     const unsheltered = STORM_DOSE[storm.event.severity];
-    const shelterCells = Math.min(alloc.shelter, SHELTER_BLOCK.length - 1);
-    const taken = unsheltered * (1 - SHELTER_BLOCK[shelterCells]);
+    const block = shelterBlock(state);
+    const shelterCells = Math.min(alloc.shelter, block.length - 1);
+    const taken = unsheltered * (1 - block[shelterCells]);
     s.dose += taken;
     const warnedBy = b.warning ? b.warning.source : null;
     stormInfo = {
@@ -229,8 +318,8 @@ function applySol(
   }
 
   // The crew breathes and eats.
-  s.air -= RATES.airUsePerSol;
-  s.food -= RATES.foodUsePerSol;
+  s.air -= s.crew * RATES.usePerPersonPerSol;
+  s.food -= s.crew * RATES.usePerPersonPerSol;
 
   // A powered monitor watches the Sun overnight and warns you tomorrow morning.
   s.monitorOnline = alloc.monitor >= 1;
@@ -252,7 +341,7 @@ function applySol(
     s.loseReason = 'dose';
   } else if (s.fuel >= 100 - EPS) {
     s.status = 'won';
-  } else if (state.sol >= t.windowSol) {
+  } else if (state.sol >= windowSol(state)) {
     s.status = 'lost';
     s.loseReason = 'window';
   }
@@ -265,14 +354,17 @@ function applySol(
     coldSnap: p.coldSnap,
     storm: stormInfo,
     baseDose,
-    airMade,
-    foodMade,
+    airMade: airMade / s.crew,
+    foodMade: foodMade / s.crew,
     fuelMade,
     heaterShortfall: shortfall,
     newDamage,
     crate: p.resupply ? crate : undefined,
     blackout: p.blackout,
     cleaning: p.cleaning,
+    built,
+    buildProject: project,
+    stored: alloc.battery,
     before,
     after: snapshot(s),
   };
@@ -293,6 +385,12 @@ export function runSol(state: MissionState, alloc: Allocation, crate?: CrateId):
   return out;
 }
 
+/** Pick which upgrade the Workshop works on. Progress on every project is kept. */
+export function setProject(state: MissionState, id: UpgradeId | null): MissionState {
+  if (id && nextCost(id, state.base.levels) === null) return state;
+  return { ...state, base: { ...cloneBase(state.base), project: id } };
+}
+
 export interface Preview {
   after: Snapshot;
   /** Extra dose if a major storm hit today with this shelter setting. */
@@ -301,6 +399,7 @@ export interface Preview {
   coldPenaltyTomorrow: number;
   newDamage: boolean;
   monitorTomorrow: boolean;
+  builds?: UpgradeId;
 }
 
 /** What-if preview for the budgeting screen. Never reveals hidden storms. */
@@ -314,6 +413,7 @@ export function previewSol(state: MissionState, alloc: Allocation, crate?: Crate
     coldPenaltyTomorrow: calm.next.coldPenalty,
     newDamage: calm.report.newDamage,
     monitorTomorrow: calm.next.monitorOnline,
+    builds: calm.report.built,
   };
 }
 
@@ -322,8 +422,8 @@ export function simulateWhatIf(state: MissionState, alloc: Allocation, storm: 'n
   return applySol(state, alloc, crate, storm);
 }
 
-export function lifeSupportDays(s: Pick<MissionState, 'air' | 'food'>): number {
-  return Math.min(s.air, s.food);
+export function lifeSupportDays(s: Pick<MissionState, 'air' | 'food' | 'crew'>): number {
+  return Math.min(s.air, s.food) / s.crew;
 }
 
 export function isModuleId(x: string): x is ModuleId {

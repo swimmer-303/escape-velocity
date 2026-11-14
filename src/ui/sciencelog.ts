@@ -3,7 +3,7 @@
 // and exactly how the game scales real numbers. This is how players and judges can check our science.
 
 import { h } from './dom';
-import { REAL, TUNING, RATES, STORM_DOSE, DUST_CELL_LOSS, type Difficulty } from '../sim/constants';
+import { REAL, TUNING, RATES, STORM_DOSE, DUST_LOSS, EXPEDITIONS, PREFILL_MAX_PCT, type Difficulty } from '../sim/constants';
 import type { SpaceWeatherFeed } from '../data/donki';
 import { MAY2024_SNAPSHOT, countByClass } from '../data/donki';
 import type { LightTime } from '../data/lighttime';
@@ -106,7 +106,7 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
     [
       'Opportunity rover: dust storms and solar power',
       [
-        `Real storms cut Opportunity's power from about ${REAL.oppyNormalWh} Wh/day to ${REAL.oppy2007StormWh} Wh (2007) and ${REAL.oppy2018StormWh} Wh (2018). The game's storms take away ${DUST_CELL_LOSS.regional} or ${DUST_CELL_LOSS.global} of your ${t.baseCells} cells: gentler than real life, so your mission can survive.`,
+        `Real storms cut Opportunity's power from about ${REAL.oppyNormalWh} Wh/day to ${REAL.oppy2007StormWh} Wh (2007) and ${REAL.oppy2018StormWh} Wh (2018). The game's storms dim your solar panels by ${Math.round(DUST_LOSS.dusty * 100)}% or ${Math.round(DUST_LOSS.storm * 100)}%: gentler than real life, so your mission can survive. A fission reactor upgrade is not affected by dust.`,
       ],
       [tag('real', 'PUBLISHED FIGURE')],
       [link('https://www.jpl.nasa.gov/news/nasa-mars-rovers-braving-severe-dust-storms', 'NASA/JPL 2007'), ' · ', link('https://www.planetary.org/articles/06-mer-update-opportunity-dust-storm-sleep', 'Planetary Society 2018')],
@@ -121,8 +121,10 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
 
   const scaling: Array<[string, string]> = [
     ['Time', 'One sol (24 h 39 min) plays in about 30 seconds. A whole mission fits in about 10 minutes.'],
-    ['Rocket fuel', `Each fuel cell fills ${t.fuelPerCell}% of the tank, so the tank fills in about 15 to 20 sols. A real crewed rocket home would need about 25 to 31 tonnes of oxygen, made by a 25 to 30 kW plant (MOXIE scaled up about 200 times) running for about 16 months before the crew arrives.`],
-    ['Air and food', `1 cell on AIR = 1 day of air for the crew. Grow lights are power-hungry: 1 greenhouse cell = ${RATES.foodPerGreenhouseCell} day of food + ${RATES.airPerGreenhouseCell} day of air. Water is assumed to be recycled (the ISS recovers about 98%).`],
+    ['Rocket fuel', `Crews of ${EXPEDITIONS.map((e) => e.crew).join(', ')} need ${EXPEDITIONS.map((e) => e.fuelNeeded).join(', ')} fuel cells to fill their (bigger and bigger) rockets. A real crewed rocket home would need about 25 to 31 tonnes of oxygen, made by a 25 to 30 kW plant (MOXIE scaled up about 200 times) running for about 16 months before the crew arrives. Between crews, the game's robot O2 plant pre-fills up to ${PREFILL_MAX_PCT}% of the next tank.`],
+    ['Air and food', `1 cell on AIR = 1 day of air for ${RATES.airPerCell} people (about ${(RATES.airPerCell * REAL.o2PerCrewKgPerDay).toFixed(1)} kg of oxygen). Grow lights are power-hungry: 1 greenhouse cell = food for ${RATES.foodPerGreenhouseCell} people for a day, plus a little air. Water is assumed to be recycled (the ISS recovers about 98%).`],
+    ['Time between crews', 'Earth and Mars line up for a short trip about every 26 months, so each new crew arrives 26 months after the last one left. That timing is real; the game skips straight to it.'],
+    ['Upgrades', 'Upgrade costs and effects are game values. Each upgrade is based on a real technology: more solar panels, battery banks, regolith shielding, LED greenhouses, a scaled-up MOXIE, and NASA\'s Fission Surface Power reactor project.'],
     ['Radiation budget', `Your crew's budget is ${t.doseBudget} mSv for the whole mission. That is much stricter than NASA's real career limit (600 mSv), so radiation choices matter in a short game. Background dose (${REAL.marsSurfaceMsvPerDay} mSv per sol) is the real Gale Crater value.`],
     ['Storm sizes', `Game doses for a storm caught outside: small ${STORM_DOSE.minor}, medium ${STORM_DOSE.moderate}, big ${STORM_DOSE.major} mSv. The big one is modeled on the May 2024 event. In real life not every big flare sends particles to Mars; in the game, every X-class flare does.`],
     ['Warnings', 'In May 2024, particles reached Mars in tens of minutes (NASA/JPL). Big storms send the fastest particles, so in the game an X-class storm always beats Earth\'s warning to Mars. Medium storms build more slowly, so Earth\'s warning arrives in time. A powered radiation monitor warns you the next morning either way.'],

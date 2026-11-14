@@ -3,6 +3,7 @@
 // They are never shown in the game; the game only uses real DONKI records.
 import type { MissionConfig, SpaceWeatherEvent } from './types';
 import type { Difficulty } from './constants';
+import { freshBase, type BaseState } from './upgrades';
 
 const ev = (i: number, severity: SpaceWeatherEvent['severity'], cls: string): SpaceWeatherEvent => ({
   id: `TEST-FLR-${i}`,
@@ -25,6 +26,6 @@ export const TEST_POOL: SpaceWeatherEvent[] = [
   ev(9, 'minor', 'C5.1'),
 ];
 
-export function testConfig(seed: string, difficulty: Difficulty = 'cadet'): MissionConfig {
-  return { seed, difficulty, lightTimeMin: 12, eventPool: TEST_POOL };
+export function testConfig(seed: string, difficulty: Difficulty = 'cadet', expedition = 1, base: BaseState = freshBase(), prefillPct = 0): MissionConfig {
+  return { seed, difficulty, lightTimeMin: 12, eventPool: TEST_POOL, expedition, base, prefillPct };
 }
