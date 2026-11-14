@@ -113,7 +113,22 @@ async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
 
 const DIRECT_BASE = 'https://ccmc.gsfc.nasa.gov/DONKI/WS/get';
 
-export async function loadSpaceWeather(days = 30): Promise<SpaceWeatherFeed> {
+let latestFeed: Promise<SpaceWeatherFeed> | null = null;
+/**
+ * The feed the game already asked for (in flight or done), so other parts (like Storm Cards) can use it
+ * without a second network request. Null if nothing has loaded it yet.
+ */
+export function latestSpaceWeather(): Promise<SpaceWeatherFeed> | null {
+  return latestFeed;
+}
+
+export function loadSpaceWeather(days = 30): Promise<SpaceWeatherFeed> {
+  const p = fetchSpaceWeather(days);
+  latestFeed = p;
+  return p;
+}
+
+async function fetchSpaceWeather(days: number): Promise<SpaceWeatherFeed> {
   const end = new Date();
   const start = new Date(end.getTime() - days * 86_400_000);
   const startDate = ymd(start);
