@@ -6,6 +6,7 @@ import { h, clear } from './dom';
 import { icon } from './icons';
 import type { Allocation } from '../sim/types';
 import { siteText, type Site, type SiteText } from '../sim/site';
+import { speakButton, coachShown } from './access';
 
 export type CoachPhase = 'briefing' | 'plan' | 'running' | 'debrief' | 'other';
 
@@ -132,6 +133,7 @@ export class Coach {
       }
     }
     this.i = -1;
+    coachShown(this.bubble, null);
     cancelAnimationFrame(this.raf);
     this.ring.remove();
     this.bubble.remove();
@@ -169,7 +171,7 @@ export class Coach {
     this.bubble.style.display = here ? '' : 'none';
     this.ring.style.display = here ? '' : 'none';
     this.bubble.append(
-      h('div', { class: 'coach-head' }, icon('rocket', 22), h('span', null, `Tutorial ${this.i + 1}/${STEPS.length}`)),
+      h('div', { class: 'coach-head' }, icon('rocket', 22), h('span', null, `Tutorial ${this.i + 1}/${STEPS.length}`), speakButton(() => [this.bubble], 'coach')),
       h('p', null, typeof s.text === 'function' ? s.text(siteText(this.ctx.site)) : s.text),
       h(
         'div',
@@ -178,6 +180,8 @@ export class Coach {
         s.done ? null : h('button', { class: 'btn small primary', onclick: () => this.next() }, s.nextLabel ?? 'Next'),
       ),
     );
+    // Read-aloud: a new tip stops the old one (and is read out if auto read-aloud is on).
+    coachShown(this.bubble, here ? String(this.i) : null);
     this.position();
   }
 

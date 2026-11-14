@@ -44,11 +44,13 @@ import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
 import { missionChartFor, crewCharts } from './charts';
 import { roomParam } from '../room/protocol';
+import { initAccess, decorateDialog, statusButton, accessPanel, accessButtonText, ACCESS_DEFAULTS, type AccessSettings } from './access';
+import { certForMission, certForCampaign, certificateView, type CertData } from './certificate';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room';
 type Mode = 'campaign' | 'quick' | 'history';
 
-interface Settings {
+interface Settings extends AccessSettings {
   muted: boolean;
   reducedMotion: boolean;
   /** 3D outpost on (default) or the simple view for slow devices. */
@@ -59,7 +61,7 @@ const SETTINGS_KEY = 'ev-settings';
 const SAVE_KEY = 'ev-save-v1';
 
 function loadSettings(): Settings {
-  const base = { muted: false, reducedMotion: prefersReducedMotion(), view3d: true };
+  const base: Settings = { muted: false, reducedMotion: prefersReducedMotion(), view3d: true, ...ACCESS_DEFAULTS };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...base, ...JSON.parse(raw) } : base;
@@ -146,6 +148,8 @@ export class App {
     this.stage = stage;
     this.stage.mount(this.stageEl);
     this.audio = new GameAudio(this.settings.muted);
+    // Read aloud and display options (larger text, high contrast, dyslexia-friendly spacing): see access.ts.
+    initAccess(this.settings, () => saveSettings(this.settings), { duck: (on) => this.audio.duck(on), reducedMotion: () => this.settings.reducedMotion });
     this.applyMotion();
     this.budget = new BudgetDock(this.dock, {
       onChange: (a) => {
@@ -188,7 +192,7 @@ export class App {
     this.stage.setReducedMotion(this.settings.reducedMotion);
   }
 
-  private modal(content: Child, opts: { wide?: boolean; label: string; onClose?: () => void } = { label: 'Dialog' }) {
+  private modal(content: Child, opts: { wide?: boolean; label: string; onClose?: () => void; autoRead?: boolean } = { label: 'Dialog' }) {
     // Re-drawing the same dialog (e.g. picking a Workshop project) keeps its scroll position.
     const prev = this.modalRoot.querySelector<HTMLElement>('.modal');
     const sameDialog = prev?.getAttribute('aria-label') === opts.label;
@@ -202,11 +206,14 @@ export class App {
     );
     this.modalRoot.append(box);
     if (keepScroll) {
+      decorateDialog(box);
       box.scrollTop = keepScroll.box;
       this.modalRoot.scrollTop = keepScroll.root;
       return box;
     }
     const focusable = box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>('button.primary, button.go, button');
+    // "Read to me" (and auto read-aloud for briefings and debriefs). Added after picking the focus, so focus stays put.
+    decorateDialog(box, { autoRead: opts.autoRead });
     focusable?.focus();
     return box;
   }
@@ -259,8 +266,10 @@ export class App {
   }
 
   private hudButtons(): HTMLElement[] {
+    const status = this.mission ? statusButton(this.hud) : null;
     return [
       this.dataBadge(),
+      ...(status ? [status] : []),
       h(
         'button',
         {
@@ -417,6 +426,7 @@ export class App {
             h('a', { class: 'btn small', href: '/teacher/', target: '_blank', rel: 'noopener' }, 'For teachers'),
             h('button', { class: 'btn small', onclick: () => this.showCredits() }, 'Credits and AI use'),
           ),
+          h('button', { class: 'btn small', onclick: () => this.showAccess() }, accessButtonText()),
         ),
         sunPanel(this.feed),
         h(
@@ -598,6 +608,7 @@ export class App {
             s.view3d ? '3D view: on' : '3D view: off',
           ),
         ),
+        accessPanel(),
         h(
           'div',
           { class: 'actions' },
@@ -632,6 +643,25 @@ export class App {
       ],
       { label: 'Menu', onClose: () => this.resume() },
     );
+  }
+
+  /** Text and voice settings, from the title screen (in a game they are in the menu). */
+  private showAccess() {
+    this.modal(
+      [
+        h('div', { class: 'kicker' }, 'Settings'),
+        h('h2', null, accessButtonText()),
+        accessPanel(),
+        h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.resume() }, 'Done')),
+      ],
+      { label: 'Text and voice settings', onClose: () => this.resume() },
+    );
+  }
+
+  /** The Junior Astronaut certificate (after a win, and at the campaign finale). Back returns to the end screen. */
+  private showCertificate(data: CertData) {
+    this.audio.sfx('click');
+    this.modal(certificateView(data, () => this.resume()), { wide: true, label: 'Junior Astronaut certificate', onClose: () => this.resume() });
   }
 
   private resume() {
@@ -993,7 +1023,7 @@ export class App {
           ),
         ),
       ],
-      { label: `${t.Turn} ${m.sol} morning briefing` },
+      { label: `${t.Turn} ${m.sol} morning briefing`, autoRead: true },
     );
     this.coachUpdate();
   }
@@ -1188,7 +1218,7 @@ export class App {
           ),
         ),
       ],
-      { label: `${t.Turn} ${report.sol} debrief` },
+      { label: `${t.Turn} ${report.sol} debrief`, autoRead: true },
     );
     this.coachUpdate();
   }
@@ -1259,6 +1289,13 @@ export class App {
           { class: 'actions' },
           isCampaign && !last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showInterlude() }, 'Send the next crew', h('span', { class: 'arrow' })) : null,
           isCampaign && last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showFinale() }, 'See your base', h('span', { class: 'arrow' })) : null,
+          won
+            ? h(
+                'button',
+                { class: 'btn cyan', onclick: () => this.showCertificate(certForMission(m, { campaign: isCampaign ? this.campaign : null, history: this.mode === 'history' })) },
+                'Get my certificate',
+              )
+            : null,
           isCampaign ? h('button', { class: 'btn', onclick: () => this.retryExpedition() }, 'Try this crew again') : null,
           !isCampaign
             ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? this.startHistory() : this.startQuick()) }, 'Play again')
@@ -1382,6 +1419,7 @@ export class App {
           'div',
           { class: 'actions' },
           h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.clearSave(), this.chooseDifficulty()) }, 'New campaign'),
+          h('button', { class: 'btn cyan', onclick: () => this.showCertificate(certForCampaign(c)) }, 'Get my certificate'),
           h('button', { class: 'btn', onclick: () => this.showScienceLog() }, 'Science Log'),
           h('button', { class: 'btn', onclick: () => (this.clearSave(), this.showTitle()) }, 'Title screen'),
         ),

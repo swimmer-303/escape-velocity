@@ -46,6 +46,10 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 
 **Class mission: Mission Control** (team play): the whole class runs one base together. The teacher opens a room on the projector and students join from their own devices with a room code and a first name. The modules are split between 4 stations (O2 Plant; Greenhouse and Heat; Radiation; Workshop and Battery), several students can share a station, and everyone sees the whole plan, but each student can only move cells in their own station. The power cells are one shared pool, so stations have to agree who gets them. No chat: only preset "pings" like "I need more cells!" or "Storm warning: shelter!". The teacher runs each sol; the server holds the real mission, using the same simulation and the same real DONKI storms.
 
+**Reading help and display options** (for slow readers, English learners, dyslexia and low vision): every dialog and tutorial tip has a **Read to me** button that reads it in order with the browser's own on-device voices (no network, no AI), highlighting each sentence and saying numbers naturally ("2.5 d" is "2.5 days"). **Auto read-aloud** reads each new briefing and debrief, **My status** reads the HUD meters, and a voice picker prefers an English voice. Read-aloud is separate from the sound switch, and the music gets quieter while it reads. The menu (or **Text and voice** on the title screen) also has **Larger text**, **High contrast** (checked against WCAG AA) and **Dyslexia-friendly spacing** (British Dyslexia Association style guide; the font stays Atkinson Hyperlegible). Without a speech engine, the read-aloud controls are hidden.
+
+**Junior Astronaut certificate:** after any win and at the campaign finale, type a name (it is never saved), and print the certificate or save it as a picture. It shows the stars, crews launched, the base built and the date, drawn in the browser.
+
 ## NASA data (and how each piece is used)
 
 | Data | Used for | Live or archive |
@@ -116,6 +120,7 @@ Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to
 - **Balance:** a player who builds up the base wins every Cadet expedition; never building makes the last crew's mission much harder (the generational lesson); pure greed (all power to fuel) always loses. Run `npm run balance` for the full report.
 - **Campaign:** the base and Workshop progress pass to the next crew, even after an early return; saves round-trip.
 - **Headless UI test:** boots the real interface and clicks through a whole 3-crew campaign, a save-and-resume, and the May 2024 scenario, offline.
+- **Reading and display:** read-aloud order and number wording with a fake speech engine, auto read-aloud, the voice picker's fallbacks, display settings saved and restored, high-contrast colors checked against WCAG AA, every read-aloud control hidden without a speech engine, and the certificate drawn on a fake canvas (name, stars, art credit, print and save).
 - **Mission Control:** the room rules (joining, names, stations, illegal moves, running a sol only when every cell is placed, reconnecting, expiry, limits), an integration test that starts the real server on a random port, joins 4 students, places cells over HTTP and reads the live event stream, and headless teacher and student screens.
 
 ## Use of AI tools

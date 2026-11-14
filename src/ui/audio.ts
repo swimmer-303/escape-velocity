@@ -17,6 +17,8 @@ export class GameAudio {
   private music?: HTMLAudioElement;
   private current?: Track;
   private unlocked = false;
+  /** Music plays quieter while the read-aloud voice speaks. */
+  private ducked = false;
 
   constructor(muted: boolean) {
     this.muted = muted;
@@ -36,6 +38,16 @@ export class GameAudio {
     else if (this.current) this.playMusic(this.current, true);
   }
 
+  /** Quieter music while the read-aloud voice speaks, so the words are easy to hear. */
+  duck(on: boolean) {
+    this.ducked = on;
+    if (this.music && this.current) this.music.volume = this.volumeFor(this.current);
+  }
+
+  private volumeFor(track: Track) {
+    return (track === 'launch' ? 0.6 : 0.35) * (this.ducked ? 0.3 : 1);
+  }
+
   /** Stop the music (Mission Control student screens stay quiet: the projector plays it). */
   stopMusic() {
     this.current = undefined;
@@ -50,8 +62,8 @@ export class GameAudio {
       this.music?.pause();
       this.music = new window.Audio(SRC[track]);
       this.music.loop = track !== 'launch';
-      this.music.volume = track === 'launch' ? 0.6 : 0.35;
     }
+    this.music.volume = this.volumeFor(track);
     this.music.play().catch(() => {
       /* the browser may block autoplay until a tap: that's fine */
     });
