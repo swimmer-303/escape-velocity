@@ -47,8 +47,8 @@ describe('Astronaut rank in the game', () => {
     const strip = document.querySelector('#modal-root .title-meta .rank-strip');
     expect(strip).not.toBeNull();
     expect(strip!.textContent).toContain('Cadet');
-    // The player card sits above the play buttons.
-    expect(strip!.compareDocumentPosition(button(/Quick mission/)!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The play buttons come first (a first-time player never scrolls past progress panels to find Play); the card follows.
+    expect(strip!.compareDocumentPosition(button(/Quick mission/)!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
 
     let celebratedDuringPlay = false;
     const stop = onGame('sol', () => {

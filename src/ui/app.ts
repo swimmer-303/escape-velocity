@@ -462,7 +462,6 @@ export class App {
         h('h1', null, 'Escape Velocity'),
         h('p', { class: 'tagline' }, 'Build a base on Mars, crew after crew. Make air to breathe and oxygen for the rocket home, and leave the base better for the next crew.'),
         this.codes.titleNote(),
-        h('div', { class: 'title-meta' }, ...renderTitleExtras()),
         h(
           'div',
           { class: 'menu' },
@@ -489,6 +488,8 @@ export class App {
             'See the code on GitHub',
           ),
         ),
+        // Rank, Storm Cards, Hangar and Flight school: right under the play buttons, so Play is never pushed down.
+        h('div', { class: 'title-meta' }, ...renderTitleExtras()),
         // Everything else, grouped so the title screen stays easy to read.
         h(
           'div',
