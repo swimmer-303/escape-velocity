@@ -18,6 +18,7 @@ export interface StageScene {
   /** The Workshop's current project and how far along it is (0..1), shown as a blueprint. */
   project?: UpgradeId | null;
   projectProgress?: number;
+  site?: 'mars' | 'moon';
 }
 
 export interface Stage {

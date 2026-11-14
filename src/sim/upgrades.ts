@@ -3,6 +3,8 @@
 // power spent building today is power NOT spent on air, food or fuel today.
 // Upgrades stay with the base when a crew goes home, so every crew builds for the next one.
 
+import type { Site } from './constants';
+
 export type UpgradeId = 'panel' | 'monitor' | 'battery' | 'berm' | 'dome2' | 'moxie2' | 'reactor';
 export const UPGRADE_IDS: readonly UpgradeId[] = ['panel', 'monitor', 'battery', 'berm', 'dome2', 'moxie2', 'reactor'];
 
@@ -73,6 +75,50 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
   },
 };
 
+/**
+ * Moon wording. Costs and effects are the same game values; only what is different on the Moon changes.
+ * Sources: NASA Moon Fact Sheet (sunlight 1361 W/m², 29.53-day synodic month),
+ * https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html ; NASA Carbothermal Reduction Demonstration (Apr 25, 2023),
+ * https://www.nasa.gov/centers-and-facilities/johnson/nasa-successfully-extracts-oxygen-from-lunar-soil-simulant/
+ */
+const MOON_TEXT: Partial<Record<UpgradeId, Partial<Pick<UpgradeDef, 'effect' | 'catch' | 'science'>>>> = {
+  panel: {
+    effect: '+1 power cell every day while the Sun is up.',
+    catch: 'Solar panels make nothing during the lunar night.',
+    science: 'The Moon gets as much sunlight as Earth (1361 watts per square meter), but none at all during its night, which lasts about two weeks. NASA Moon Fact Sheet.',
+  },
+  battery: {
+    effect: 'Unlocks the battery: put in up to 2 cells a day and it saves them for the lunar night, then gives back up to 2 cells each night.',
+    catch: 'A stored cell does nothing today.',
+    science: 'Every lunar night lasts about two weeks, so a solar-powered Moon base needs to store energy or make it another way.',
+  },
+  berm: {
+    effect: 'Piles Moon soil on the shelter: 1 cell now blocks 90% of a storm (instead of 50%).',
+    science: 'Thick layers of soil (regolith) or water are some of the best radiation shields a Moon base could build.',
+  },
+  moxie2: {
+    effect: 'Your O2 plant makes 50% more oxygen per cell, for air AND rocket fuel.',
+    science: 'In 2023, NASA heated simulated Moon soil in a vacuum chamber and pulled oxygen out of it. Bigger machines could make oxygen to breathe and to burn as rocket propellant.',
+  },
+  reactor: {
+    effect: '+3 power cells every day, all through the lunar night.',
+  },
+};
+
+/** The upgrade as described at this site. */
+export function upgradeDef(id: UpgradeId, site?: Site): UpgradeDef {
+  const def = UPGRADES[id];
+  return site === 'moon' ? { ...def, ...MOON_TEXT[id] } : def;
+}
+
+/**
+ * Upgrades that can be built at this site. On the Moon, Earth's storm warnings take only 1.3 seconds, so they are
+ * never late and the base does not need its own radiation monitor.
+ */
+export function upgradesFor(site?: Site): readonly UpgradeId[] {
+  return site === 'moon' ? UPGRADE_IDS.filter((id) => id !== 'monitor') : UPGRADE_IDS;
+}
+
 export type Levels = Record<UpgradeId, number>;
 
 export function emptyLevels(): Levels {
@@ -103,8 +149,11 @@ export function freshBase(): BaseState {
 }
 
 /** Suggested build order when a project finishes and the player hasn't picked another. */
-export function defaultNextProject(levels: Levels): UpgradeId | null {
-  const order: UpgradeId[] = ['panel', 'monitor', 'panel', 'battery', 'berm', 'moxie2', 'panel', 'reactor', 'dome2', 'panel'];
+export function defaultNextProject(levels: Levels, site?: Site): UpgradeId | null {
+  const order: UpgradeId[] =
+    site === 'moon'
+      ? ['panel', 'battery', 'panel', 'berm', 'moxie2', 'panel', 'reactor', 'dome2', 'panel']
+      : ['panel', 'monitor', 'panel', 'battery', 'berm', 'moxie2', 'panel', 'reactor', 'dome2', 'panel'];
   for (const id of order) if (nextCost(id, levels) !== null) return id;
   return null;
 }

@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App } from './app';
-import { CssStage } from '../render/stage';
+import { CssStage, type StageScene } from '../render/stage';
 import { builder } from '../sim/strategies';
 import { MODULE_LABEL } from './budget';
 import { MODULE_IDS, type MissionState } from '../sim/types';
@@ -40,10 +40,16 @@ beforeEach(() => {
 type AppInternals = { mission: MissionState; campaign: Campaign };
 
 /** Plays until `done()` says stop. Uses the builder strategy, picking Workshop projects through the UI. */
-async function play(app: App, done: () => boolean) {
+async function play(app: App, done: () => boolean, opts: { noSolWord?: boolean } = {}) {
   const internals = app as unknown as AppInternals;
   let sols = 0;
   for (let guard = 0; guard < 400 && !done(); guard++) {
+    // A Moon base counts Earth days: the word "sol" must never show up.
+    if (opts.noSolWord) {
+      const text = document.body.textContent ?? '';
+      const at = text.search(/\bsols?\b/i);
+      expect(at < 0 ? '' : text.slice(Math.max(0, at - 80), at + 40)).toBe('');
+    }
     if (document.querySelector('.crates .crate') && !button(/Plan the day/)) {
       document.querySelector<HTMLButtonElement>('.crates .crate')!.click();
       continue;
@@ -66,12 +72,12 @@ async function play(app: App, done: () => boolean) {
           box!.click();
         }
       }
-      (await waitFor(() => button(/^Run sol/))).click();
+      (await waitFor(() => button(/^Run (sol|day)/))).click();
       (await waitFor(() => button(/^Skip$/))).click();
       sols++;
       continue;
     }
-    const next = button(/Start sol|Launch!|See what happened|Land the crew|Send the next crew|Meet the next crew|See your base/);
+    const next = button(/Start (sol|day)|Launch!|See what happened|Land the crew|Send the next crew|Meet the next crew|See your base/);
     if (next) {
       next.click();
       await sleep(0);
@@ -86,6 +92,7 @@ describe('UI smoke test', () => {
   it('guides a first-time player through the first sol, and can be skipped', async () => {
     new App(new CssStage());
     (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
     (await waitFor(() => button(/Land the crew/))).click();
     const bubble = await waitFor(() => document.querySelector('.coach-bubble'));
     expect(bubble.textContent).toMatch(/PLAN THE DAY/);
@@ -127,6 +134,45 @@ describe('UI smoke test', () => {
     cont.click();
     expect((app2 as unknown as AppInternals).mission.sol).toBe(sol);
   }, 30000);
+
+  it('plays a whole 3-crew campaign on the Moon', async () => {
+    const stage = new CssStage();
+    const scenes: StageScene[] = [];
+    const setScene = stage.setScene.bind(stage);
+    stage.setScene = (scene) => {
+      scenes.push(scene);
+      setScene(scene);
+    };
+    const app = new App(stage);
+    (await waitFor(() => button(/New campaign/))).click();
+    (await waitFor(() => button(/The Moon/))).click();
+    expect(button(/The Moon/)!.getAttribute('aria-pressed')).toBe('true');
+    (await waitFor(() => button(/Cadet/))).click();
+    const internals = app as unknown as AppInternals;
+    const sols = await play(app, () => !!document.querySelector('[aria-label="Campaign complete"]'), { noSolWord: true });
+    expect(sols).toBeGreaterThan(20);
+    const c = internals.campaign;
+    expect(c.site).toBe('moon');
+    expect(c.results.length).toBe(3);
+    expect(c.results.filter((r) => r.status === 'won').length).toBeGreaterThanOrEqual(2);
+    expect(c.base.levels.monitor).toBe(0);
+    expect(scenes.some((sc) => sc.site === 'moon' && sc.crew > 0)).toBe(true);
+    expect(document.querySelector('[aria-label="Campaign complete"]')!.textContent).toMatch(/Days/);
+  }, 60000);
+
+  it('starts a Quick mission on the Moon', async () => {
+    const app = new App(new CssStage());
+    (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/The Moon/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
+    (await waitFor(() => button(/Land the crew/))).click();
+    await waitFor(() => button(/Plan the day/));
+    const m = (app as unknown as AppInternals).mission;
+    expect(m.config.site).toBe('moon');
+    expect(m.config.lightTimeMin * 60).toBeCloseTo(1.3, 5);
+    expect(document.body.textContent).toMatch(/about 1\.3 seconds/);
+    expect(document.querySelector('.sol-chip')!.textContent).toMatch(/DAY 1/);
+  }, 20000);
 
   it('plays the May 2024 history scenario', async () => {
     const app = new App(new CssStage());

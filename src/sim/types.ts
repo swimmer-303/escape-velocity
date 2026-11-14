@@ -1,5 +1,5 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-import type { Difficulty } from './constants';
+import type { Difficulty, Site } from './constants';
 import type { BaseState, UpgradeId } from './upgrades';
 
 export type ModuleId = 'air' | 'fuel' | 'greenhouse' | 'heaters' | 'shelter' | 'monitor' | 'build' | 'battery';
@@ -49,6 +49,8 @@ export interface SolPlan {
   resupply: boolean;
   /** Wind cleaned the solar panels: +1 cell. */
   cleaning: boolean;
+  /** Moon only: the lunar night (the solar panels are dark). Missing on Mars. */
+  night?: boolean;
 }
 
 export type CrateId = 'food' | 'parts' | 'panel';
@@ -56,7 +58,9 @@ export type CrateId = 'food' | 'parts' | 'panel';
 export interface MissionConfig {
   seed: string;
   difficulty: Difficulty;
-  /** One-way Earth to Mars light time used for the comm-delay mechanic, minutes. */
+  /** Where the base is: Mars (default, also for old saves) or the Moon. */
+  site?: Site;
+  /** One-way Earth to Mars (or Moon) light time used for the comm-delay mechanic, minutes. */
   lightTimeMin: number;
   /** Real space-weather events to deal into the mission. */
   eventPool: SpaceWeatherEvent[];
@@ -100,6 +104,14 @@ export interface Briefing {
   /** Cells the Workshop can still use on its current project today. */
   buildRoom: number;
   shelterBlock: readonly number[];
+  /** Moon only: tonight is part of the lunar night. */
+  night?: boolean;
+  /** Moon only: turns until the lunar night begins (1 = tomorrow), if it is still ahead. */
+  nightIn?: number | null;
+  /** Moon only: turns of night left, counting today. */
+  nightLeft?: number;
+  /** Moon only: cells waiting in the battery for the night (after today's share comes out). */
+  batteryHeld?: number;
 }
 
 export interface SolReport {
@@ -131,6 +143,8 @@ export interface SolReport {
   built?: UpgradeId;
   buildProject?: UpgradeId | null;
   stored: number;
+  /** Moon only: this turn was part of the lunar night. */
+  night?: boolean;
   before: Snapshot;
   after: Snapshot;
 }

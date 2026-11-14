@@ -1,11 +1,12 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // Turns sim results into plain-language cause and effect for kids.
 
-import { TUNING } from './constants';
-import { UPGRADES } from './upgrades';
+import type { Site } from './constants';
+import { UPGRADES, upgradeDef } from './upgrades';
+import { siteText } from './site';
 import type { MissionState, SolReport, SpaceWeatherEvent } from './types';
 
-export type ScienceTopic = 'shelter' | 'monitor' | 'greenhouse' | 'o2' | 'dust' | 'cold' | 'crew' | 'comm' | 'build';
+export type ScienceTopic = 'shelter' | 'monitor' | 'greenhouse' | 'o2' | 'dust' | 'cold' | 'crew' | 'comm' | 'build' | 'night';
 
 export interface Debrief {
   headline: string;
@@ -31,7 +32,9 @@ export function eventDate(e: SpaceWeatherEvent): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
-export function explainSol(r: SolReport): Debrief {
+export function explainSol(r: SolReport, site?: Site): Debrief {
+  const t = siteText(site);
+  const moon = t.site === 'moon';
   const details: string[] = [];
   const fuelLine = r.alloc.fuel
     ? `${cells(r.alloc.fuel)} made rocket fuel: the tank is ${Math.floor(r.after.fuel)}% full.`
@@ -72,18 +75,25 @@ export function explainSol(r: SolReport): Debrief {
     }
     if (s.warnedBy === 'monitor') details.push('Your own radiation monitor spotted it coming.');
   } else if (r.built) {
-    const u = UPGRADES[r.built];
+    const u = upgradeDef(r.built, site);
     headline = `Your crew finished building: ${u.name}! ${u.effect} It stays with the base for every crew after you.`;
     topic = r.built === 'panel' || r.built === 'reactor' || r.built === 'battery' ? 'build' : r.built === 'monitor' ? 'monitor' : r.built === 'berm' ? 'shelter' : r.built === 'dome2' ? 'greenhouse' : 'o2';
     tone = 'good';
   } else if (r.newDamage) {
-    headline = 'Too many cold nights damaged a battery: you will have 1 fewer power cell every sol from now on.';
+    headline = `Too many cold nights damaged a battery: you will have 1 fewer power cell every ${t.turn} from now on.`;
     topic = 'cold';
     tone = 'bad';
   } else if (r.heaterShortfall > 0) {
     headline = `You skipped ${r.heaterShortfall === 1 ? 'a heater' : 'the heaters'}, so the batteries got cold: you will have ${cells(r.heaterShortfall)} fewer tomorrow.`;
     topic = 'cold';
     tone = 'warn';
+  } else if (moon && r.night && r.after.air >= 1.5 && r.after.food >= 1.5) {
+    headline =
+      r.cells > 2
+        ? `The long lunar night: the solar panels are dark, but your base still had ${cells(r.cells)} to work with.`
+        : 'The long lunar night: the solar panels are dark, so your crew lives on the air and food you stocked up.';
+    topic = 'night';
+    tone = 'neutral';
   } else if (r.weather !== 'clear') {
     headline = `Dust blocked the sunlight, so your solar panels only made ${cells(r.cells)} today.`;
     topic = 'dust';
@@ -109,10 +119,10 @@ export function explainSol(r: SolReport): Debrief {
   if (headline !== fuelLine) details.push(fuelLine);
   if (r.built && r.storm) details.push(`Your crew also finished building: ${UPGRADES[r.built].name}.`);
   if (r.alloc.build && !r.built && r.buildProject) details.push(`${cells(r.alloc.build)} went into the Workshop: ${UPGRADES[r.buildProject].name} is getting closer.`);
-  if (r.stored) details.push(`You stored ${cells(r.stored)} in the battery for tomorrow.`);
+  if (r.stored) details.push(moon ? `You saved ${cells(r.stored)} in the battery for the lunar night.` : `You stored ${cells(r.stored)} in the battery for tomorrow.`);
   if (r.crate === 'food') details.push('The cargo lander brought 3 days of food.');
   if (r.crate === 'parts') details.push('The cargo lander brought spare parts: repairs done.');
-  if (r.crate === 'panel') details.push('The cargo lander brought a new solar panel: +1 cell from tomorrow.');
+  if (r.crate === 'panel') details.push(moon ? 'The cargo lander brought a new solar panel: +1 cell from tomorrow, while the Sun is up.' : 'The cargo lander brought a new solar panel: +1 cell from tomorrow.');
   if (r.cleaning) details.push('A lucky gust of wind blew the dust off your solar panels.');
   if (r.alloc.monitor) details.push('Your radiation monitor is watching the Sun tonight.');
   return { headline, details, topic, tone };
@@ -132,6 +142,8 @@ export interface Badge {
 }
 
 export function endingFor(state: MissionState): Ending {
+  const t = siteText(state.config);
+  const moon = t.site === 'moon';
   const log = state.log;
   const storms = log.filter((r) => r.storm);
   const unsheltered = storms.filter((r) => r.storm!.shelterCells === 0);
@@ -144,8 +156,8 @@ export function endingFor(state: MissionState): Ending {
   let title = '';
 
   if (state.status === 'won') {
-    title = 'ESCAPE VELOCITY REACHED: 5.0 km/s';
-    happened.push(`You filled the tank and launched on sol ${lastSol}.`);
+    title = `ESCAPE VELOCITY REACHED: ${t.escapeKms} km/s`;
+    happened.push(`You filled the tank and launched on ${t.turn} ${lastSol}.`);
     happened.push(
       `Your crew finished with ${days(Math.min(state.air, state.food) / state.crew)} of supplies and a radiation dose of ${n1(state.dose)} out of ${state.doseBudget}.`,
     );
@@ -157,22 +169,29 @@ export function endingFor(state: MissionState): Ending {
     title = 'The flight surgeon calls it: your crew heads home early.';
     switch (state.loseReason) {
       case 'air':
-        happened.push(`Your crew ran out of air on sol ${lastSol}.`);
-        tip = 'Keep at least 1 cell on AIR every sol. Your crew breathes 1 day of air each sol.';
+        happened.push(`Your crew ran out of air on ${t.turn} ${lastSol}.`);
+        tip =
+          moon && log[log.length - 1]?.night
+            ? 'Stock up on air before the lunar night. Your solar panels make nothing then, so make extra air in the days before.'
+            : `Keep at least 1 cell on AIR every ${t.turn}. Your crew breathes 1 day of air each ${t.turn}.`;
         break;
       case 'food':
-        happened.push(`Your crew ran out of food on sol ${lastSol}.`);
-        tip = 'Give the greenhouse 2 cells most sols. Grow lights are power-hungry: each cell grows half a day of food.';
+        happened.push(`Your crew ran out of food on ${t.turn} ${lastSol}.`);
+        tip =
+          moon && log[log.length - 1]?.night
+            ? 'Stock up on food before the lunar night. Your solar panels make nothing then, so grow extra food in the days before.'
+            : `Give the greenhouse 2 cells most ${t.turns}. Grow lights are power-hungry: each cell grows half a day of food.`;
         break;
       case 'dose':
-        happened.push(`Your crew's radiation dose went over the safe budget (${state.doseBudget}) on sol ${lastSol}.`);
-        if (unwarnedHits.length)
+        happened.push(`Your crew's radiation dose went over the safe budget (${state.doseBudget}) on ${t.turn} ${lastSol}.`);
+        if (unwarnedHits.length && !moon)
           tip = 'Power the radiation monitor when Earth says the Sun is active. It warns you before fast storms that beat Earth\'s messages.';
-        else if (warnedIgnored.length) tip = 'When you get a storm warning, put 2 cells in the shelter that sol.';
+        else if (warnedIgnored.length) tip = `When you get a storm warning, put 2 cells in the shelter that ${t.turn}.`;
+        else if (moon) tip = 'Every day on the Moon adds about twice the radiation of a day on Mars. Make fuel faster so your crew can go home sooner.';
         else tip = 'Every sol on Mars adds a little dose. Make fuel faster so your crew can go home sooner.';
         break;
       case 'window':
-        happened.push(`The launch window closed on sol ${lastSol} with the tank ${Math.floor(state.fuel)}% full.`);
+        happened.push(`The launch window closed on ${t.turn} ${lastSol} with the tank ${Math.floor(state.fuel)}% full.`);
         tip = 'Once your air and food reserves are safe, put more cells into FUEL.';
         break;
     }
@@ -185,6 +204,7 @@ export function endingFor(state: MissionState): Ending {
 }
 
 export function badgesFor(state: MissionState): Badge[] {
+  const t = siteText(state.config);
   const log = state.log;
   const won = state.status === 'won';
   const out: Badge[] = [];
@@ -194,13 +214,15 @@ export function badgesFor(state: MissionState): Badge[] {
     out.push({ id: 'stormproof', name: 'Storm Proof', why: 'Launched with every solar storm blocked by the shelter.' });
   if (log.some((r) => r.storm?.warnedBy === 'monitor'))
     out.push({ id: 'watchful', name: 'Watchful Eye', why: 'Your own radiation monitor caught a storm.' });
-  if (food >= 10) out.push({ id: 'greenhouse', name: 'Greenhouse Hero', why: `Grew ${n1(food)} days of food on Mars.` });
+  if (food >= 10) out.push({ id: 'greenhouse', name: 'Greenhouse Hero', why: `Grew ${n1(food)} days of food on ${t.body}.` });
   if (won && log.every((r) => r.heaterShortfall === 0))
     out.push({ id: 'cozy', name: 'Warm and Cozy', why: 'Never skipped the heaters.' });
-  if (won && log.length <= 12) out.push({ id: 'speedy', name: 'Speed Launch', why: `Launched by sol ${log.length}.` });
+  if (won && log.length <= 12) out.push({ id: 'speedy', name: 'Speed Launch', why: `Launched by ${t.turn} ${log.length}.` });
   if (won && state.config.difficulty === 'commander') out.push({ id: 'commander', name: 'Commander', why: 'Won on Commander difficulty.' });
   if (won && state.config.scenario === 'may2024') out.push({ id: 'history', name: 'History Maker', why: 'Survived the real May 2024 solar storms.' });
-  if (won && state.dose < TUNING[state.config.difficulty].doseBudget * 0.4)
+  if (won && t.site === 'moon' && log.some((r) => r.night) && log.every((r) => !r.night || r.heaterShortfall === 0))
+    out.push({ id: 'nightowl', name: 'Night Owl', why: 'Kept the base warm all through the lunar night.' });
+  if (won && state.dose < state.doseBudget * 0.4)
     out.push({ id: 'lowdose', name: 'Low Dose', why: 'Kept the crew\'s dose under 40% of the budget.' });
   return out;
 }

@@ -2,8 +2,9 @@
 // The generational campaign: each expedition is a new crew that inherits the base.
 // Between crews, Earth and Mars swing apart and back (about 26 months), while the
 // robot O2 plant keeps working and pre-fills the next crew's rocket.
+// On the Moon there is no 26-month wait (the Moon is always close), but the base still sits empty between crews.
 
-import { EXPEDITIONS, PREFILL_MAX_PCT, PREFILL_PCT_PER_CELL, TUNING, type Difficulty } from './constants';
+import { EXPEDITIONS, PREFILL_MAX_PCT, PREFILL_PCT_PER_CELL, REAL, tuningFor, type Difficulty, type Site } from './constants';
 import { REACTOR_CELLS, UPGRADE_BOOST } from './sim';
 import { freshBase, type BaseState, type UpgradeId } from './upgrades';
 import type { LoseReason, MissionConfig, MissionState, SpaceWeatherEvent } from './types';
@@ -31,6 +32,8 @@ export interface Campaign {
   version: 1;
   seed: string;
   difficulty: Difficulty;
+  /** Mars or the Moon. Missing in saves from before the Moon existed: those are Mars. */
+  site?: Site;
   /** Current expedition, 1-based. Past the last one = campaign complete. */
   expedition: number;
   /** The base when the current expedition started (used for retries). */
@@ -40,20 +43,23 @@ export interface Campaign {
   usedEventIds: string[];
 }
 
-export function newCampaign(seed: string, difficulty: Difficulty): Campaign {
+export function newCampaign(seed: string, difficulty: Difficulty, site: Site = 'mars'): Campaign {
   const base = freshBase();
-  return { version: 1, seed, difficulty, expedition: 1, base, prefillPct: 0, results: [], usedEventIds: [] };
+  return { version: 1, seed, difficulty, site, expedition: 1, base, prefillPct: 0, results: [], usedEventIds: [] };
 }
 
 export function campaignDone(c: Campaign): boolean {
   return c.expedition > EXPEDITIONS.length;
 }
 
+/** `lightTimeMin` is today's Earth-Mars light time; on the Moon it is always about 1.3 seconds. */
 export function missionConfigFor(c: Campaign, lightTimeMin: number, eventPool: SpaceWeatherEvent[]): MissionConfig {
+  const moon = c.site === 'moon';
   return {
     seed: c.seed,
     difficulty: c.difficulty,
-    lightTimeMin,
+    ...(moon ? { site: 'moon' as const } : {}),
+    lightTimeMin: moon ? REAL.moonLightSec / 60 : lightTimeMin,
     eventPool,
     expedition: c.expedition,
     base: c.base,
@@ -62,9 +68,9 @@ export function missionConfigFor(c: Campaign, lightTimeMin: number, eventPool: S
   };
 }
 
-/** How full the robot O2 plant gets the next crew's tank during the ~26 months the base is empty. */
-export function prefillFor(base: BaseState, difficulty: Difficulty): number {
-  const cells = TUNING[difficulty].baseCells + base.levels.panel + (base.levels.reactor ? REACTOR_CELLS : 0);
+/** How full the robot O2 plant gets the next crew's tank while the base is empty (on Mars, the ~26 months between crews). */
+export function prefillFor(base: BaseState, difficulty: Difficulty, site?: Site): number {
+  const cells = tuningFor(difficulty, site).baseCells + base.levels.panel + (base.levels.reactor ? REACTOR_CELLS : 0);
   const boost = base.levels.moxie2 ? UPGRADE_BOOST : 1;
   return Math.min(PREFILL_MAX_PCT, Math.round(cells * PREFILL_PCT_PER_CELL * boost));
 }
@@ -104,7 +110,7 @@ export function finishExpedition(c: Campaign, end: MissionState): Campaign {
     ...c,
     expedition: c.expedition + 1,
     base: { levels: { ...end.base.levels }, progress: { ...end.base.progress }, project: end.base.project },
-    prefillPct: prefillFor(end.base, c.difficulty),
+    prefillPct: prefillFor(end.base, c.difficulty, c.site),
     results,
     usedEventIds: [...used],
   };

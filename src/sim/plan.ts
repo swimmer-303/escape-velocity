@@ -3,7 +3,7 @@
 // space-weather events. The player's choices never change the plan; they change
 // how well the outpost copes with it.
 
-import { TUNING, DUST_STORM_LENGTH, EXPEDITIONS } from './constants';
+import { DUST_STORM_LENGTH, MOON_TUNING, expeditionFor, tuningFor } from './constants';
 import { makeRng, randInt, shuffle, type Rng } from './rng';
 import type { MissionConfig, SolPlan, SpaceWeatherEvent, Severity } from './types';
 
@@ -62,8 +62,8 @@ function blankPlan(windowSol: number): SolPlan[] {
 }
 
 export function buildPlan(config: MissionConfig): SolPlan[] {
-  const t = TUNING[config.difficulty];
-  const spec = EXPEDITIONS[Math.max(0, Math.min(EXPEDITIONS.length - 1, config.expedition - 1))];
+  const t = tuningFor(config.difficulty, config.site);
+  const spec = expeditionFor(config.expedition, config.site);
   const rng = makeRng(`${config.seed}|plan|${config.expedition}`);
   const W = spec.windowSol + t.windowBonus;
   const plan = blankPlan(W);
@@ -106,6 +106,8 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
     p.outlookActive = soon || rng() < 0.15;
   }
 
+  if (config.site === 'moon') return moonPlan(plan, rng, W, MOON_TUNING[config.difficulty].nightLength, spec.resupplySol);
+
   // --- Dust storms (Opportunity-style), spotted from orbit a day ahead --------
   const dustKinds: Array<'dusty' | 'storm'> = t.dustStorms >= 2 ? ['dusty', 'storm'] : ['dusty'];
   let lastDustEnd = 0;
@@ -145,6 +147,22 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
   // --- Cargo resupply -----------------------------------------------------------
   at(Math.min(spec.resupplySol, W)).resupply = true;
 
+  return plan;
+}
+
+/**
+ * The Moon has no air: no dust storms, no wind, no weather. Earth is 1.3 light-seconds away, so the Sun never
+ * blocks the radio. What it does have is the lunar night: about 14.8 Earth days of darkness (half of the 29.53-day
+ * synodic month, NASA Moon Fact Sheet), compressed here into a few turns.
+ */
+function moonPlan(plan: SolPlan[], rng: Rng, W: number, nightLength: number, resupplySol: number): SolPlan[] {
+  const at = (sol: number) => plan[sol - 1];
+  // Leave a few days to stock up before the night, and a few to finish fuelling after it.
+  const lo = Math.max(5, Math.round(W * 0.3));
+  const hi = Math.max(lo, W - nightLength - 6);
+  const start = randInt(rng, lo, hi);
+  for (let s = start; s < start + nightLength && s <= W; s++) at(s).night = true;
+  at(Math.min(resupplySol, W)).resupply = true;
   return plan;
 }
 

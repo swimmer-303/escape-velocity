@@ -3,7 +3,6 @@
 // No rendering or DOM imports allowed in src/sim.
 
 import {
-  TUNING,
   RATES,
   REAL,
   HEATER_NEED,
@@ -14,11 +13,15 @@ import {
   MODULE_CAP,
   EARTH_PROCESSING_MIN,
   SUN_EARTH_LIGHT_MIN,
-  EXPEDITIONS,
+  MOON_BATTERY,
+  MOON_NIGHT,
+  expeditionFor,
+  tuningFor,
   type ExpeditionSpec,
+  type Site,
 } from './constants';
 import { buildPlan } from './plan';
-import { defaultNextProject, maxLevel, nextCost, type BaseState, type UpgradeId } from './upgrades';
+import { defaultNextProject, maxLevel, nextCost, upgradesFor, type BaseState, type UpgradeId } from './upgrades';
 import {
   MODULE_IDS,
   type Allocation,
@@ -47,12 +50,12 @@ export function totalCells(a: Allocation): number {
   return MODULE_IDS.reduce((s, id) => s + a[id], 0);
 }
 
-export function expeditionSpec(config: Pick<MissionConfig, 'expedition'>): ExpeditionSpec {
-  return EXPEDITIONS[Math.max(0, Math.min(EXPEDITIONS.length - 1, config.expedition - 1))];
+export function expeditionSpec(config: Pick<MissionConfig, 'expedition'> & { site?: Site }): ExpeditionSpec {
+  return expeditionFor(config.expedition, config.site);
 }
 
 export function windowSol(state: MissionState): number {
-  return expeditionSpec(state.config).windowSol + TUNING[state.config.difficulty].windowBonus;
+  return expeditionSpec(state.config).windowSol + tuningFor(state.config.difficulty, state.config.site).windowBonus;
 }
 
 function cloneBase(b: BaseState): BaseState {
@@ -60,7 +63,7 @@ function cloneBase(b: BaseState): BaseState {
 }
 
 export function createMission(config: MissionConfig): MissionState {
-  const t = TUNING[config.difficulty];
+  const t = tuningFor(config.difficulty, config.site);
   const spec = expeditionSpec(config);
   return {
     config,
@@ -93,6 +96,42 @@ export function planFor(state: MissionState, sol = state.sol) {
 
 export const has = (s: MissionState, id: UpgradeId) => s.base.levels[id] > 0;
 
+/** Moon rules apply (lunar night, regolith O2, no dust, Earth 1.3 light-seconds away). */
+export const isMoon = (s: MissionState) => s.config.site === 'moon';
+
+/** Moon only: is this turn part of the lunar night? Always false on Mars. */
+export function isNight(s: MissionState, sol = s.sol): boolean {
+  return isMoon(s) && !!planFor(s, sol)?.night;
+}
+
+/**
+ * Cells the battery gives back today. Mars: everything stored yesterday. Moon: the battery saves cells for the
+ * lunar night and gives back up to MOON_BATTERY.releasePerNight on each night turn.
+ */
+export function batteryOut(s: MissionState): number {
+  if (!isMoon(s)) return s.stored;
+  return isNight(s) ? Math.min(s.stored, MOON_BATTERY.releasePerNight) : 0;
+}
+
+/** Moon only: turns until the lunar night starts (1 = tomorrow), or null if it is night now or no night is ahead. */
+export function nightIn(s: MissionState): number | null {
+  if (!isMoon(s) || isNight(s)) return null;
+  for (let sol = s.sol + 1; sol <= s.plan.length; sol++) if (s.plan[sol - 1].night) return sol - s.sol;
+  return null;
+}
+
+/** Moon only: turns of lunar night left, counting today (0 in the daytime). */
+export function nightLeft(s: MissionState): number {
+  let n = 0;
+  for (let sol = s.sol; sol <= s.plan.length && isNight(s, sol); sol++) n++;
+  return n;
+}
+
+/** Steady background (cosmic ray) dose per turn: Curiosity RAD at Gale Crater, or Chang'e 4 LND on the Moon. */
+export function backgroundDose(s: MissionState): number {
+  return isMoon(s) ? REAL.moonSurfaceUsvPerDay / 1000 : REAL.marsSurfaceMsvPerDay;
+}
+
 export function airPerCell(s: MissionState) {
   return RATES.airPerCell * (has(s, 'moxie2') ? UPGRADE_BOOST : 1);
 }
@@ -108,7 +147,7 @@ export function shelterBlock(s: MissionState): readonly number[] {
 
 /** Solar cells on a clear sol, from the starting array plus panels built. */
 export function solarCells(s: MissionState) {
-  return TUNING[s.config.difficulty].baseCells + s.base.levels.panel;
+  return tuningFor(s.config.difficulty, s.config.site).baseCells + s.base.levels.panel;
 }
 
 /** Most cells each module can take today. */
@@ -117,7 +156,9 @@ export function moduleCap(s: MissionState, id: ModuleId): number {
     case 'monitor':
       return has(s, 'monitor') ? MODULE_CAP.monitor : 0;
     case 'battery':
-      return has(s, 'battery') ? MODULE_CAP.battery : 0;
+      if (!has(s, 'battery')) return 0;
+      // On the Moon the battery keeps its charge for the night, up to its capacity.
+      return isMoon(s) ? Math.max(0, Math.min(MODULE_CAP.battery, MOON_BATTERY.capacity - (s.stored - batteryOut(s)))) : MODULE_CAP.battery;
     case 'shelter':
       return has(s, 'berm') ? 1 : MODULE_CAP.shelter;
     case 'build': {
@@ -135,7 +176,10 @@ export function getBriefing(state: MissionState): Briefing {
   const p = planFor(state);
   const notes: string[] = [];
   const solar = solarCells(state);
-  let cells = solar;
+  const moon = isMoon(state);
+  const night = isNight(state);
+  let cells = night ? 0 : solar;
+  if (night) notes.push(`Lunar night, panels dark: -${solar}`);
   if (p.weather !== 'clear') {
     const lost = Math.round(solar * DUST_LOSS[p.weather]);
     cells -= lost;
@@ -149,7 +193,7 @@ export function getBriefing(state: MissionState): Briefing {
     cells += 1;
     notes.push('Wind cleaned your panels: +1');
   }
-  if (state.bonusCells) {
+  if (state.bonusCells && !night) {
     cells += state.bonusCells;
     notes.push(`Cargo solar panel: +${state.bonusCells}`);
   }
@@ -161,16 +205,20 @@ export function getBriefing(state: MissionState): Briefing {
     cells -= state.damage;
     notes.push(`Damaged batteries: -${state.damage}`);
   }
-  cells = Math.max(2, cells);
-  if (state.stored) {
-    cells += state.stored;
-    notes.push(`From your battery: +${state.stored}`);
+  const floor = night ? MOON_NIGHT.floorCells : 2;
+  if (night && cells < floor) notes.push(`Backup battery: ${floor} cells`);
+  cells = Math.max(floor, cells);
+  const fromBattery = batteryOut(state);
+  if (fromBattery) {
+    cells += fromBattery;
+    notes.push(`From your battery: +${fromBattery}`);
   }
 
   let warning: Warning | null = null;
   if (p.storm) {
     if (state.monitorOnline) warning = { source: 'monitor', event: p.storm.event };
-    else if (!p.blackout && !p.storm.fast) warning = { source: 'earth', event: p.storm.event };
+    // Mars: the fastest particles beat Earth's warning. Moon: the warning needs only 1.3 seconds, so it is always in time.
+    else if (!p.blackout && (!p.storm.fast || moon)) warning = { source: 'earth', event: p.storm.event };
   }
 
   return {
@@ -178,7 +226,7 @@ export function getBriefing(state: MissionState): Briefing {
     weather: p.weather,
     cells,
     powerNotes: notes,
-    heaterNeed: HEATER_NEED.normal + (p.coldSnap ? HEATER_NEED.coldSnap : 0) + (has(state, 'dome2') ? 1 : 0),
+    heaterNeed: HEATER_NEED.normal + (p.coldSnap ? HEATER_NEED.coldSnap : 0) + (night ? MOON_NIGHT.heaterExtra : 0) + (has(state, 'dome2') ? 1 : 0),
     coldSnap: p.coldSnap,
     warning,
     outlook: p.blackout ? 'none' : p.outlookActive ? 'active' : 'quiet',
@@ -186,11 +234,12 @@ export function getBriefing(state: MissionState): Briefing {
     dustTomorrow: p.dustTomorrow,
     resupply: p.resupply,
     monitorOnline: state.monitorOnline,
-    fromBattery: state.stored,
+    fromBattery,
     hasMonitor: has(state, 'monitor'),
     hasBattery: has(state, 'battery'),
     buildRoom: moduleCap(state, 'build'),
     shelterBlock: shelterBlock(state),
+    ...(moon ? { night, nightIn: nightIn(state), nightLeft: nightLeft(state), batteryHeld: state.stored - fromBattery } : {}),
   };
 }
 
@@ -268,12 +317,12 @@ function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undef
       s.base.progress[project] = 0;
       built = project;
       s.builtThisExpedition.push(project);
-      if (s.base.levels[project] >= maxLevel(project)) s.base.project = defaultNextProject(s.base.levels);
+      if (s.base.levels[project] >= maxLevel(project)) s.base.project = defaultNextProject(s.base.levels, state.config.site);
     }
   }
 
-  // Battery: cells stored today come back tomorrow.
-  s.stored = alloc.battery;
+  // Battery. Mars: cells stored today come back tomorrow. Moon: they wait in the battery for the night.
+  s.stored = isMoon(state) ? state.stored - b.fromBattery + alloc.battery : alloc.battery;
 
   // Heaters: every missing cell chills the batteries (fewer cells tomorrow) and wears equipment.
   const shortfall = Math.max(0, b.heaterNeed - alloc.heaters);
@@ -287,7 +336,7 @@ function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undef
   }
 
   // Radiation: the steady background (cosmic rays) plus any solar storm.
-  const baseDose = REAL.marsSurfaceMsvPerDay;
+  const baseDose = backgroundDose(state);
   s.dose += baseDose;
   let stormInfo: SolReport['storm'];
   const storm =
@@ -308,7 +357,7 @@ function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undef
       fast: storm.fast,
       warnedBy,
       lateByMin:
-        !warnedBy && storm.fast && !p.blackout && !(storm.event.kind === 'cme' && !storm.event.sourceLocation)
+        !warnedBy && storm.fast && !p.blackout && !isMoon(state) && !(storm.event.kind === 'cme' && !storm.event.sourceLocation)
           ? earthWarningLateBy(state.config.lightTimeMin)
           : undefined,
       shelterCells,
@@ -365,6 +414,7 @@ function applySol(state: MissionState, alloc: Allocation, crate: CrateId | undef
     built,
     buildProject: project,
     stored: alloc.battery,
+    ...(p.night && isMoon(state) ? { night: true } : {}),
     before,
     after: snapshot(s),
   };
@@ -388,6 +438,7 @@ export function runSol(state: MissionState, alloc: Allocation, crate?: CrateId):
 /** Pick which upgrade the Workshop works on. Progress on every project is kept. */
 export function setProject(state: MissionState, id: UpgradeId | null): MissionState {
   if (id && nextCost(id, state.base.levels) === null) return state;
+  if (id && !upgradesFor(state.config.site).includes(id)) return state;
   return { ...state, base: { ...cloneBase(state.base), project: id } };
 }
 

@@ -3,7 +3,23 @@
 // and exactly how the game scales real numbers. This is how players and judges can check our science.
 
 import { h } from './dom';
-import { REAL, TUNING, RATES, STORM_DOSE, DUST_LOSS, EXPEDITIONS, PREFILL_MAX_PCT, type Difficulty } from '../sim/constants';
+import {
+  REAL,
+  TUNING,
+  RATES,
+  STORM_DOSE,
+  DUST_LOSS,
+  EXPEDITIONS,
+  PREFILL_MAX_PCT,
+  MOON_TUNING,
+  MOON_EXPEDITIONS,
+  MOON_NIGHT,
+  MOON_BATTERY,
+  SUN_EARTH_LIGHT_MIN,
+  EARTH_PROCESSING_MIN,
+  type Difficulty,
+} from '../sim/constants';
+import { FAST_PARTICLE_MIN } from '../sim/sim';
 import type { SpaceWeatherFeed } from '../data/donki';
 import { MAY2024_SNAPSHOT, countByClass } from '../data/donki';
 import type { LightTime } from '../data/lighttime';
@@ -117,6 +133,51 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
       [tag('real', 'PARTNER RESOURCE')],
       [link('https://www.asc-csa.gc.ca/eng/youth-educators/resources-stem-and-youth-organizations.asp', 'CSA youth and STEM resources')],
     ],
+    // ------------------------------------------------------------ the Moon
+    [
+      "Moon: Chang'e 4 LND radiation",
+      [
+        `On a Moon base, every day adds ${(REAL.moonSurfaceUsvPerDay / 1000).toFixed(3)} mSv to your crew's dose: the real average dose equivalent (${REAL.moonSurfaceUsvPerDay.toLocaleString('en-US')} microsieverts per day) that China's Chang'e 4 lander measured on the lunar surface in 2019, the first such measurement. That is almost twice the ISS over the same weeks (${REAL.issSameTimeUsvPerDay} per day) and about twice the Mars value. The end-screen chart uses its absorbed dose rate, ${REAL.moonSurfaceUgyPerHour} micrograys per hour.`,
+      ],
+      [tag('real', 'PUBLISHED FIGURE')],
+      [link('https://doi.org/10.1126/sciadv.aaz1334', 'Zhang et al., Science Advances 2020')],
+    ],
+    [
+      'Moon: NASA Moon Fact Sheet',
+      [
+        `Escape velocity ${REAL.moonEscapeKms} km/s (Mars: ${REAL.marsEscapeKms}). Mean distance ${REAL.moonDistanceKm.toLocaleString('en-US')} km, so radio messages take about ${REAL.moonLightSec} seconds. Synodic month ${REAL.moonSynodicDays} days, so lunar daylight and lunar night each last about 14.8 Earth days. Sunlight ${REAL.moonSolarWm2} W/m², the same as at Earth. Equator temperatures ${REAL.moonTempMinK} K to ${REAL.moonTempMaxK} K (about ${REAL.moonTempMinK - 273} °C to ${REAL.moonTempMaxK - 273} °C).`,
+      ],
+      [tag('real', 'PUBLISHED FIGURE')],
+      [link('https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html', 'nssdc.gsfc.nasa.gov Moon Fact Sheet')],
+    ],
+    [
+      'Moon: oxygen from regolith (ESA)',
+      [
+        `The Moon has no air to pull oxygen from, so a Moon base's O2 plant gets it from the soil. Samples returned from the Moon show regolith is ${REAL.regolithO2PctMin} to ${REAL.regolithO2PctMax}% oxygen by weight, locked in minerals and glass.`,
+      ],
+      [tag('real', 'PUBLISHED FIGURE')],
+      [link('https://www.esa.int/Enabling_Support/Space_Engineering_Technology/ESA_opens_oxygen_plant_making_air_out_of_moondust', 'ESA, January 2020')],
+    ],
+    [
+      'Moon: NASA Carbothermal Reduction Demonstration',
+      [
+        'In April 2023, NASA Johnson Space Center extracted oxygen from simulated lunar soil in a vacuum chamber for the first time, heating it with a laser in a reactor built by Sierra Space. NASA notes the oxygen could be used for breathing and as propellant: the same air-or-fuel trade-off as the game.',
+      ],
+      [tag('real', 'PUBLISHED RESULT')],
+      [link('https://www.nasa.gov/centers-and-facilities/johnson/nasa-successfully-extracts-oxygen-from-lunar-soil-simulant/', 'NASA, April 25, 2023')],
+    ],
+    [
+      "Moon: NASA and the lunar south pole",
+      [
+        "The Moon base sits near the south pole, the region NASA plans to explore with crewed Artemis landings. There the Sun hovers below or just above the horizon, and permanently shadowed craters reach -203 °C.",
+      ],
+      [tag('real', 'REFERENCE')],
+      [
+        link('https://www.nasa.gov/humans-in-space/moons-south-pole-is-full-of-mystery-science-intrigue/', "NASA: the Moon's south pole"),
+        ' · ',
+        link('https://www.nasa.gov/missions/artemis/artemis-3/nasa-outlines-preliminary-artemis-iii-mission-plans/', 'NASA Artemis plans (2026)'),
+      ],
+    ],
   ];
 
   const scaling: Array<[string, string]> = [
@@ -129,6 +190,27 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
     ['Storm sizes', `Game doses for a storm caught outside: small ${STORM_DOSE.minor}, medium ${STORM_DOSE.moderate}, big ${STORM_DOSE.major} mSv. The big one is modeled on the May 2024 event. In real life not every big flare sends particles to Mars; in the game, every X-class flare does.`],
     ['Warnings', 'In May 2024, particles reached Mars in tens of minutes (NASA/JPL). Big storms send the fastest particles, so in the game an X-class storm always beats Earth\'s warning to Mars. Medium storms build more slowly, so Earth\'s warning arrives in time. A powered radiation monitor warns you the next morning either way.'],
     ['Shelter', 'A storm shelter with 2 cells blocks 90% of a storm; 1 cell blocks half. Shelters mostly help against solar storms, not the steady background radiation, and the game models it that way.'],
+    [
+      'Moon: time',
+      `One turn is one Earth day (not a sol). A real lunar night lasts about 14.8 Earth days; the game squeezes it into ${MOON_TUNING.cadet.nightLength} days so a mission fits in a class period. The daylight before and after it is not to scale either.`,
+    ],
+    [
+      'Moon: power at night',
+      `At night the solar panels make nothing. A small backup battery always gives ${MOON_NIGHT.floorCells} cells, the Battery bank upgrade saves up to ${MOON_BATTERY.capacity} cells for the night and gives back ${MOON_BATTERY.releasePerNight} each night, and the fission reactor keeps running. Heaters need ${MOON_NIGHT.heaterExtra} extra cell at night. These are game values.`,
+    ],
+    [
+      'Moon: radiation budget',
+      `Moon crews get a ${MOON_TUNING.cadet.doseBudget} mSv budget (Mars: ${TUNING.cadet.doseBudget}), because every day on the Moon adds the real Chang'e 4 dose, about twice the Mars value. Both are much stricter than NASA's 600 mSv career limit. Storm sizes and the shelter use the same game values as on Mars.`,
+    ],
+    [
+      'Moon: rocket fuel',
+      `Moon crews need ${MOON_EXPEDITIONS.map((e) => e.fuelNeeded).join(', ')} fuel cells (Mars: ${EXPEDITIONS.map((e) => e.fuelNeeded).join(', ')}). These are game values; the real reason a Moon rocket needs less is that the Moon's gravity is much weaker (escape velocity ${REAL.moonEscapeKms} km/s vs. ${REAL.marsEscapeKms} km/s).`,
+    ],
+    [
+      'Moon: warnings and weather',
+      `Earth's warning needs ${SUN_EARTH_LIGHT_MIN} minutes for sunlight to reach Earth, about ${EARTH_PROCESSING_MIN} minutes for forecasters, and ${REAL.moonLightSec} seconds of radio: less than the ${FAST_PARTICLE_MIN} minutes the game gives the fastest particles, so on the Moon every warning arrives in time and there is no radiation monitor to build. The Moon has no air, so there are no dust storms, no wind and no cold snaps, and the Sun never blocks the radio the way it does for Mars.`,
+    ],
+    ['Moon: between crews', 'There is no 26-month wait: the Moon is always close, so the next crew comes when it is ready. The game does not say how long the base waits.'],
   ];
 
   return [
