@@ -1,5 +1,8 @@
 # Written with AI assistance (Claude Code). See README "Use of AI tools".
-"""Turn raw AI-generated images into small retro game art with a baked-in watermark.
+"""Turn raw AI-generated images into small retro game art.
+
+No per-image watermark by default: the Space Apps organizer confirmed a disclosure at the start of
+the slides and at the bottom of the website is enough. Pass --watermark to bake one in anyway.
 
 Usage:
     python3 -I scripts/process-art.py <raw_dir> [out_dir]
@@ -29,6 +32,7 @@ DEFAULT_OUT = os.path.join(ROOT, "public", "art")
 
 MAX_BYTES = 200 * 1024
 WATERMARK = "AI-generated"
+WATERMARK_ON = "--watermark" in sys.argv
 WM_BG = (0x0B, 0x0A, 0x18, 191)  # #0b0a18 at ~75% alpha
 WM_FG = (255, 255, 255, 255)
 WM_PAD = 4
@@ -86,7 +90,7 @@ def render(src, size, colors):
     # cyan fuel stripe) that plain median cut tends to merge into the browns.
     poster = small.quantize(colors=colors, method=Image.MEDIANCUT, kmeans=3, dither=Image.NONE)
     big = poster.convert("RGB").resize((size[0] * 2, size[1] * 2), Image.NEAREST)
-    marked = bake_watermark(big)
+    marked = bake_watermark(big) if WATERMARK_ON else big
     # Re-palettize onto: the posterized colors, the same colors under the watermark
     # box, and a few greys for the anti-aliased label. Art colors stay exact.
     flat = poster.getpalette()[: 3 * colors]
@@ -119,8 +123,9 @@ def process(path, out_dir):
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
-    raw_dir = sys.argv[1]
-    out_dir = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_OUT
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    raw_dir = args[0]
+    out_dir = args[1] if len(args) > 1 else DEFAULT_OUT
     os.makedirs(out_dir, exist_ok=True)
     files = sorted(
         f for f in os.listdir(raw_dir) if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))

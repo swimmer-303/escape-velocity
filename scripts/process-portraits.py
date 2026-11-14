@@ -41,6 +41,7 @@ CELL = LOW * SCALE
 COLORS = 40
 MAX_BYTES = 60 * 1024
 
+WATERMARK_ON = "--watermark" in sys.argv  # off by default (disclosure lives on the site and slides)
 STRIP_H = 32  # bottom strip that carries the full "AI-generated" text
 WM_BG = (0x0B, 0x0A, 0x18)  # same navy as the game UI and process-art.py
 WM_FG = (255, 255, 255)
@@ -129,6 +130,13 @@ def build_sheet(src, cols, rows, use, colors):
     sheet.paste(big, (0, 0))
     draw = ImageDraw.Draw(sheet)
 
+    if not WATERMARK_ON:
+        flat = poster.getpalette()[: 3 * colors]
+        pal = [tuple(flat[i : i + 3]) for i in range(0, len(flat), 3)] + [WM_BG]
+        pal_img = Image.new("P", (1, 1))
+        pal_img.putpalette([v for c in pal for v in c] + [0] * (768 - 3 * len(pal)))
+        return sheet.quantize(palette=pal_img, dither=Image.NONE), n
+
     # "AI" corner tag on every portrait: Silkscreen at 24 px is 3 screen pixels per font pixel.
     tag_font = load_font(24)
     l, t, tw, th = text_box(draw, tag_font, "AI")
@@ -175,8 +183,9 @@ def process(n, path, out_dir):
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
-    raw_dir = sys.argv[1]
-    out_dir = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_OUT
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    raw_dir = args[0]
+    out_dir = args[1] if len(args) > 1 else DEFAULT_OUT
     os.makedirs(out_dir, exist_ok=True)
     for n in sorted(SHEETS):
         path = os.path.join(raw_dir, f"crew-{n}.png")

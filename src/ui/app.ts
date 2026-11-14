@@ -425,6 +425,12 @@ export class App {
           `Today Mars is about ${Math.round(lt.distanceKm / 1e6)} million km from Earth, so messages take about ${Math.round(lt.oneWayMinutes)} minutes to arrive (approximate). `,
           counts ? `${this.feed.status === 'live' ? 'Live' : 'Archived'} NASA data: ${counts.X} X-class and ${counts.M} M-class solar flares in the last 30 days.` : '',
         ),
+        h(
+          'p',
+          { class: 'ai-disclosure' },
+          'AI disclosure: the illustrations, crew portraits and music in this game are AI-generated (Higgsfield), and the code was written with AI assistance (Claude Code). The picture of the Sun is real NASA imagery, and all data comes from NASA. ',
+          h('button', { class: 'linklike', onclick: () => this.showCredits() }, 'Details'),
+        ),
       ),
       { label: 'Escape Velocity title screen' },
     );

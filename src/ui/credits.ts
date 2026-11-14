@@ -15,7 +15,7 @@ export function renderCredits(): HTMLElement[] {
       'ul',
       { class: 'clean' },
       h('li', null, h('b', null, 'Code: '), 'written with AI assistance (Claude Code by Anthropic) and reviewed by our team. Each source file says so at the top.'),
-      h('li', null, h('b', null, 'Images: '), 'all illustrations, including the crew portraits, are AI-generated with Higgsfield (GPT Image 2.6) and carry a visible "AI-generated" watermark (an "AI" tag on each small crew portrait). The crew members are made up. The one exception is the picture of the Sun: it is a real NASA photo (see below).'),
+      h('li', null, h('b', null, 'Images: '), 'all illustrations, including the crew portraits, are AI-generated with Higgsfield (GPT Image 2.6). The crew members are made up. The one exception is the picture of the Sun: it is a real NASA photo (see below).'),
       h('li', null, h('b', null, 'Music: '), 'AI-generated with Higgsfield (ElevenLabs Music v2.5). Sound effects are made in code.'),
       h('li', null, h('b', null, 'Data: '), 'all space-weather, radiation and biology data comes straight from NASA sources (listed below and in the Science Log). Our AI-assisted scripts fetch and reformat it; they never invent values.'),
       h('li', null, 'Every generated asset, with its prompt, is listed in ASSETS.md in our code repository.'),

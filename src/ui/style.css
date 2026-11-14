@@ -565,3 +565,7 @@ table.mc-players td { vertical-align: middle; }
 .today-event { box-shadow: inset 0 0 0 3px var(--amber); }
 .today-calm { box-shadow: inset 0 0 0 3px var(--green); }
 @media (max-width: 900px) { .tray-actions { margin-left: 0; width: 100%; } }
+
+/* ---------- AI disclosure (title screen footer) ---------- */
+.ai-disclosure { font-size: 13px; color: var(--muted); margin: 14px auto 0; max-width: 640px; line-height: 1.4; border-top: 2px dashed var(--line); padding-top: 10px; }
+.linklike { background: none; border: none; padding: 0; color: var(--cyan); text-decoration: underline; cursor: pointer; font: inherit; }

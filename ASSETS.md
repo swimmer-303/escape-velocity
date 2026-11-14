@@ -1,5 +1,7 @@
 # Escape Velocity: Asset Credits
 
+> **Update (Nov 14, 2026):** the Space Apps organizer confirmed that a disclosure at the start of the slides and at the bottom of the website is enough, so the shipped images no longer carry a per-image watermark. They were re-processed from the same originals with the same steps, minus the watermark (`scripts/process-art.py` and `scripts/process-portraits.py` take `--watermark` to add it back). Disclosure now lives in the title screen footer, the in-game Credits, the README and the pitch deck's first slide.
+
 All images and music in this game were made with AI. This page lists every shipped file, the tool and model used, the exact prompt, and what we did to it afterwards.
 
 - **Images:** every image in `public/art/` was generated with **Higgsfield** using the **GPT Image 2.6** model (`gpt_image_2_6`, quality `high`, resolution `1k`, aspect ratio 16:9). The title image was made first. It was then given to the model as a style reference for all the other images so the set looks consistent. Each shipped image has a visible **"AI-generated"** watermark baked into the bottom-right corner by `scripts/process-art.py`. The crew portrait sheets (`public/art/crew-*.png`, see [Crew portraits](#crew-portraits)) use the same model and title reference, are processed by `scripts/process-portraits.py`, and carry an **"AI"** tag on every portrait plus a full **"AI-generated"** label along the bottom of each sheet.

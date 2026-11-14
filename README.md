@@ -89,7 +89,7 @@ src/room/     Mission Control: shared protocol, pure room rules (stations, legal
 src/ui/room/  Mission Control screens: join/create, the teacher's projector view and the student's station view
 api/          spaceweather.ts: the DONKI proxy handler (run by the droplet's server)
 deploy/       droplet server (server.ts), Caddyfile, systemd service, one-time setup script
-scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark), process-portraits.py (crew portrait sheets + watermark)
+scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing), process-portraits.py (crew portrait sheets); both take --watermark to bake a label in
 ```
 
 ## Run it
@@ -123,10 +123,10 @@ Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to
 We used AI tools, and here is exactly where and how:
 
 - **Code:** written with AI assistance (Claude Code by Anthropic), directed and reviewed by our team. Every source file has a header comment saying so.
-- **Images:** every illustration (title art, event cards, Real Science art, crew portraits) was generated with **Higgsfield** (GPT Image 2.6), then downscaled and palette-reduced for the retro look. **Every image carries a visible "AI-generated" watermark**, baked into the image file. Crew portraits come in one sprite sheet per crew: each face has a baked-in "AI" tag and each sheet a full "AI-generated" label. The crew members are fictional. The one exception is the live picture of the Sun, which is real NASA/SDO imagery loaded from NASA and credited as such.
+- **Images:** every illustration (title art, event cards, Real Science art, crew portraits) was generated with **Higgsfield** (GPT Image 2.6), then downscaled and palette-reduced for the retro look. The Space Apps organizer confirmed that a clear disclosure (at the start of our slides and at the bottom of the website) is enough, so images carry no per-image watermark; the title screen's footer and the Credits say which art is AI-generated. The one exception is the live picture of the Sun, which is real NASA/SDO imagery loaded from NASA and credited as such.
 - **Music:** generated with **Higgsfield** (ElevenLabs Music v2.5); credited here, in the in-game Credits screen, and in each MP3's metadata. Sound effects are synthesized in code.
 - **Data:** all data comes from NASA sources. AI-assisted scripts fetch and reformat it, but never invent or change values.
-- **Disclosure in the product:** an `ai-assistance` meta tag in `index.html`, an "AI tools" section in the in-game Credits, watermarks on all images, and [`ASSETS.md`](ASSETS.md), which lists every generated asset with its tool, model and full prompt.
+- **Disclosure in the product:** an `ai-assistance` meta tag in `index.html`, an "AI tools" section in the in-game Credits, a disclosure line at the bottom of the title screen, the disclosure on the pitch deck's first slide, and [`ASSETS.md`](ASSETS.md), which lists every generated asset with its tool, model and full prompt.
 - No NASA logos, flags, mission patches or insignia appear in any prompt or asset.
 
 ## Credits
