@@ -278,7 +278,10 @@ export class App {
     const focusable = box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>('button.primary, button.go, button');
     // "Read to me" (and auto read-aloud for briefings and debriefs). Added after picking the focus, so focus stays put.
     decorateDialog(box, { autoRead: opts.autoRead });
-    focusable?.focus();
+    // Focus the main button without scrolling to it: a long dialog (the title screen, a busy briefing) must open at its top.
+    focusable?.focus({ preventScroll: true });
+    box.scrollTop = 0;
+    this.modalRoot.scrollTop = 0;
     return box;
   }
 
