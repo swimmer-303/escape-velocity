@@ -172,7 +172,9 @@ describe('the Storm Cards screen', () => {
     expect(row.textContent).toContain(`1 of ${poolFacts().length} collected`);
     expect(row.textContent).toContain('1 Rare');
     document.body.append(row);
-    Array.from(row.querySelectorAll('button')).find((b) => b.textContent === 'Open Storm Cards')!.click();
+    const open = row.querySelector<HTMLButtonElement>('button.sc-open')!;
+    expect(open.textContent).toBe('Open Storm Cards1 new');
+    open.click();
     expect(root.querySelector('[aria-label="Storm Cards"]')).not.toBeNull();
     // Opening the screen shows the card as New once.
     expect(root.querySelector('.sc-new')).not.toBeNull();

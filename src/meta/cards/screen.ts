@@ -269,7 +269,7 @@ export function renderCollection(col: Collection, o: CollectionOpts): HTMLElemen
       h('div', { class: 'sc-sorts', role: 'group', 'aria-label': 'Sort by' }, h('span', { class: 'kicker' }, 'Sort'), sortBtn('rarity', 'Rarity'), sortBtn('date', 'Date')),
     ),
     host,
-    h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', 'data-autofocus': true, onclick: o.onBack }, 'Back to the title screen')),
+    h('div', { class: 'actions' }, h('button', { class: 'btn primary', type: 'button', onclick: o.onBack }, 'Back to the title screen')),
   );
   draw();
   return el;
@@ -331,7 +331,7 @@ export function renderDetail(c: StoredCard, o: DetailOpts): HTMLElement {
   const row = (k: string, ...v: Array<Node | string | null>) => facts.push(h('div', { class: 'sc-fact' }, h('dt', null, k), h('dd', null, ...v)));
 
   const when = cardDateTime(c.time);
-  row(c.kind === 'flare' ? 'Peak' : c.kind === 'sep' ? 'Detected' : 'Left the Sun', when || 'Not in the record');
+  row(c.kind === 'cme' ? 'Left the Sun' : 'When', when || 'Not in the record');
   if (c.region) row('Sunspot region', `${c.region} (NOAA's number for that group of sunspots)`);
   const where = locationWords(c.location);
   if (where) row('Where on the Sun', where);
@@ -385,7 +385,7 @@ export function renderDetail(c: StoredCard, o: DetailOpts): HTMLElement {
       h(
         'div',
         { class: 'actions' },
-        h('button', { class: 'btn primary', type: 'button', 'data-autofocus': true, onclick: o.onBack }, 'Back to Storm Cards'),
+        h('button', { class: 'btn primary', type: 'button', onclick: o.onBack }, 'Back to Storm Cards'),
         h('button', { class: 'btn small', type: 'button', onclick: o.onTitle }, 'Title screen'),
       ),
     ),
@@ -402,6 +402,7 @@ export function openStormCards(): void {
   const ctx = metaContext();
   if (!ctx) return;
   watchFeed();
+  view.allMissing = false;
   const col = loadCollection();
   // Cards collected since the last visit are "New" for this visit.
   const justNew = takeFresh(col);
@@ -449,6 +450,7 @@ export function renderTitleRow(now = new Date()): HTMLElement {
   const owned = Object.values(col.cards);
   const possible = possibleCards(col);
   const sun = newFromTheSun(col, now);
+  const unseen = owned.filter((c) => c.fresh).length;
   const counts = RARITIES.slice()
     .reverse()
     .map((r) => ({ r, n: owned.filter((c) => rarityOf(c) === r).length }));
@@ -468,7 +470,12 @@ export function renderTitleRow(now = new Date()): HTMLElement {
           ? h('span', { class: 'sc-row-rarity' }, ...counts.filter((c) => c.n > 0).map((c) => rarityChip(c.r, `${c.n} ${RARITY_WORD[c.r]}`)))
           : h('span', { class: 'sc-row-rarity' }, 'Real NASA storms your crews face become cards.'),
       ),
-      h('button', { class: 'btn small cyan sc-open', type: 'button', onclick: () => openStormCards() }, 'Open Storm Cards'),
+      h(
+        'button',
+        { class: 'btn small cyan sc-open', type: 'button', onclick: () => openStormCards() },
+        'Open Storm Cards',
+        unseen ? h('span', { class: 'sc-badge' }, `${unseen} new`) : null,
+      ),
     ),
     sun ? h('p', { class: 'sc-row-sun' }, h('span', { class: 'tag live' }, 'Live'), ' ', fromTheSunText(sun)) : null,
   );

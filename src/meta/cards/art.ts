@@ -152,19 +152,27 @@ function drawSpot(px: Px, x: number, y: number) {
 }
 
 function drawBurst(px: Px, x: number, y: number, size: number, r: () => number) {
+  // Rays and a glowing ring around the sunspot, which stays visible in the middle.
   const rays = size >= 9 ? 16 : size >= 6 ? 12 : 8;
   const cols = ['#ffffff', '#fff4c2', '#ffe08a', '#ffb627', '#ff5a4f'];
+  const inner = size >= 6 ? 2.5 : 1.5;
+  // Soft glow first, so the rays draw over it.
+  const glow = size * 0.55;
+  for (let dy = -glow; dy <= glow; dy++)
+    for (let dx = -glow; dx <= glow; dx++) {
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= glow && d > inner && (Math.round(x + dx) + Math.round(y + dy)) % 2 === 0) px(x + dx, y + dy, d < glow * 0.6 ? '#fff4c2' : '#ffe08a');
+    }
   for (let i = 0; i < rays; i++) {
     const a = (i / rays) * Math.PI * 2 + r() * 0.2;
     const len = size * (i % 2 === 0 ? 1 : 0.6) * (0.85 + r() * 0.3);
-    for (let t = 0; t <= len; t += 0.7) {
+    for (let t = inner; t <= len; t += 0.6) {
       const k = Math.min(cols.length - 1, Math.floor((t / Math.max(1, len)) * cols.length));
       px(x + Math.cos(a) * t, y + Math.sin(a) * t, cols[k]);
     }
   }
-  // Bright core.
-  const core = Math.max(1, size * 0.3);
-  for (let dy = -core; dy <= core; dy++) for (let dx = -core; dx <= core; dx++) if (dx * dx + dy * dy <= core * core) px(x + dx, y + dy, '#ffffff');
+  // Bright ring right around the spot.
+  for (let a = 0; a < Math.PI * 2; a += 0.25) px(x + Math.cos(a) * inner, y + Math.sin(a) * inner, '#ffffff');
 }
 
 function drawParticles(px: Px, r: () => number, toMars: boolean) {
@@ -186,25 +194,31 @@ function drawParticles(px: Px, r: () => number, toMars: boolean) {
 }
 
 function drawCme(px: Px, r: () => number, c: CardFacts, far: boolean) {
-  // A shell of solar gas; bigger for a faster CME. From the far side it bulges out from behind the Sun.
+  // A shell of solar gas, bigger for a faster CME. From the far side it rings the whole Sun (a "halo"),
+  // brightest on the side away from us; otherwise it bulges out on the side DONKI gives (east = left as seen from Earth).
   const v = c.speedKms ?? 800;
-  const rad = SUN_R * (1.25 + Math.min(1.2, v / 2500));
-  const cx = far ? SUN_X - 4 : SUN_X + 6;
-  const cy = far ? SUN_Y - 2 : SUN_Y - 4;
-  const from = far ? Math.PI * 0.55 : -Math.PI * 0.6;
-  const to = far ? Math.PI * 1.75 : Math.PI * 0.35;
+  const rad = Math.min(23, SUN_R * (1.15 + Math.min(0.5, v / 5000)));
+  const loc = parseLocation(c.location);
+  const side = loc && loc.lon > 0 ? 1 : -1;
+  const cx = far ? SUN_X : SUN_X + side * 7;
+  const cy = far ? SUN_Y : SUN_Y - 3;
+  const from = far ? 0 : side > 0 ? -Math.PI * 0.6 : Math.PI * 0.65;
+  const to = far ? Math.PI * 2 : side > 0 ? Math.PI * 0.35 : Math.PI * 1.6;
+  const cols = ['#ff5a4f', '#ff9a2e', '#c58bff'];
   for (let k = 0; k < 3; k++) {
     const rr = rad - k * 2.5;
-    const col = k === 0 ? '#ff5a4f' : k === 1 ? '#ff9a2e' : '#c58bff';
-    for (let a = from; a <= to; a += 0.02) {
-      if (r() < 0.12 * k) continue;
-      px(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, col);
+    for (let a = from; a <= to; a += 0.015) {
+      // The far-side halo is patchier on the lower right, like a real cloud.
+      const thin = far ? 0.1 + 0.45 * Math.max(0, Math.cos(a - Math.PI * 0.25)) : 0.12 * k;
+      if (r() < thin) continue;
+      const wob = (r() - 0.5) * 1.2;
+      px(cx + Math.cos(a) * (rr + wob), cy + Math.sin(a) * (rr + wob), cols[k]);
     }
   }
   // Loose clumps inside the cloud.
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 60; i++) {
     const a = from + r() * (to - from);
-    const d = rad * (0.6 + r() * 0.35);
+    const d = rad * (0.7 + r() * 0.3);
     px(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r() < 0.5 ? '#ff9a2e' : '#ffb627');
   }
 }
