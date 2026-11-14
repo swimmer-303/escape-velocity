@@ -111,7 +111,7 @@ async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
   }
 }
 
-const DIRECT_BASE = 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get';
+const DIRECT_BASE = 'https://ccmc.gsfc.nasa.gov/DONKI/WS/get';
 
 export async function loadSpaceWeather(days = 30): Promise<SpaceWeatherFeed> {
   const end = new Date();

@@ -6,16 +6,16 @@
 // the scaled game value so players and judges can see exactly what we changed.
 
 export const REAL = {
-  /** O2 used per crew member per day, kg. NASA Life Support Baseline Values (BVAD), NASA/TP-2015-218570. */
-  o2PerCrewKgPerDay: 0.84,
+  /** O2 used per crew member per day, kg (nominal 0.895). NASA Life Support Baseline Values and Assumptions (BVAD) Rev 2, 2022, Table 3-31. */
+  o2PerCrewKgPerDay: 0.895,
   crewSize: 4,
-  /** Mars surface dose-equivalent rate at Gale Crater, mSv/day. Curiosity RAD, Hassler et al., Science 2014 (343:1244797). */
+  /** Mars surface dose-equivalent rate at Gale Crater, mSv/day. Curiosity RAD, Hassler et al., Science 343 (2014), as reported in SwRI's release (paper: 0.64 ± 0.12). */
   marsSurfaceMsvPerDay: 0.67,
   /** Mars surface ABSORBED dose rate at Gale Crater, µGy/day (0.210 ± 0.040 mGy/day). Hassler et al., Science 2014. */
   marsSurfaceUgyPerDay: 210,
   /** Deep-space cruise dose-equivalent rate, mSv/day. Curiosity RAD cruise, Zeitlin et al., Science 2013. */
   cruiseMsvPerDay: 1.8,
-  /** Moon surface dose-equivalent rate, µSv/day. Chang'e 4 LND, Zhang et al., Science Advances 2020. */
+  /** Moon surface dose-equivalent rate, µSv/day. Chang'e 4 LND, Zhang et al., Science Advances 2020. (~1.9x the ISS total of 731; 2.6x is vs. the ISS GCR-only 523.) */
   moonSurfaceUsvPerDay: 1369,
   /** May 20 2024 solar event at Gale Crater, Curiosity RAD absorbed dose, µGy. NASA/JPL news release, June 2024. */
   may2024EventUgy: 8100,
@@ -25,7 +25,7 @@ export const REAL = {
   moxieRuns: 16,
   /** MOXIE best rate, g O2 per hour, at >= 98% purity. NASA/JPL. */
   moxiePeakGPerHour: 12,
-  /** Opportunity solar output, Wh/day: normal, 2007 storm, 2018 storm. NASA/JPL. */
+  /** Opportunity solar output, Wh/day: normal and 2007 storm low point (NASA/JPL 2007); 2018 storm (The Planetary Society; JPL gives tau 10.8). */
   oppyNormalWh: 700,
   oppy2007StormWh: 128,
   oppy2018StormWh: 22,

@@ -5,7 +5,7 @@ NASA Space Apps Challenge 2026, Charlotte, NC · Team Sendy1 (Spencer Hedges and
 
 > Command a tiny outpost in Gale Crater on Mars. Keep your 4-person crew breathing, fed and safe from solar storms, while making enough oxygen to fill the rocket that flies them home. Fill the tank and you hit **escape velocity**.
 
-**Play it:** _deploy URL goes here_ · no download, no account, works on Chromebooks, desktops and tablets.
+**Play it:** https://escape-velocity-seven.vercel.app · no download, no account, works on Chromebooks, desktops and tablets.
 
 ## The challenge
 
@@ -46,7 +46,7 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 | **Curiosity RAD** (Hassler et al. 2014; NASA/JPL 2024) | The steady background dose on every sol (0.67 mSv/sol, the real Gale Crater average) and the model for a "big" storm (8,100 µGy on May 20, 2024). | Published figures |
 | **NASA OSDR RadLab** (ISS DOSTEL dosimetry) | "Mars vs. ISS" radiation comparison. | ARCHIVE (RadLab's ISS series ends in late 2024) |
 | **NASA OSDR** study search | 10 Real Science cards with real study IDs (OSD-###), tied to the greenhouse, shelter and crew. | ARCHIVE (curated at build time) |
-| **NASA/JPL MOXIE**, **NASA BVAD**, **Opportunity** power history | O2 plant concept, crew oxygen needs, dust-storm power loss. | Published figures |
+| **NASA/JPL MOXIE**, **NASA BVAD Rev 2** (0.895 kg O2 per person per day), **Opportunity** power history | O2 plant concept, crew oxygen needs, dust-storm power loss. | Published figures |
 | **Canadian Space Agency**: food production on the Moon and in remote areas | Greenhouse Real Science card (partner agency resource). | Reference |
 
 Full details, raw field names, CORS findings and the source URL for every number are in [`docs/data-notes.md`](docs/data-notes.md). The in-game **Science Log** shows all of this to players.
@@ -56,7 +56,7 @@ Full details, raw field names, CORS findings and the source URL for every number
 The game time-compresses and scales real numbers so a mission fits in about 10 minutes, and it says so in-game:
 
 - 1 sol plays in about 30 seconds.
-- Fuel: each cell fills a few percent of the tank. A real crewed ascent needs tens of tonnes of oxygen from a plant running for more than a year.
+- Fuel: each cell fills a few percent of the tank. A real crewed ascent needs about 25 to 31 tonnes of oxygen from a 25 to 30 kW plant (MOXIE scaled up about 200 times) running for about 16 months.
 - Radiation: the mission dose budget (about 27 mSv) is much stricter than NASA's real 600 mSv career limit, so radiation choices matter in a short game. The background dose per sol is the real measured value.
 - Dust storms take 2 or 3 of 7 cells: gentler than Opportunity's real storms.
 - We never invent space-weather events, values or study IDs, and we never label stored data as live.

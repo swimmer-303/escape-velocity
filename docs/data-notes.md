@@ -28,7 +28,7 @@ All of these are **archived snapshots**. Only call something "live" when it was 
 |---|---|---|---|
 | **ccmc.gsfc.nasa.gov** (use this) | `https://ccmc.gsfc.nasa.gov/DONKI/WS/get/{FLR,SEP,CME,GST,notifications}?startDate=yyyy-MM-dd&endDate=yyyy-MM-dd` | none | 200, ~0.5-1.5 s |
 | kauai.ccmc.gsfc.nasa.gov (old) | `https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/...` | none | **down**: TCP connect timed out from our network and returned "connection refused" from a second network. Every `link` field in DONKI now points at `ccmc.gsfc.nasa.gov/DONKI/view/...`. |
-| api.nasa.gov | `https://api.nasa.gov/DONKI/{FLR,...}?startDate=...&endDate=...&api_key=KEY` | DEMO_KEY or your own | 200; returned the same JSON as CCMC (byte-for-byte for May 2024 GST) |
+| api.nasa.gov | `https://api.nasa.gov/DONKI/{FLR,...}?startDate=...&endDate=...&api_key=KEY` | DEMO_KEY or your own | 200; returned the same JSON content as CCMC (checked for May 2024 GST) |
 
 `scripts/fetch-data.mjs` tries ccmc, then kauai, then api.nasa.gov (with `NASA_API_KEY` if set, otherwise `DEMO_KEY`).
 
@@ -154,4 +154,58 @@ Cautions for the UI:
 
 ## 4. Verified facts
 
-FACT_TABLE_PLACEHOLDER
+Checked 2026-11-14 against the sources listed. In the **Status** column:
+
+- "OK" means the claim matches the source.
+- "FIX" means the claim needed correcting; use the value in the table.
+- "Partial" means part of the claim is confirmed and part is not.
+
+| # | Claim we planned to use | What the source actually says | Status | Source |
+|---|---|---|---|---|
+| 1 | O2 per crew member ~0.82-0.84 kg/day | BVAD Rev 2 (2022) Table 3-31 gives a nominal "Oxygen Consumed 0.895 kg/CM-d". Table 4-1 gives low / nominal / high values of 0.61 / 0.90 / 1.08. BVAD Rev 1 (2018) had 0.816. | **FIX**: use **~0.9 kg/day** (0.895) | https://ntrs.nasa.gov/api/citations/20210024855/downloads/BVAD_2.15.22-final.pdf |
+| 2 | MOXIE: 122 g total over 16 runs; peak 12 g/h at >=98% purity | "generated a total of 122 grams of oxygen ... about what a small dog breathes in 10 hours"; "12 grams of oxygen an hour ... at 98% purity or better"; 16th run on Aug 7, 2023 | OK | https://www.nasa.gov/missions/mars-2020-perseverance/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/ |
+| 3a | Scaled-up MOXIE: ~2-3 kg O2/hour | Hoffman et al. 2022 (Science Advances): "2 to 3 kg/hour of oxygen production ... for a crew arriving one 26-month cycle later" | OK | https://pmc.ncbi.nlm.nih.gov/articles/PMC9432831/ |
+| 3b | ~25 kW, how long the plant runs | NASA PDS MOXIE page: scale up "about 200 times to ... produce at least 24 metric tons ... of liquid oxygen ... in the 16 months preceding the launch of a human crew ... powered by the same 25-30 kW plant" | OK: say **25-30 kW**, **about 16 months** | https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/moxie.html |
+| 3c | O2 needed for a crewed ascent ~25-30 t | NASA (Apr 2021, 4 astronauts): "7 metric tons of rocket fuel and 25 metric tons of oxygen". Hoffman 2022 (6-person ascent vehicle): "~31 tons will be oxygen and ~9 tons will be methane". The PDS page says at least 24 t. | OK as a range (**~25-31 t**); name the crew size | https://www.nasa.gov/news-release/nasas-perseverance-mars-rover-extracts-first-oxygen-from-red-planet/ |
+| 4a | Mars surface ~0.67 mSv/day (Hassler et al. Science **2013**) | "0.67 millisieverts per day" (SwRI release for the paper). The paper was published online in Dec 2013 and in print in Science 343, **Jan 24, 2014**. | **FIX**: cite it as Hassler et al., *Science* **2014** | https://swri.org/node/9079 |
+| 4b | Deep-space cruise ~1.8 mSv/day | Zeitlin et al., *Science* 340:1080 (2013): "1.8 milliSieverts per day in cruise". Round trip about 0.66 Sv. | OK | https://www.swri.org/newsroom/press-releases/swri-led-team-calculates-the-radiation-exposure-associated-trip-mars |
+| 5 | Moon 1,369 µSv/day is ~2.6x the ISS (~731 µSv/day) | Zhang et al. 2020 (Science Advances): "1369 μSv/day ... ISS ... 731 μSv/day with contributions only from GCR of 523 μSv/day ... the daily GCR dose equivalent on the surface of the Moon is around a factor of 2.6 higher than the dose inside the ISS". The ISS number came from DOSIS 3D DOSTEL, the same detector family as our RadLab snapshot. | **FIX**: 2.6x is against the ISS **cosmic-ray part (523)**. Against the full 731 it is **~1.9x**. | https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7518862/fullTextXML |
+| 6 | May 20, 2024: RAD ~8,100 µGy, "30 chest X-rays", typical day ~700 µGy | JPL, June 10, 2024: "8,100 micrograys", equivalent to 30 chest X-rays; the flare was "later estimated to be an X12 ... based on data from the Solar Orbiter spacecraft"; particles reached Mars "in just tens of minutes". **The release gives no typical-day dose; ~700 µGy appears only in news coverage.** | 8,100 and 30 X-rays OK; **drop "typical day ~700 µGy"** or source it elsewhere | https://www.jpl.nasa.gov/news/nasa-watches-mars-light-up-during-epic-solar-storm |
+| 7a | Opportunity 2007: ~700 Wh/day down to 128 Wh; ~99% of sunlight blocked | JPL 2007: about 700 watt-hours before the storm, 148 Wh on July 17, then 128 Wh the next day; dust "blocked 99 percent of direct sunlight" | OK (128 Wh was the low point) | https://www.jpl.nasa.gov/news/nasa-mars-rovers-braving-severe-dust-storms |
+| 7b | Opportunity 2018: ~22 Wh | JPL gives tau 10.8 on June 10, 2018. **22 Wh comes only from the Planetary Society** (down from about 645 Wh on June 1); no NASA page states it. | **Partial**: credit the Planetary Society, or use "tau 10.8" | https://www.jpl.nasa.gov/news/six-things-about-opportunitys-recovery-efforts/ and https://www.planetary.org/articles/06-mer-update-opportunity-dust-storm-sleep |
+| 8 | Mars sunlight ~43% of Earth's (586-590 vs 1361 W/m²) | NASA Mars Fact Sheet: "Solar irradiance (W/m2) 586.2 / 1361.0 / ratio 0.431" | OK: use **586.2 W/m²** | https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html |
+| 9a | Mars escape velocity 5.03 km/s; Moon 2.38 km/s | Mars fact sheet: 5.03. Moon fact sheet: 2.38. | OK | https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html and https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html |
+| 9b | Sol = 24 h 39 m 35 s | Fact sheet: length of day 24.6597 h, which is 24 h 39 m 34.9 s | OK | same Mars fact sheet |
+| 10 | Time for first SEPs to reach Mars; can Mars rely on Earth forecasts? | JPL (May 2024 event): particles reached Mars "in just tens of minutes". Löwe et al. 2025 (arXiv 2502.02469, with Hassler, Zeitlin and others): "all currently available tools are primarily designed for the Earth or Earth-Moon system"; their Mars nowcasting system gives "at least 30 minutes" of warning. NASA notes that Perseverance can see the Sun's far side "where Earth has no view". | OK: say **"tens of minutes"**; Earth forecasts can miss far-side events (May 20, 2024 was one) | https://www.jpl.nasa.gov/news/nasa-watches-mars-light-up-during-epic-solar-storm ; https://arxiv.org/abs/2502.02469 ; https://science.nasa.gov/missions/artemis/artemis-2/to-protect-artemis-ii-astronauts-nasa-experts-keep-eyes-on-sun/ |
+| 11 | Career limit 600 mSv (NASA-STD-3001) | Vol 1 Rev B (2022) [V1 4030]: "shall be less than 600 mSv. This limit is universal for all ages and sexes." **Rev C (2023-09-15)** is current and keeps 600 mSv. | OK: cite **Rev C** | https://standards.nasa.gov/sites/default/files/standards/NASA/C//nasa-std-3001-vol-1-rev-c-signature.pdf |
+| 12 | ISS water recovery ~98% (2023) | NASA, June 20, 2023: "total water recovery of 98%, thanks to the brine processor" (up from 93-94%) | OK | https://www.nasa.gov/missions/station/iss-research/nasa-achieves-water-recovery-milestone-on-international-space-station/ |
+| 13a | Mars solar conjunction 2025-26 | JPL Horizons: smallest Sun-Mars angle about 0.94°, around **2026-01-09 ~10 UT**. NASA's Curiosity blog: conjunction "will last from Dec. 27 to Jan. 20". | OK: **blackout ~Dec 27, 2025 to Jan 20, 2026** | https://science.nasa.gov/blog/curiosity-blog-sols-4750-4762-see-you-on-the-other-side-of-the-sun/ ; https://ssd.jpl.nasa.gov/api/horizons.api |
+| 13b | Mars opposition early 2027 | JPL Horizons: opposition **2027-02-19 (~16 UT)**; closest approach ~Feb 20, about 0.678 AU. No NASA web page stating the date was found. | OK (ephemeris-derived) | https://ssd.jpl.nasa.gov/api/horizons.api |
+
+Not verified:
+
+- **Hecht et al. 2021** (*Space Science Reviews*, the MOXIE instrument paper) could not be loaded, so nothing above relies on it.
+- **"Plant runs ~14 months before crew arrive"** was found only in a secondary quote. Use the PDS page's **16 months**, or Hoffman's "one 26-month cycle".
+
+---
+
+## 5. Claims the data does not support (or only partly supports)
+
+1. **"DONKI recorded the X12 flare that hit Mars."**
+   - False: DONKI has no FLR entry for May 20, 2024, and none of its SEP entries are linked to it.
+   - DONKI records the eruption only as a fast "backsided" halo CME (`2024-05-20T05:36:00-CME-001`).
+   - Its model runs for that CME predicted no Mars impact.
+   - The X12 estimate comes from Solar Orbiter, via JPL's release.
+2. **"The recent window had radiation storms."**
+   - 2026-10-15 to 2026-11-14 had **0 SEPs**, no X flares and one G2 storm.
+   - If the "live" mode needs a big event to be fun, say plainly that it's a replay of May 2024. Don't present the replay as live.
+3. **SEP entry count ≠ storm count** (see section 1).
+4. **ISS numbers are µGy (absorbed, silicon); Mars and Moon numbers are mSv or µSv (dose equivalent).**
+   - Don't put them on the same bar chart without labels.
+   - Fair comparisons: ISS ~200 µGy/day (DOSTEL) next to Curiosity's 8,100 µGy in one event, both in Gy units. Or ISS 731 µSv/day next to Moon 1,369 µSv/day next to Mars 670 µSv/day, all dose equivalent.
+5. **The ISS barely noticed the May 2024 G5 storm** (DOSTEL1: 186 µGy on May 10, 207 µGy on May 11, against a ~202 µGy/day monthly mean). The magnetosphere protects the ISS; Mars has no global magnetic field. This is a true and useful contrast.
+6. **RadLab ISS data stops in late 2024**, so don't label it "today's ISS radiation".
+7. **The kauai DONKI host is down**, and `src/data/donki.ts` should use `https://ccmc.gsfc.nasa.gov/DONKI/WS/get`.
+8. **OSD-714 is Moon gravity, not Mars gravity.** OSD-581 and OSD-479 are ground studies.
+9. **O2 per person is ~0.9 kg/day in current NASA BVAD**, not 0.82-0.84.
+10. **"Moon 2.6x ISS"** is true only against the ISS cosmic-ray component. Against the ISS total it is ~1.9x.

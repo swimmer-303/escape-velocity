@@ -65,7 +65,7 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
         `Every sol adds ${REAL.marsSurfaceMsvPerDay} mSv to your crew's dose: the real average Curiosity measured at Gale Crater. The May 20, 2024 storm (${REAL.may2024EventUgy.toLocaleString('en-US')} micrograys, about ${REAL.may2024EventChestXrays} chest X-rays) is the model for a "big" storm.`,
       ],
       [tag('real', 'PUBLISHED FIGURE')],
-      [link('https://www.science.org/doi/10.1126/science.1244797', 'Hassler et al., Science 2014'), ' · ', link('https://www.jpl.nasa.gov/news/nasa-watches-mars-light-up-during-epic-solar-storm/', 'NASA/JPL, June 2024')],
+      [link('https://doi.org/10.1126/science.1244797', 'Hassler et al., Science 2014'), ' · ', link('https://www.jpl.nasa.gov/news/nasa-watches-mars-light-up-during-epic-solar-storm/', 'NASA/JPL, June 2024')],
     ],
     [
       'OSDR RadLab: radiation on the ISS',
@@ -95,13 +95,13 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
         `MOXIE made ${REAL.moxieTotalO2g} g of oxygen over ${REAL.moxieRuns} runs, at best ${REAL.moxiePeakGPerHour} g per hour. Your O2 plant is a scaled-up MOXIE: each cell on AIR makes 1 day of air for 4 people (about ${(REAL.o2PerCrewKgPerDay * REAL.crewSize).toFixed(1)} kg).`,
       ],
       [tag('real', 'PUBLISHED FIGURE')],
-      [link('https://www.jpl.nasa.gov/news/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/', 'NASA/JPL MOXIE')],
+      [link('https://www.nasa.gov/missions/mars-2020-perseverance/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/', 'NASA MOXIE'), ' · ', link('https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/moxie.html', 'NASA PDS')],
     ],
     [
       'NASA life support baseline (BVAD): how much air a crew needs',
-      [`Each person uses about ${REAL.o2PerCrewKgPerDay} kg of oxygen per day.`],
+      [`Each person uses about ${REAL.o2PerCrewKgPerDay} kg of oxygen per day (nominal value).`],
       [tag('real', 'PUBLISHED FIGURE')],
-      [link('https://ntrs.nasa.gov/citations/20180001338', 'NASA/TP-2015-218570')],
+      [link('https://ntrs.nasa.gov/citations/20210024855', 'BVAD Rev 2 (2022)')],
     ],
     [
       'Opportunity rover: dust storms and solar power',
@@ -109,7 +109,7 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
         `Real storms cut Opportunity's power from about ${REAL.oppyNormalWh} Wh/day to ${REAL.oppy2007StormWh} Wh (2007) and ${REAL.oppy2018StormWh} Wh (2018). The game's storms take away ${DUST_CELL_LOSS.regional} or ${DUST_CELL_LOSS.global} of your ${t.baseCells} cells: gentler than real life, so your mission can survive.`,
       ],
       [tag('real', 'PUBLISHED FIGURE')],
-      [link('https://science.nasa.gov/mission/mer-opportunity/', 'NASA Opportunity mission')],
+      [link('https://www.jpl.nasa.gov/news/nasa-mars-rovers-braving-severe-dust-storms', 'NASA/JPL 2007'), ' · ', link('https://www.planetary.org/articles/06-mer-update-opportunity-dust-storm-sleep', 'Planetary Society 2018')],
     ],
     [
       'Canadian Space Agency: food production',
@@ -121,11 +121,11 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
 
   const scaling: Array<[string, string]> = [
     ['Time', 'One sol (24 h 39 min) plays in about 30 seconds. A whole mission fits in about 10 minutes.'],
-    ['Rocket fuel', `Each fuel cell fills ${t.fuelPerCell}% of the tank, so the tank fills in about 15 to 20 sols. A real crewed rocket home would need tens of tonnes of oxygen, made by a plant running for over a year before the crew arrives.`],
+    ['Rocket fuel', `Each fuel cell fills ${t.fuelPerCell}% of the tank, so the tank fills in about 15 to 20 sols. A real crewed rocket home would need about 25 to 31 tonnes of oxygen, made by a 25 to 30 kW plant (MOXIE scaled up about 200 times) running for about 16 months before the crew arrives.`],
     ['Air and food', `1 cell on AIR = 1 day of air for the crew. Grow lights are power-hungry: 1 greenhouse cell = ${RATES.foodPerGreenhouseCell} day of food + ${RATES.airPerGreenhouseCell} day of air. Water is assumed to be recycled (the ISS recovers about 98%).`],
     ['Radiation budget', `Your crew's budget is ${t.doseBudget} mSv for the whole mission. That is much stricter than NASA's real career limit (600 mSv), so radiation choices matter in a short game. Background dose (${REAL.marsSurfaceMsvPerDay} mSv per sol) is the real Gale Crater value.`],
     ['Storm sizes', `Game doses for a storm caught outside: small ${STORM_DOSE.minor}, medium ${STORM_DOSE.moderate}, big ${STORM_DOSE.major} mSv. The big one is modeled on the May 2024 event. In real life not every big flare sends particles to Mars; in the game, every X-class flare does.`],
-    ['Warnings', 'Big storms send the fastest particles, so in the game an X-class storm always beats Earth\'s warning to Mars. Medium storms build more slowly, so Earth\'s warning arrives in time. A powered radiation monitor warns you the next morning either way.'],
+    ['Warnings', 'In May 2024, particles reached Mars in tens of minutes (NASA/JPL). Big storms send the fastest particles, so in the game an X-class storm always beats Earth\'s warning to Mars. Medium storms build more slowly, so Earth\'s warning arrives in time. A powered radiation monitor warns you the next morning either way.'],
     ['Shelter', 'A storm shelter with 2 cells blocks 90% of a storm; 1 cell blocks half. Shelters mostly help against solar storms, not the steady background radiation, and the game models it that way.'],
   ];
 

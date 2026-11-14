@@ -2,11 +2,11 @@
 // Vercel Function: GET /api/spaceweather?days=30
 // Fetches real solar flares (FLR) and particle storms (SEP) from NASA DONKI, normalizes them,
 // and lets Vercel's CDN cache the answer for an hour so players never hit NASA rate limits.
-// Uses the keyless CCMC DONKI host; if NASA_API_KEY is set, api.nasa.gov is used as a backup.
+// Uses the keyless CCMC DONKI host (ccmc.gsfc.nasa.gov); if NASA_API_KEY is set, api.nasa.gov is used as a backup.
 
-import { normalizeDonki } from '../src/data/donki-normalize';
+import { normalizeDonki } from '../src/data/donki-normalize.js';
 
-const CCMC = 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get';
+const CCMC = 'https://ccmc.gsfc.nasa.gov/DONKI/WS/get';
 const NASA = 'https://api.nasa.gov/DONKI';
 
 async function getJson(url: string): Promise<unknown> {
