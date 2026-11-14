@@ -42,8 +42,9 @@ import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, science
 import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
 import { missionChartFor, crewCharts } from './charts';
+import { roomParam } from '../room/protocol';
 
-type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale';
+type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room';
 type Mode = 'campaign' | 'quick' | 'history';
 
 interface Settings {
@@ -157,7 +158,10 @@ export class App {
       if (this.phase === 'title') this.showTitle();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
-    this.showTitle();
+    // A Mission Control join link (?room=CODE) goes straight to the class room.
+    const room = roomParam(location.search);
+    if (room) this.openRoom(room);
+    else this.showTitle();
   }
 
   // ------------------------------------------------------------------ helpers
@@ -382,6 +386,7 @@ export class App {
             h('button', { class: 'btn', onclick: () => this.startQuick() }, 'Quick mission'),
             h('button', { class: 'btn cyan', onclick: () => this.startHistory(), disabled: MAY2024_SNAPSHOT ? undefined : true }, 'May 2024 storms'),
           ),
+          h('button', { class: 'btn', onclick: () => this.openRoom() }, 'Class mission: Mission Control'),
           h(
             'div',
             { class: 'menu-row' },
@@ -405,6 +410,25 @@ export class App {
       ),
       { label: 'Escape Velocity title screen' },
     );
+  }
+
+  /** Mission Control (class team play) borrows the stage, HUD, dock and dialogs, and hands them back on exit. */
+  private openRoom(code: string | null = null) {
+    if (this.coach.active) this.coach.stop(false);
+    this.audio.sfx('click');
+    this.phase = 'room';
+    this.mission = null;
+    this.mode = null;
+    this.closeModal();
+    clear(this.dock);
+    import('./room/mission-control')
+      .then(({ openMissionControl }) =>
+        openMissionControl(
+          { stage: this.stage, hud: this.hud, dock: this.dock, modalRoot: this.modalRoot, audio: this.audio, reducedMotion: this.settings.reducedMotion, exit: () => this.showTitle() },
+          code,
+        ),
+      )
+      .catch(() => this.showTitle());
   }
 
   /** Pick Mars or the Moon, then a difficulty (campaign) or just go (quick mission). */

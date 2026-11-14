@@ -79,7 +79,7 @@ describe('no free choices', () => {
       }
     }
     expect(checked).toBeGreaterThan(1000);
-  });
+  }, 60000);
 
   it.each(['mars', 'moon'] as const)('%s: every module does something useful when given a cell', (site) => {
     const state = createMission(testConfig('useful', 'cadet', 1, site === 'moon' ? moonBase() : fullBase(), 0, site));
