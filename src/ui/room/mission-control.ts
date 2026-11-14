@@ -860,6 +860,7 @@ export class MissionControl {
         while (fired < beats.length && beats[fired].at <= t) {
           const ev = beats[fired++];
           logLine.textContent = ev.text;
+          if (ev.cue && !ff) this.host.stage.cue?.(ev.cue);
           if (ev.storm && !ff) {
             this.host.stage.storm(ev.storm);
             if (teacher) this.host.audio.sfx('storm');

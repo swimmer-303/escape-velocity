@@ -190,6 +190,8 @@ export class App {
       onOpenWorkshop: () => this.showWorkshop(() => this.closeModalAndPlan()),
       sfx: (n) => this.audio.sfx(n),
     });
+    // Tapping a module in 3D highlights its card in the dock.
+    this.stage.onPick = (key) => this.budget.highlight(key);
     this.feedReady = loadSpaceWeather().then((f) => {
       this.feed = f;
       // Refresh the title screen with the new data only if it is the dialog on screen right now:
@@ -389,6 +391,7 @@ export class App {
       projectProgress: p && cost ? Math.min(1, (m.base.progress[p] + (this.phase === 'plan' ? this.alloc.build : 0)) / cost) : undefined,
       site: siteOf(m.config),
       landing: landingOf(m.config),
+      warning: this.phase === 'briefing' || this.phase === 'plan' ? (b.warning?.source ?? null) : null,
     });
   }
 
@@ -1221,6 +1224,7 @@ export class App {
         while (fired < beats.length && beats[fired].at <= t) {
           const ev = beats[fired++];
           logLine.textContent = ev.text;
+          if (ev.cue) this.stage.cue?.(ev.cue);
           if (ev.storm) {
             this.stage.storm(ev.storm);
             this.audio.sfx('storm');
