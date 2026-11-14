@@ -835,6 +835,7 @@ html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, 
   html.ev-printing-cert body > :not(#cert-print) { display: none !important; }
   html.ev-printing-cert #cert-print { display: block !important; }
   #cert-print img { display: block; width: 100%; height: auto; max-height: 180mm; object-fit: contain; margin: 0 auto; }
+}
 /* ---------- Radar ---------- */
 /* Space weather radar (src/ui/radar/radar.ts). CME speed is an ordinal one-hue ramp (OKLCH hue 62, L 0.52 to 0.88),
    validated with the dataviz ordinal check against the radar surface #0d0c1c, and it never relies on color alone:
