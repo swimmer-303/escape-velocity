@@ -1056,3 +1056,16 @@ html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, 
 /* ---------- Demo (attract mode) ---------- */
 .demo-banner { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 80; background: var(--amber); color: #15122b; border: 3px solid #000; box-shadow: 4px 4px 0 var(--shadow); padding: 8px 14px; font-size: 16px; max-width: calc(100vw - 24px); text-align: center; }
 .demo-banner b { font-family: var(--font-px); font-weight: 400; margin-right: 8px; }
+
+/* ---------- Planning panel always fits the screen ---------- */
+/* The panel is never taller than the space under the HUD (the HUD wraps to two rows on narrower screens;
+   app.ts keeps --hud-h up to date). In the right column, the notes and "Suggest a plan" reasons scroll,
+   and the Run button always stays in view. Small screens scroll the whole page instead (see above). */
+@media (min-width: 901px) {
+  .dock { min-height: 0; max-height: calc(100vh - var(--hud-h, 110px) - 56px); max-height: calc(100dvh - var(--hud-h, 110px) - 56px); }
+  .dock-right { min-height: 0; justify-content: flex-start; }
+  .dock-right > .brief-mini { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+  .dock-right > :last-child { flex: none; margin-top: auto; }
+}
+/* Phones and tablets: 100vh includes the browser's toolbar, so size dialogs to the visible screen. */
+.modal { max-height: calc(100dvh - 32px); }

@@ -211,6 +211,10 @@ export class App {
       else this.refreshHud();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
+    // The planning panel must fit under the HUD, which wraps to two rows on narrower screens (style.css reads --hud-h).
+    if (typeof ResizeObserver === 'function') {
+      new ResizeObserver(() => document.documentElement.style.setProperty('--hud-h', `${this.hud.offsetHeight}px`)).observe(this.hud);
+    }
     // A Mission Control join link (?room=CODE) goes straight to the class room;
     // a teacher dashboard link (?dashboard=CODE&key=KEY) opens the class board instead of the game.
     const room = roomParam(location.search);

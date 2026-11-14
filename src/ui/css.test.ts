@@ -20,4 +20,13 @@ describe('style.css', () => {
     }
     expect(depth).toBe(0);
   });
+
+  it('keeps the planning panel on screen: the right column scrolls and the Run button stays in view', () => {
+    const css = readFileSync(fileURLToPath(new URL('./style.css', import.meta.url)), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    // The last word on these rules (later rules win), inside the desktop media block.
+    const block = css.slice(css.lastIndexOf('@media (min-width: 901px)'));
+    expect(block).toMatch(/\.dock-right > \.brief-mini \{[^}]*overflow-y: auto/);
+    expect(block).toMatch(/\.dock-right > :last-child \{[^}]*flex: none/);
+    expect(block).toMatch(/\.dock \{[^}]*max-height: calc\(100dvh - var\(--hud-h/);
+  });
 });
