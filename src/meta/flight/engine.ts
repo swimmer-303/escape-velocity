@@ -7,6 +7,8 @@
 import './flight.css';
 import { h, clear, prefersReducedMotion, type Child } from '../../ui/dom';
 import type { Sfx } from '../../ui/audio';
+import { decorateDialog } from '../../ui/access';
+import { reader } from '../../ui/voice';
 import type { FlightInput } from './physics';
 
 export interface FlightSound {
@@ -307,6 +309,7 @@ export class FlightShell {
     }
     window.clearTimeout(this.captionTimer);
     this.rumble.stop();
+    this.stopReading();
     for (const { el, had } of this.inertEls) if (!had) el.removeAttribute('inert');
     this.inertEls = [];
     this.el.remove();
@@ -522,12 +525,27 @@ export class FlightShell {
     this.el.classList.add('has-panel');
     const focus = box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>('button');
     focus?.focus();
+    // The game's "Read to me" button (and auto read-aloud, if the player turned it on), for young readers.
+    try {
+      decorateDialog(box, { autoRead: true });
+    } catch {
+      /* reading aloud is optional */
+    }
     return Promise.race([picked, this.aborted]).then((r) => {
+      this.stopReading();
       this.panel.hidden = true;
       this.el.classList.remove('has-panel');
       clear(this.panel);
       return r;
     });
+  }
+
+  private stopReading() {
+    try {
+      if (reader.owner === 'dialog') reader.stop();
+    } catch {
+      /* nothing was reading */
+    }
   }
 
   /** Put keyboard focus on the game itself, so Space and the arrows fly. */
