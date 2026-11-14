@@ -165,6 +165,10 @@ describe('flight interstitials', () => {
     expect(xp).toEqual([MEDAL_XP[medal]]);
     expect(root.textContent).toContain('New best!');
     expect(JSON.parse(localStorage.getItem(STORE_KEY)!).best['launch-mars'].medal).toBe(medal);
+    // Space still held from the flight (auto-repeat) must not press the results card's button.
+    const repeat = new KeyboardEvent('keydown', { key: ' ', repeat: true, bubbles: true, cancelable: true });
+    btn(/^Continue/)!.dispatchEvent(repeat);
+    expect(repeat.defaultPrevented).toBe(true);
     btn(/^Continue/)!.click();
     await done;
     expect(root.childElementCount).toBe(0);

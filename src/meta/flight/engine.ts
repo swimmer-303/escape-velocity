@@ -405,6 +405,11 @@ export class FlightShell {
       this.skip();
       return;
     }
+    // A key still held from the flight (Space through touchdown) must not auto-repeat into the results card's button.
+    if (down && e.repeat && !this.panel.hidden && (e.key === ' ' || e.key === 'Enter' || e.key === 'Spacebar')) {
+      e.preventDefault();
+      return;
+    }
     const ctl = ctlOf(e.key);
     if (!ctl) return;
     if (!down) {

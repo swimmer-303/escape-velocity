@@ -6,8 +6,8 @@ import { h, clear } from '../../ui/dom';
 import { emitGame } from '../hooks';
 import { AUTOPILOT_XP, MEDAL_XP, SAFE_SPEED, scoreLanding, scoreLaunch, type FlightSite, type Medal } from './physics';
 import { ABORT, FlightShell, medalIcon, type Abort, type FlightSound } from './engine';
-import { landingHint, landingStats, runLanding, type LandingRun } from './landing';
-import { launchHint, launchStats, runLaunch, type LaunchRun } from './launch';
+import { landingHint, landingStats, landingTip, runLanding, type LandingRun } from './landing';
+import { launchHint, launchStats, launchTip, runLaunch, type LaunchRun } from './launch';
 import { MEDAL_NAME, bestFor, recordFlight, upgradeXp, type BestRecord, type FlightGame } from './store';
 import type { Scenery } from './scenery';
 
@@ -50,6 +50,7 @@ function resultCard(opts: {
   best: { prev: BestRecord | null; newBest: boolean } | null;
   xp: number;
   practice: boolean;
+  tip?: string | null;
 }): HTMLElement {
   const { best } = opts;
   return h(
@@ -59,6 +60,7 @@ function resultCard(opts: {
     h('h2', null, opts.title),
     h('div', { class: `ev-flight-medal ${opts.medal ?? 'none'}` }, medalIcon(opts.medal ?? 'none', true), h('b', null, opts.medalText)),
     h('ul', { class: 'ev-flight-stats' }, ...opts.stats.map((t) => h('li', null, t))),
+    opts.tip ? h('p', { class: 'ev-flight-fact' }, opts.tip) : null,
     best
       ? best.newBest
         ? h('p', { class: 'ev-flight-best new' }, h('b', null, 'New best!'), best.prev ? ` (was ${MEDAL_NAME[best.prev.medal]})` : '')
@@ -96,6 +98,8 @@ export async function playFlight(setup: FlightSetup, env: FlightEnv): Promise<Fl
       inert: env.inert,
     });
     const hint = setup.game === 'landing' ? landingHint(setup) : launchHint(setup);
+    const best = bestFor(setup.game, setup.site);
+    if (best) hint.append(h('p', { class: 'ev-flight-best' }, `Your best ${setup.game} here: `, medalIcon(best.medal), ` ${MEDAL_NAME[best.medal]}`));
     const go = await shell.choose(hint, [{ id: 'fly', label: setup.game === 'landing' ? 'Start landing' : 'Start launch', primary: true }], 'How to fly');
     if (go === ABORT) return out;
     let autopilot = false;
@@ -164,7 +168,9 @@ export async function playFlight(setup: FlightSetup, env: FlightEnv): Promise<Fl
             best,
             xp,
             practice: setup.practice,
+            tip: landingTip(score),
           });
+          shell.announce(`${MEDAL_NAME[score.medal]} medal!${best.newBest ? ' New best!' : ''}${xp ? ` Plus ${xp} XP.` : ''}`);
         }
         const next = await shell.choose(
           card,
@@ -193,6 +199,7 @@ export async function playFlight(setup: FlightSetup, env: FlightEnv): Promise<Fl
         xp = award(Math.max(0, MEDAL_XP[score.medal] - given), `${MEDAL_NAME[score.medal]} medal launch to escape velocity`);
         given += xp;
       }
+      shell.announce(`${MEDAL_NAME[score.medal]} medal!${best.newBest ? ' New best!' : ''}${xp ? ` Plus ${xp} XP.` : ''}`);
       const next = await shell.choose(
         resultCard({
           kicker: `${where} launch`,
@@ -203,6 +210,7 @@ export async function playFlight(setup: FlightSetup, env: FlightEnv): Promise<Fl
           best,
           xp,
           practice: setup.practice,
+          tip: launchTip(score),
         }),
         [
           { id: 'done', label: setup.practice ? 'Done' : 'Continue', primary: true },

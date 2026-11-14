@@ -165,6 +165,18 @@
   .ev-flight-howto .keys { min-width: 96px; }
 }
 
+/* Big screens and projectors: larger HUD text. */
+@media (min-width: 1400px) and (min-height: 760px) {
+  .ev-gauge { padding: 6px 10px 7px; }
+  .ev-gauge .lbl { font-size: 14px; }
+  .ev-gauge .val { font-size: 16px; }
+  .ev-gauge .val b { font-size: 28px; }
+  .ev-gauge.path .val b, .ev-gauge.pad .val b { font-size: 22px; }
+  .ev-gauge .bar { height: 18px; min-width: 180px; }
+  .ev-gauge.wide .bar { min-width: 260px; }
+  .ev-gauge .bar .zone, .ev-gauge .bar .tick span { font-size: 11px; }
+}
+
 /* High contrast option. */
 html.ev-contrast .ev-gauge, html.ev-contrast .ev-flight-card { background: #000; }
 html.ev-contrast .ev-flight-panel { background: rgba(0, 0, 0, 0.85); }

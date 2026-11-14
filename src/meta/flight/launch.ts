@@ -40,7 +40,7 @@ export function launchHint(setup: FlightSetup): HTMLElement {
       { class: 'ev-flight-fact' },
       `Rockets lean over as they climb (a "gravity turn"), so their speed carries them around the planet instead of only fighting gravity straight up. At ${kms(ORBIT[setup.site])} km/s you could circle ${w} in orbit; at ${kms(ESCAPE[setup.site])} km/s you escape it.`,
     ),
-    h('p', { class: 'ev-flight-note' }, `Real gravity and escape speed. The clock runs ${LAUNCH_WARP} times faster than real life, and engine heat is a game rule.`),
+    h('p', { class: 'ev-flight-note' }, `Medals for staying on the arc, never overheating, and a quick climb. Real gravity and escape speed; the clock runs ${LAUNCH_WARP} times faster than real life, and engine heat is a game rule.`),
   );
 }
 
@@ -284,6 +284,14 @@ export function runLaunch(shell: FlightShell, setup: FlightSetup): Promise<Launc
       },
     });
   });
+}
+
+/** One thing to try next time (nothing for gold). */
+export function launchTip(score: LaunchScore): string | null {
+  if (score.medal === 'gold') return null;
+  if (score.path < 0.7) return 'Next time: tap Right again and again as the dotted arc leans over, and keep the nose on it.';
+  if (score.overheats > 0) return 'Next time: let go of THRUST when the heat bar says HOT, before it overheats.';
+  return 'Next time: keep the engine at full power as much as the heat allows, to climb faster.';
 }
 
 export function launchStats(score: LaunchScore, helped: number): string[] {

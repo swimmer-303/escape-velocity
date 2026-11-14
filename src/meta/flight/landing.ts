@@ -44,7 +44,7 @@ export function landingHint(setup: FlightSetup): HTMLElement {
         ? `Mars gravity is ${g} m/s², about 3/8 of Earth's ${EARTH_GRAVITY}. The parachute slows you down, but Mars air is too thin to land on a parachute alone, so rockets do the last part. Engineers call a Mars landing the "seven minutes of terror": ${radio}, so real Mars landers fly themselves.`
         : `Moon gravity is ${g} m/s², about 1/6 of Earth's ${EARTH_GRAVITY}, so you fall slowly. There is no air, so no parachute: the rocket does all the work. Radio reaches Earth in about ${REAL.moonLightSec} seconds, and Apollo astronauts steered the last part of every Moon landing by hand.`,
     ),
-    h('p', { class: 'ev-flight-note' }, 'Real gravity. Heights are shortened so a landing takes about half a minute.'),
+    h('p', { class: 'ev-flight-note' }, 'Medals for a soft touchdown, landing right on the pad, and fuel left. Real gravity; heights and speeds are shortened so a landing takes about half a minute.'),
   );
 }
 
@@ -250,9 +250,26 @@ export function runLanding(shell: FlightShell, setup: FlightSetup, autopilot: bo
         const blink = shell.reduced || Math.floor(shell.time * 2) % 2 === 0;
         drawBase(g, view, sc, { rocket: true, blink });
         drawPad(g, view, PAD_HALF, blink);
+        const flyingNow = s.phase === 'chute' || s.phase === 'flying';
+        // A marker over the pad while it's small and far away.
+        if (flyingNow && view.ppm < 1.3) {
+          const px = sx(view, 0);
+          const py = view.groundY - 12 - (blink ? 0 : 1);
+          g.fillStyle = '#5ef2e6';
+          g.fillRect(px - 3, py, 7, 1);
+          g.fillRect(px - 2, py + 1, 5, 1);
+          g.fillRect(px - 1, py + 2, 3, 1);
+          g.fillRect(px, py + 3, 1, 1);
+        }
         parts.draw(g, (x, y) => [sx(view, x), sy(view, y)]);
         const lx = sx(view, s.x);
         const ly = sy(view, s.y);
+        // The lander's shadow on the ground helps judge the height.
+        if (flyingNow && s.y < 150) {
+          const w = Math.max(2, Math.round(LANDER_SIZE.w * zoom * (1 - s.y / 190)));
+          g.fillStyle = 'rgba(0,0,0,0.35)';
+          g.fillRect(Math.round(lx - w / 2), view.groundY, w, 1);
+        }
         if (s.firing) drawFlame(g, lx, ly - 1, tilt, (shell.reduced ? 6 : 5 + Math.random() * 3) * zoom, 3 * zoom, 0);
         if (s.side) drawFlame(g, lx - s.side * 7 * zoom, ly - 8 * zoom, (s.side * Math.PI) / 2, 3 * zoom, 1 * zoom, 0);
         drawLander(g, lx, ly, tilt, zoom);
@@ -265,6 +282,15 @@ export function runLanding(shell: FlightShell, setup: FlightSetup, autopilot: bo
       },
     });
   });
+}
+
+/** One thing to try next time (nothing for gold). */
+export function landingTip(score: LandingScore): string | null {
+  if (score.medal === 'gold') return null;
+  if (!score.onPad) return 'Next time: slide over the pad with Left and Right while you are still high up.';
+  if (score.soft < 0.6) return 'Next time: slow right down just before the ground. Short bursts of the engine near the bottom.';
+  if (score.fuelLeft < 0.3) return 'Next time: let it fall for a while before you brake. Hovering burns lots of fuel.';
+  return 'So close! A little softer and closer to the middle of the pad wins gold.';
 }
 
 export function landingStats(score: LandingScore): string[] {

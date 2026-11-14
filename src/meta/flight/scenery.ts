@@ -424,11 +424,11 @@ const LANDER = [
   '.kkwwwwwwskk.',
   '.kaaaaaaaaak.',
   '.kfffffffffk.',
-  '..kk.kkk.kk..',
-  '.k...kgk...k.',
-  'k.....k.....k',
-  'k...........k',
-  'kk.........kk',
+  '..gg.ggg.gg..',
+  '.g...gkg...g.',
+  'g.....g.....g',
+  'g...........g',
+  'gg.........gg',
 ];
 
 const ROCKET = [
