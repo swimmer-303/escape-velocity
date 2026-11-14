@@ -2,8 +2,21 @@
 // The Stage shows the outpost. The game only talks to this interface, so the
 // 3D diorama (Three.js) and the lightweight fallback are interchangeable.
 
-import type { Allocation, Weather } from '../sim/types';
+import type { Allocation, CrateId, Weather } from '../sim/types';
 import type { Levels, UpgradeId } from '../sim/upgrades';
+
+/**
+ * The parts of the base you can tap in 3D (or pick from the "Look at" menu). Where a part has a card in the
+ * planning dock, the key is that card's key ('heaters' is the habitat with its heater vents, 'build' the Workshop).
+ */
+export type FocusKey = 'o2' | 'greenhouse' | 'heaters' | 'shelter' | 'monitor' | 'battery' | 'build' | 'rocket' | 'panels' | 'reactor';
+
+/** A moment of the sol for the stage to act out (the 3D stage animates it; the simple stage ignores it). */
+export type StageCue =
+  /** Resupply: a cargo lander comes down on its retro-rockets, then the crate appears beside it. */
+  | { kind: 'lander'; crate?: CrateId }
+  /** A solar storm is about to hit and the shelter is powered: the crew runs inside. */
+  | { kind: 'shelter' };
 
 export interface StageScene {
   sol: number;
@@ -20,6 +33,8 @@ export interface StageScene {
   projectProgress?: number;
   /** Which world the base is on (default 'mars'). The stage switches scenery whenever it changes. */
   site?: 'mars' | 'moon';
+  /** A storm warning is in today, from Earth (radio) or from the base's own radiation monitor. The 3D stage shows a comms beam. */
+  warning?: 'monitor' | 'earth' | null;
 }
 
 export interface Stage {
@@ -31,7 +46,12 @@ export interface Stage {
   storm(intensity: number): void;
   /** Launch cinematic; resolves when done. */
   launch(): Promise<void>;
-  focusModule?(key: string | null): void;
+  /** Point the camera at a part of the base (null = back to the whole base). Does not call onPick. */
+  focusModule?(key: FocusKey | null): void;
+  /** Act out a moment of the sol (see StageCue). */
+  cue?(cue: StageCue): void;
+  /** Set by the game: the player tapped a part of the base in 3D or picked one from the "Look at" menu (null = whole base). */
+  onPick?: (key: FocusKey | null) => void;
   setReducedMotion(on: boolean): void;
   dispose(): void;
 }
@@ -45,6 +65,8 @@ export class CssStage implements Stage {
   private ground = document.createElement('div');
   private weather: Weather = 'clear';
   private moon = false;
+  /** Never called: there is nothing to tap in the flat view. */
+  onPick?: (key: FocusKey | null) => void;
 
   mount(el: HTMLElement) {
     this.el = el;
@@ -104,6 +126,10 @@ export class CssStage implements Stage {
     /* the 3D stage has the real cinematic */
   }
 
+  /* Nothing to look at or act out in the flat view. */
+  focusModule() {}
+  cue() {}
+
   setReducedMotion() {}
   dispose() {
     this.sky.remove();
@@ -127,9 +153,16 @@ export class SwappableStage implements Stage {
   private last?: StageScene;
   private t = 0.25;
   private reduced = false;
+  /** The game's pick handler; whichever stage is inside reports to it. */
+  onPick?: (key: FocusKey | null) => void;
 
   constructor(initial: Stage) {
     this.inner = initial;
+    this.listen(initial);
+  }
+
+  private listen(s: Stage) {
+    s.onPick = (key) => this.onPick?.(key);
   }
 
   swap(next: Stage) {
@@ -144,6 +177,7 @@ export class SwappableStage implements Stage {
     }
     prev.dispose();
     this.inner = next;
+    this.listen(next);
     next.setReducedMotion(this.reduced);
     if (this.last) next.setScene(this.last);
     next.setTimeOfDay(this.t);
@@ -166,6 +200,12 @@ export class SwappableStage implements Stage {
   }
   launch() {
     return this.inner.launch();
+  }
+  focusModule(key: FocusKey | null) {
+    this.inner.focusModule?.(key);
+  }
+  cue(cue: StageCue) {
+    this.inner.cue?.(cue);
   }
   setReducedMotion(on: boolean) {
     this.reduced = on;

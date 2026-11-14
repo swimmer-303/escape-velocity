@@ -109,6 +109,41 @@ describe('UI smoke test', () => {
     expect(document.querySelector('.line.advice')).toBeNull();
   }, 20000);
 
+  it('outlines the dock card of a module tapped in the 3D view, and passes storm warnings to the stage', async () => {
+    const stage = new CssStage();
+    const scenes: StageScene[] = [];
+    const setScene = stage.setScene.bind(stage);
+    stage.setScene = (scene) => {
+      scenes.push(scene);
+      setScene(scene);
+    };
+    new App(stage);
+    expect(typeof stage.onPick).toBe('function');
+    (await waitFor(() => button(/Quick mission/))).click();
+    const start = await waitFor(() => button(/Start quick mission/) ?? button(/Land the crew/));
+    start.click();
+    const land = await waitFor(() => button(/Land the crew/) ?? button(/Plan the day/));
+    if (/Land the crew/.test(land.textContent ?? '')) land.click();
+    (await waitFor(() => button(/Plan the day/))).click();
+    await waitFor(() => document.querySelector('.module.o2'));
+    stage.onPick!('rocket'); // the rocket is fuelled from the O2 plant
+    expect(document.querySelector('.module.o2')!.classList.contains('picked')).toBe(true);
+    stage.onPick!('heaters');
+    expect(document.querySelectorAll('.module.picked').length).toBe(1);
+    // The outline stays when the dock redraws.
+    document.querySelector<HTMLButtonElement>('button[aria-label="Add a cell to Heaters"]')!.click();
+    expect(document.querySelector('.module.heaters.picked')).not.toBeNull();
+    stage.onPick!('panels'); // no card for the solar panels
+    expect(document.querySelector('.module.picked')).toBeNull();
+    stage.onPick!(null);
+    expect(document.querySelector('.module.picked')).toBeNull();
+    // Every scene says whether a storm warning is in (the 3D stage draws a comms beam for it).
+    expect(scenes.length).toBeGreaterThan(0);
+    const missionScenes = scenes.filter((s) => s.site && s.crew > 0);
+    expect(missionScenes.length).toBeGreaterThan(0);
+    expect(missionScenes.every((s) => s.warning === null || s.warning === 'earth' || s.warning === 'monitor')).toBe(true);
+  }, 20000);
+
   it('guides a first-time player through the first sol, and can be skipped', async () => {
     new App(new CssStage());
     (await waitFor(() => button(/Quick mission/))).click();

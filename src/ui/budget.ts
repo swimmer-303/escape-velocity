@@ -111,6 +111,8 @@ export class BudgetDock {
   private cb: BudgetCallbacks;
   private side: HTMLElement[] = [];
   private drag: { from: ModuleId | 'tray'; ghost: HTMLElement; startX: number; startY: number; moved: boolean; srcEl: HTMLElement } | null = null;
+  /** The module card picked in the 3D view (outlined). */
+  private picked: string | null = null;
 
   constructor(root: HTMLElement, cb: BudgetCallbacks) {
     this.root = root;
@@ -131,6 +133,26 @@ export class BudgetDock {
 
   private left() {
     return this.briefing.cells - Object.values(this.alloc).reduce((a, b) => a + b, 0);
+  }
+
+  /**
+   * The player tapped a part of the base in 3D: outline its card (null clears). The rocket is filled from the
+   * O2 plant's FUEL slot, so it lights up the O2 Plant; parts with no card (panels, reactor) light up nothing.
+   */
+  highlight(key: string | null) {
+    this.picked = key === 'rocket' ? 'o2' : key;
+    this.root.querySelectorAll('.module.picked').forEach((n) => n.classList.remove('picked'));
+    const card = this.picked ? MODULES.some((m) => m.key === this.picked) && this.root.querySelector<HTMLElement>(`.module.${this.picked}`) : null;
+    if (!card) return;
+    card.classList.add('picked');
+    // Bring it into view inside the dock only: never scroll the page away from the 3D view.
+    const box = this.root.querySelector<HTMLElement>('.dock-left');
+    if (box && box.scrollHeight > box.clientHeight) {
+      const r = card.getBoundingClientRect();
+      const b = box.getBoundingClientRect();
+      if (r.top < b.top) box.scrollTop -= b.top - r.top + 8;
+      else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
+    }
   }
 
   private get site(): Site {
@@ -301,7 +323,7 @@ export class BudgetDock {
         const lock = this.cb.canEdit ? (mine ? 'mine' : 'locked') : '';
         return h(
           'section',
-          { class: `module ${m.key} ${short ? 'short' : ''} ${lock}`, 'data-drop': m.slots[0].id, 'aria-label': m.name },
+          { class: `module ${m.key} ${short ? 'short' : ''} ${lock} ${this.picked === m.key ? 'picked' : ''}`, 'data-drop': m.slots[0].id, 'aria-label': m.name },
           h('div', { class: 'module-head' }, icon(m.icon, 22), m.name.toUpperCase()),
           isBuild
             ? h(

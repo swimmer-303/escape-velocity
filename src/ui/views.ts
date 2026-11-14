@@ -10,6 +10,7 @@ import type { ScienceFact } from '../data/science';
 import { RADLAB_ISS, RADLAB_ISS_MAY2024 } from '../data/radlab';
 import { windowSol } from '../sim/sim';
 import { siteText, type Site } from '../sim/site';
+import type { StageCue } from '../render/stage';
 
 export function shortRange(a: string, b: string) {
   const f = (s: string) => new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -119,11 +120,23 @@ interface Beat {
   at: number;
   text: string;
   storm?: number;
+  /** Something for the 3D stage to act out at this moment. */
+  cue?: StageCue;
+}
+
+const CRATE_WORDS = { food: 'food crate', parts: 'crate of spare parts', panel: 'solar panel crate' } as const;
+
+/** Beats both worlds share: the cargo lander, and the crew running for the shelter before a storm. */
+function sharedBeats(r: SolReport): Beat[] {
+  const out: Beat[] = [];
+  if (r.crate) out.push({ at: 0.06, text: `A cargo lander fires its retro-rockets and sets down your ${CRATE_WORDS[r.crate]}.`, cue: { kind: 'lander', crate: r.crate } });
+  if (r.storm && r.storm.shelterCells > 0) out.push({ at: 0.24, text: 'Storm alarm! The crew runs into the shelter.', cue: { kind: 'shelter' } });
+  return out;
 }
 
 export function runBeats(r: SolReport, site?: Site): Beat[] {
   if (site === 'moon') return moonBeats(r);
-  const beats: Beat[] = [{ at: 0, text: 'Sunrise. The solar panels wake up.' }];
+  const beats: Beat[] = [{ at: 0, text: 'Sunrise. The solar panels wake up.' }, ...sharedBeats(r)];
   const on = (id: keyof Allocation) => r.alloc[id] > 0;
   if (on('fuel')) beats.push({ at: 0.12, text: `The O2 plant hums: ${r.alloc.fuel} cell${r.alloc.fuel === 1 ? '' : 's'} filling the rocket.` });
   if (on('greenhouse')) beats.push({ at: 0.22, text: 'The greenhouse glows under its grow lights.' });
@@ -155,6 +168,7 @@ function moonBeats(r: SolReport): Beat[] {
       at: 0,
       text: r.night ? 'The long lunar night goes on. The solar panels are dark.' : 'The Sun hangs low over the south pole. The solar panels hum.',
     },
+    ...sharedBeats(r),
   ];
   if (on('fuel')) beats.push({ at: 0.12, text: `The O2 plant bakes oxygen out of Moon soil: ${r.alloc.fuel} cell${r.alloc.fuel === 1 ? '' : 's'} filling the rocket.` });
   if (on('greenhouse')) beats.push({ at: 0.22, text: 'The greenhouse glows under its grow lights.' });
