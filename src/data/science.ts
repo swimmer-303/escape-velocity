@@ -3,7 +3,7 @@
 // Every number here is a published figure; sources are listed on the card and in the Science Log.
 
 import type { ScienceTopic } from '../sim/explain';
-import { REAL, type Site } from '../sim/constants';
+import { ARCADIA, REAL, type Landing, type Site } from '../sim/constants';
 import { OSDR_CARDS, type OsdrCard } from './osdr';
 
 export interface ScienceFact {
@@ -15,6 +15,8 @@ export interface ScienceFact {
   art?: string;
   /** Only shown at this site. Missing = true for both Mars and the Moon. */
   site?: Site;
+  /** Mars only: only shown at this landing site. Missing = shown at every landing site. */
+  landing?: Landing;
 }
 
 export const FACTS: ScienceFact[] = [
@@ -141,6 +143,34 @@ export const FACTS: ScienceFact[] = [
     url: 'https://www.nasa.gov/missions/station/iss-research/nasa-achieves-water-recovery-milestone-on-international-space-station/',
     art: 'science-crew',
   },
+  // ---------------------------------------------------------------- the ice landing site (Arcadia Planitia)
+  {
+    topic: 'greenhouse',
+    site: 'mars',
+    landing: 'arcadia',
+    title: 'Ice under your boots',
+    body: `NASA's Subsurface Water Ice Mapping project (SWIM) put together measurements from three NASA spacecraft orbiting Mars to map where ice is probably hiding under the ground. The scientists found that the broad plains of Arcadia match the most signs of ice that astronauts could reach. Ice could give a crew water to drink and water for growing plants. In this game, your greenhouse grows ${ARCADIA.greenhouseBoost} times as much here (a game value).`,
+    source: 'Morgan et al., Nature Astronomy (2021); Planetary Science Institute, Feb 8, 2021',
+    url: 'https://www.psi.edu/blog/water-ice-resources-identified-in-martian-northern-hemisphere/',
+  },
+  {
+    topic: 'cold',
+    site: 'mars',
+    landing: 'arcadia',
+    title: 'Ice or sunshine?',
+    body: "Close to Mars' poles there is lots of ice just under the ground, but it is colder there and the nights are long. Near the equator, where Curiosity explores Gale Crater, it is warmer and sunny enough for solar power, but there is little ice near the surface. NASA's mission planners are looking for a middle ground, like the northern plains of Arcadia Planitia: some ice, some sunshine.",
+    source: 'NASA/JPL, "Where Should Future Astronauts Land on Mars? Follow the Water" (Feb 8, 2021)',
+    url: 'https://www.jpl.nasa.gov/news/where-should-future-astronauts-land-on-mars-follow-the-water',
+  },
+  {
+    topic: 'o2',
+    site: 'mars',
+    landing: 'arcadia',
+    title: 'Ice means a ride home',
+    body: 'Bringing all the rocket fuel for a round trip from Earth is basically not possible, so almost every plan for a human Mars mission in the last 30 years looks at making fuel on Mars. A SWIM scientist says ice could give astronauts drinking water, plants, air to breathe and rocket fuel, "but the most important is to provide fuel for the return trip home to Earth." On the space station, astronauts already make oxygen by splitting water with electricity. In this game, your O2 plant still takes oxygen from Mars air, like MOXIE.',
+    source: 'Planetary Science Institute (Feb 8, 2021); NASA, ISS life support (oxygen from water)',
+    url: 'https://www.psi.edu/blog/water-ice-resources-identified-in-martian-northern-hemisphere/',
+  },
   // ---------------------------------------------------------------- the Moon
   {
     topic: 'shelter',
@@ -241,10 +271,13 @@ export const OSDR_FACTS: ScienceFact[] = OSDR_CARDS.map((c) => ({
   art: OSDR_ART[c.tieIn],
 }));
 
-/** A Real Science card for what just happened, at this site (Mars by default). */
-export function factFor(topic: ScienceTopic, seed: number, site: Site = 'mars'): ScienceFact {
-  const here = (f: ScienceFact) => (f.site ?? site) === site;
+/** A Real Science card for what just happened, at this site (Mars at Gale Crater by default). */
+export function factFor(topic: ScienceTopic, seed: number, site: Site = 'mars', landing: Landing = 'gale'): ScienceFact {
+  const here = (f: ScienceFact) => (f.site ?? site) === site && (!f.landing || (site === 'mars' && f.landing === landing));
   const list = [...FACTS, ...OSDR_FACTS].filter((f) => f.topic === topic && here(f));
+  // At a special landing site, its own cards come up every other time (Gale Crater has none, so it is unchanged).
+  const own = list.filter((f) => f.landing && f.landing === landing);
+  if (own.length && Math.abs(seed) % 2 === 0) return own[Math.floor(Math.abs(seed) / 2) % own.length];
   const pool = list.length ? list : FACTS.filter(here);
   return pool[Math.abs(seed) % pool.length];
 }

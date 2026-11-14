@@ -76,6 +76,50 @@ export function siteOf(x: { site?: Site } | null | undefined): Site {
 }
 
 /**
+ * Where on Mars the base lands: Gale Crater (Curiosity's crater, the default) or the ice-rich plains of
+ * Arcadia Planitia. Missing (old saves, and every Moon game) means Gale Crater.
+ */
+export type Landing = 'gale' | 'arcadia';
+
+export function landingOf(x: { site?: Site; landing?: Landing } | null | undefined): Landing {
+  return x?.site !== 'moon' && x?.landing === 'arcadia' ? 'arcadia' : 'gale';
+}
+
+/**
+ * The ice landing site, Arcadia Planitia. Real facts (each with its source) and the game values built on them.
+ *
+ * - Where: the center of Arcadia Planitia, 46.66°N 192.00°E (planetocentric, east-positive), from the IAU/USGS
+ *   Gazetteer of Planetary Nomenclature, feature 348: https://planetarynames.wr.usgs.gov/Feature/348
+ *   Gale Crater (Bradbury Landing) is at 4.59°S (see src/data/snapshots/gale-terrain.json).
+ * - Why: NASA's Subsurface Water Ice Mapping (SWIM) project found that "the broad plains of Arcadia and the extensive
+ *   glacial networks across Deuteronilus Mensae match the greatest number of remote-sensing criteria for accessible
+ *   ice-rich, subsurface material" (Morgan et al., Nature Astronomy 5, 230-236, 2021;
+ *   https://pubs.usgs.gov/publication/70226786). The SWIM map value at this spot is in
+ *   src/data/snapshots/swim-ice.json (scripts/fetch-swim.mjs).
+ * - The trade-off: ice near the surface is stable poleward of about 50°, "but these regions are colder and subject to
+ *   long seasons of extended night. Lower latitudes are warmer, have a manageable length of night and plenty of solar
+ *   radiation for power generation" (G. Morgan, PSI, Feb 8 2021:
+ *   https://www.psi.edu/blog/water-ice-resources-identified-in-martian-northern-hemisphere/). Ice is useful for
+ *   "water for human consumption, growing plants for food, and for the generation of methane fuel and breathable air"
+ *   (same release).
+ *
+ * The SIZES of the effects below are GAME VALUES (the Science Log says so): we found no published figure for how
+ * much more food a Mars greenhouse grows with local water, or how many more cold nights a base at 47°N gets.
+ */
+export const ARCADIA = {
+  lat: 46.66,
+  lonE: 192.0,
+  /** Gale Crater's latitude (Bradbury Landing), for comparisons. */
+  galeLat: -4.59,
+  /** GAME VALUE: less sunlight this far north, so the starting solar array makes 1 cell fewer (7 -> 6). */
+  sunCellsLost: 1,
+  /** GAME VALUE: colder nights, so each mission has this many more cold snaps (each needs 1 more heater cell). */
+  extraColdSnaps: 2,
+  /** GAME VALUE: water from the ice for the greenhouse: each greenhouse cell grows this many times as much food. */
+  greenhouseBoost: 2,
+} as const;
+
+/**
  * Units: air and food are counted in PERSON-DAYS (1 = one astronaut for one sol).
  * The HUD shows "days left" = stock / crew size.
  */
@@ -164,8 +208,19 @@ export const MOON_TUNING: Record<Difficulty, MoonTuning> = {
   },
 };
 
-export function tuningFor(difficulty: Difficulty, site?: Site): Tuning {
-  return site === 'moon' ? MOON_TUNING[difficulty] : TUNING[difficulty];
+/** Arcadia Planitia: Mars rules, with a smaller starting solar array and more cold snaps (game values, see ARCADIA). */
+export const ARCADIA_TUNING: Record<Difficulty, Tuning> = {
+  cadet: { ...TUNING.cadet, baseCells: TUNING.cadet.baseCells - ARCADIA.sunCellsLost, coldSnaps: TUNING.cadet.coldSnaps + ARCADIA.extraColdSnaps },
+  commander: {
+    ...TUNING.commander,
+    baseCells: TUNING.commander.baseCells - ARCADIA.sunCellsLost,
+    coldSnaps: TUNING.commander.coldSnaps + ARCADIA.extraColdSnaps,
+  },
+};
+
+export function tuningFor(difficulty: Difficulty, site?: Site, landing?: Landing): Tuning {
+  if (site === 'moon') return MOON_TUNING[difficulty];
+  return landing === 'arcadia' ? ARCADIA_TUNING[difficulty] : TUNING[difficulty];
 }
 
 /** Lunar night rules (game values). */
@@ -241,8 +296,19 @@ export const MOON_EXPEDITIONS: ExpeditionSpec[] = [
   },
 ];
 
-export function expeditionFor(n: number, site?: Site): ExpeditionSpec {
-  const list = site === 'moon' ? MOON_EXPEDITIONS : EXPEDITIONS;
+/** The same three Mars crews at Arcadia Planitia: only the first crew's story changes. */
+export const ARCADIA_EXPEDITIONS: ExpeditionSpec[] = [
+  {
+    ...EXPEDITIONS[0],
+    blurb:
+      'Four astronauts land on the icy plains of Arcadia Planitia, far north of Gale Crater. There is ice under their boots, but less sunshine and colder nights. Make enough rocket oxygen to get home, and start building a base for the crews who come after you.',
+  },
+  EXPEDITIONS[1],
+  EXPEDITIONS[2],
+];
+
+export function expeditionFor(n: number, site?: Site, landing?: Landing): ExpeditionSpec {
+  const list = site === 'moon' ? MOON_EXPEDITIONS : landing === 'arcadia' ? ARCADIA_EXPEDITIONS : EXPEDITIONS;
   return list[Math.max(0, Math.min(list.length - 1, n - 1))];
 }
 

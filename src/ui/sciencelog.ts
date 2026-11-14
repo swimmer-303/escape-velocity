@@ -17,6 +17,8 @@ import {
   MOON_BATTERY,
   SUN_EARTH_LIGHT_MIN,
   EARTH_PROCESSING_MIN,
+  ARCADIA,
+  ARCADIA_TUNING,
   type Difficulty,
 } from '../sim/constants';
 import { FAST_PARTICLE_MIN } from '../sim/sim';
@@ -26,6 +28,8 @@ import type { LightTime } from '../data/lighttime';
 import { OSDR_CARDS } from '../data/osdr';
 import { RADLAB_ISS, RADLAB_ISS_MAY2024 } from '../data/radlab';
 import { GALE_EXAGGERATION, GALE_PRODUCT, GALE_PRODUCT_URL } from '../render/gale-info';
+import { ARCADIA_RELIEF_M, GALE_RELIEF_M, ARCADIA_ELEVATION_M, GALE_ELEVATION_M } from '../render/arcadia-info';
+import { SWIM, SWIM_ABOUT_URL, SWIM_PRODUCTS_URL, fmtIce, swimAt, swimProfileEnds } from '../data/swim';
 
 interface Ctx {
   feed: SpaceWeatherFeed;
@@ -151,6 +155,48 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
       [tag('real', 'PARTNER RESOURCE')],
       [link('https://www.asc-csa.gc.ca/eng/youth-educators/resources-stem-and-youth-organizations.asp', 'CSA youth and STEM resources')],
     ],
+    // ------------------------------------------------------------ the ice landing site (Arcadia Planitia)
+    [
+      'NASA SWIM: maps of ice under the ground (Arcadia landing site)',
+      [
+        "NASA's Subsurface Water Ice Mapping project (SWIM, run by the Planetary Science Institute for NASA's Mars Exploration Program) combines measurements from Mars Odyssey, Mars Global Surveyor and Mars Reconnaissance Orbiter (neutrons, heat, SHARAD radar echoes and icy landforms) into an \"ice consistency\" from -1 (the data are inconsistent with ice) to +1 (consistent with ice); 0 means unclear or no data. ",
+        `At the center of Arcadia Planitia the SWIM 2.0 maps read ${fmtIce(swimAt('arcadia', 'c0_1'))} for the top meter, ${fmtIce(swimAt('arcadia', 'c1_5'))} for 1 to 5 m and ${fmtIce(swimAt('arcadia', 'c5'))} deeper than 5 m. At Gale Crater: ${fmtIce(swimAt('gale', 'c0_1'))}, ${fmtIce(swimAt('gale', 'c1_5'))} and ${fmtIce(swimAt('gale', 'c5'))}. `,
+        (() => {
+          const { south, north, lonE } = swimProfileEnds();
+          return `Along Arcadia's longitude (${lonE}°E), the top-meter value (averaged over 1-degree boxes) climbs from ${fmtIce(south.mean)} at ${south.lat}°N to ${fmtIce(north.mean)} at ${north.lat}°N: more ice farther north, where there is less sunshine. `;
+        })(),
+        'It measures how well independent datasets agree, not how much ice there is, and SWIM does not choose landing sites: we picked the center of the plain.',
+      ],
+      [tag('archive', 'ARCHIVE'), ` Values read from the SWIM 2.0 map files on ${day(SWIM.fetchedAt)}.`],
+      [link(SWIM_PRODUCTS_URL, 'SWIM 2.0 maps'), ' · ', link(SWIM_ABOUT_URL, 'What "ice consistency" means'), ' · ', link('https://pubs.usgs.gov/publication/70226786', 'Morgan et al., Nature Astronomy 2021')],
+    ],
+    [
+      'Arcadia Planitia: why land there?',
+      [
+        `The center of Arcadia Planitia is at ${ARCADIA.lat}°N, ${ARCADIA.lonE.toFixed(2)}°E (Gale Crater: ${Math.abs(ARCADIA.galeLat)}°S). `,
+        'The first SWIM paper found that "the broad plains of Arcadia and the extensive glacial networks across Deuteronilus Mensae match the greatest number of remote-sensing criteria for accessible ice-rich, subsurface material." ',
+        'Its lead scientist says ice could be used for "water for human consumption, growing plants for food, and for the generation of methane fuel and breathable air," and that the most important use is fuel for the trip home. ',
+        'The catch: in the current climate, ice within 3 m of the surface should be stable above about 50° latitude, in places that are "colder and subject to long seasons of extended night," while lower latitudes are warmer with "plenty of solar radiation for power generation." NASA/JPL calls the northern mid-latitudes a middle ground between the most ice (the poles) and the most sunlight and warmth (the equator).',
+      ],
+      [tag('real', 'PUBLISHED RESULT')],
+      [
+        link('https://planetarynames.wr.usgs.gov/Feature/348', 'IAU/USGS Gazetteer: Arcadia Planitia'),
+        ' · ',
+        link('https://www.psi.edu/blog/water-ice-resources-identified-in-martian-northern-hemisphere/', 'Planetary Science Institute, Feb 2021'),
+        ' · ',
+        link('https://www.jpl.nasa.gov/news/where-should-future-astronauts-land-on-mars-follow-the-water', 'NASA/JPL, Feb 2021'),
+      ],
+    ],
+    [
+      'NASA Mars Trek: Arcadia Planitia terrain',
+      [
+        `Land at Arcadia and the ground around your base is the same Mars Trek elevation product as Gale Crater (${GALE_PRODUCT}), at the same scale and the same ×${GALE_EXAGGERATION} height, centered on the middle of the plain. `,
+        `The whole 240 km snapshot rises and falls by only ${ARCADIA_RELIEF_M.toLocaleString('en-US')} m (Gale Crater, with Mount Sharp: ${GALE_RELIEF_M.toLocaleString('en-US')} m). The base sits ${Math.abs(ARCADIA_ELEVATION_M).toLocaleString('en-US')} m below the Mars datum (Curiosity's landing site: ${Math.abs(GALE_ELEVATION_M).toLocaleString('en-US')} m). `,
+        "The frost patches are made up for the look. They stand for the thin water-ice frost that NASA's Viking 2 lander photographed on another northern plain, Utopia Planitia, on May 18, 1979.",
+      ],
+      [tag('archive', 'ARCHIVE'), ' A snapshot of Mars Trek elevations, stored with the game.'],
+      [link('https://trek.nasa.gov/mars/', 'trek.nasa.gov/mars'), ' · ', link('https://nssdc.gsfc.nasa.gov/imgcat/html/object_page/vl2_p21873.html', 'NASA: Viking 2 frost image')],
+    ],
     // ------------------------------------------------------------ the Moon
     [
       "Moon: Chang'e 4 LND radiation",
@@ -229,6 +275,18 @@ export function renderScienceLog(ctx: Ctx): HTMLElement[] {
       `Earth's warning needs ${SUN_EARTH_LIGHT_MIN} minutes for sunlight to reach Earth, about ${EARTH_PROCESSING_MIN} minutes for forecasters, and ${REAL.moonLightSec} seconds of radio: less than the ${FAST_PARTICLE_MIN} minutes the game gives the fastest particles, so on the Moon every warning arrives in time and there is no radiation monitor to build. The Moon has no air, so there are no dust storms, no wind and no cold snaps, and the Sun never blocks the radio the way it does for Mars.`,
     ],
     ['Moon: between crews', 'There is no 26-month wait: the Moon is always close, so the next crew comes when it is ready. The game does not say how long the base waits.'],
+    [
+      'Arcadia: sunshine',
+      `At Arcadia the starting solar array makes ${ARCADIA_TUNING.cadet.baseCells} cells instead of ${TUNING.cadet.baseCells}. That is a game value: the sources say only that the mid-latitudes get less sunshine than the equator. Our own rough estimate of yearly sunlight at the top of Mars' air gives about a quarter less at ${Math.round(ARCADIA.lat)}°N than at Gale Crater, so 1 cell in ${TUNING.cadet.baseCells} is gentler than real life (method in docs/data-notes.md).`,
+    ],
+    [
+      'Arcadia: cold nights',
+      `${ARCADIA_TUNING.cadet.coldSnaps} cold snaps per mission on Cadet instead of ${TUNING.cadet.coldSnaps} (Commander: ${ARCADIA_TUNING.commander.coldSnaps} instead of ${TUNING.commander.coldSnaps}). A game value: the sources say these latitudes are colder, but we found no count of cold nights.`,
+    ],
+    [
+      'Arcadia: water from ice',
+      `Each greenhouse cell grows ${ARCADIA.greenhouseBoost} times as much food (and the plants give ${ARCADIA.greenhouseBoost} times as much air). A game value standing for plenty of water from the ice. The O2 plant does not change: it still takes oxygen from the air, like MOXIE. Crews, rocket fuel, launch windows, storms and radiation all use the Gale Crater values; the base is about as low as Curiosity's landing site, under a similar thickness of air, so the game keeps Curiosity's radiation measurement there too (a game assumption).`,
+    ],
   ];
 
   return [

@@ -20,6 +20,8 @@ export interface StageScene {
   projectProgress?: number;
   /** Which world the base is on (default 'mars'). The stage switches scenery whenever it changes. */
   site?: 'mars' | 'moon';
+  /** Mars only: the landing site ('gale', the default, or 'arcadia', the ice-rich plains). Ignored on the Moon. */
+  landing?: string;
 }
 
 export interface Stage {
@@ -45,6 +47,7 @@ export class CssStage implements Stage {
   private ground = document.createElement('div');
   private weather: Weather = 'clear';
   private moon = false;
+  private ice = false;
 
   mount(el: HTMLElement) {
     this.el = el;
@@ -60,8 +63,10 @@ export class CssStage implements Stage {
   setScene(scene: StageScene) {
     this.weather = scene.weather;
     this.moon = scene.site === 'moon';
+    this.ice = !this.moon && scene.landing === 'arcadia';
     // Moon: gray ground and a white Sun (inline styles; empty strings fall back to the Mars CSS).
-    this.ground.style.background = this.moon ? 'linear-gradient(#8d8b87, #4f4f52)' : '';
+    // Arcadia Planitia: paler, frosty plains.
+    this.ground.style.background = this.moon ? 'linear-gradient(#8d8b87, #4f4f52)' : this.ice ? 'linear-gradient(#c9b4a4, #8a5a40)' : '';
     this.sun.style.background = this.moon ? '#ffffff' : '';
     this.sun.style.boxShadow = this.moon ? 'none' : '';
     this.label.textContent = '';

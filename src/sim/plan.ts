@@ -3,7 +3,7 @@
 // space-weather events. The player's choices never change the plan; they change
 // how well the outpost copes with it.
 
-import { DUST_STORM_LENGTH, MOON_TUNING, expeditionFor, tuningFor } from './constants';
+import { DUST_STORM_LENGTH, MOON_TUNING, expeditionFor, landingOf, tuningFor } from './constants';
 import { makeRng, randInt, shuffle, type Rng } from './rng';
 import type { MissionConfig, SolPlan, SpaceWeatherEvent, Severity } from './types';
 
@@ -65,8 +65,8 @@ function blankPlan(windowSol: number): SolPlan[] {
 }
 
 export function buildPlan(config: MissionConfig): SolPlan[] {
-  const t = tuningFor(config.difficulty, config.site);
-  const spec = expeditionFor(config.expedition, config.site);
+  const t = tuningFor(config.difficulty, config.site, landingOf(config));
+  const spec = expeditionFor(config.expedition, config.site, landingOf(config));
   const rng = makeRng(`${config.seed}|plan|${config.expedition}`);
   const W = spec.windowSol + t.windowBonus;
   const plan = blankPlan(W);

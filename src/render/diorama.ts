@@ -2,17 +2,21 @@
 // The low-poly outpost. Built from code (no model files), so it's tiny to download.
 // The base visibly grows: every upgrade has its own piece, and the Workshop's current
 // project shows as a see-through blueprint that fills in as the crew builds it.
-// On Mars the ground around the base is real Gale Crater terrain (see gale.ts); on the Moon it is
+// On Mars the ground around the base is real Gale Crater terrain (see gale.ts), or, at the ice landing site,
+// the real, much flatter plains of Arcadia Planitia with frost patches (see arcadia.ts); on the Moon it is
 // made-up gray, cratered regolith with the Earth in the sky (see moon.ts).
 
 import * as THREE from 'three';
 import { mat, rand } from './retro';
 import { marsHeight, GROUND_RADIUS } from './gale';
+import { arcadiaHeight, frostAmount } from './arcadia';
 import { moonHeight, moonTone, buildEarth } from './moon';
 import type { StageScene } from './stage';
 import type { UpgradeId, Levels } from '../sim/upgrades';
 
 export type Site = NonNullable<StageScene['site']>;
+/** Where on Mars the base sits: Gale Crater (default) or the ice landing site, Arcadia Planitia. */
+export type MarsLanding = 'gale' | 'arcadia';
 
 const C = {
   rust: '#8a3a1c',
@@ -130,9 +134,12 @@ export class Diorama {
   private night = 0;
   private storming = 0;
   private site: Site = 'mars';
+  private landing: MarsLanding = 'gale';
   private marsGround: THREE.Group;
   /** Built the first time the Moon is shown. */
   private moonGround?: THREE.Group;
+  /** Built the first time the ice landing site is shown. */
+  private arcadiaGround?: THREE.Group;
   private hull: Array<{ m: THREE.MeshPhongMaterial; base: THREE.Color }> = [];
 
   constructor() {
@@ -203,9 +210,10 @@ export class Diorama {
 
   // ------------------------------------------------------------------ building pieces
 
-  /** Ground height. Both sites keep the base pad (within 11 units) perfectly flat at 0. */
+  /** Ground height. Every site keeps the base pad (within 11 units) perfectly flat at 0. */
   private height(x: number, z: number) {
-    return this.site === 'moon' ? moonHeight(x, z) : marsHeight(x, z);
+    if (this.site === 'moon') return moonHeight(x, z);
+    return this.landing === 'arcadia' ? arcadiaHeight(x, z) : marsHeight(x, z);
   }
 
   /** Gale Crater from real Mars Trek elevations (Mount Sharp included), plus rocks near the base. */
@@ -236,6 +244,61 @@ export class Diorama {
       const rock = mesh(rockGeo, rockMat, x, marsHeight(x, z) + 0.1, z);
       const s = 0.5 + r() * 1.6;
       rock.scale.set(s, s * (0.5 + r() * 0.5), s);
+      rock.rotation.set(r() * 3, r() * 3, r() * 3);
+      g.add(rock);
+    }
+    return g;
+  }
+
+  /**
+   * Arcadia Planitia from real Mars Trek elevations: wide, flat plains (no Mount Sharp), a little paler, with
+   * patches of thin frost (made up for the look) and fewer rocks.
+   */
+  private buildArcadiaGround() {
+    const g = new THREE.Group();
+    g.name = 'arcadia-ground';
+    const r = rand(4666);
+    const tones = ['#94543a', '#a2623f', '#b27a55'].map((c) => new THREE.Color(c));
+    const frost = new THREE.Color('#e3e8ec');
+    const geo = groundGeometry(GROUND_RADIUS, 72, 1.8, arcadiaHeight, (x, z) => {
+      const c = tones[Math.floor(r() * tones.length)].clone();
+      return c.lerp(frost, frostAmount(x, z) * 0.8);
+    });
+    const ground = new THREE.Mesh(geo, mat('#ffffff', { vertexColors: true }));
+    ground.receiveShadow = true;
+    g.add(ground);
+
+    // Frost patches: thin, flat, white shapes lying on the ground, mostly where the ground is already frosty.
+    const frostMat = mat('#eef2f5', { transparent: true, opacity: 0.85, emissive: new THREE.Color('#8fa3b5'), emissiveIntensity: 0.15 });
+    let placed = 0;
+    for (let tries = 0; placed < 34 && tries < 400; tries++) {
+      const a = r() * Math.PI * 2;
+      const d = 13 + r() * 30;
+      const x = Math.cos(a) * d;
+      const z = Math.sin(a) * d;
+      if (frostAmount(x, z) < 0.15 && r() > 0.25) continue;
+      const patch = new THREE.Mesh(new THREE.CircleGeometry(0.5 + r() * 1.6, 7), frostMat);
+      patch.name = 'frost';
+      patch.rotation.x = -Math.PI / 2;
+      patch.rotation.z = r() * Math.PI;
+      patch.scale.set(1 + r() * 0.8, 0.6 + r() * 0.6, 1);
+      patch.position.set(x, arcadiaHeight(x, z) + 0.05, z);
+      patch.receiveShadow = true;
+      g.add(patch);
+      placed++;
+    }
+
+    // A few rocks: these plains are smooth.
+    const rockMat = mat('#6e3418');
+    const rockGeo = new THREE.DodecahedronGeometry(0.3, 0);
+    for (let i = 0; i < 24; i++) {
+      const a = r() * Math.PI * 2;
+      const d = 10 + r() * 18;
+      const x = Math.cos(a) * d;
+      const z = Math.sin(a) * d;
+      const rock = mesh(rockGeo, rockMat, x, arcadiaHeight(x, z) + 0.08, z);
+      const s = 0.4 + r() * 1.0;
+      rock.scale.set(s, s * (0.5 + r() * 0.4), s);
       rock.rotation.set(r() * 3, r() * 3, r() * 3);
       g.add(rock);
     }
@@ -559,17 +622,28 @@ export class Diorama {
 
   // ------------------------------------------------------------------ updating
 
-  /** Switch the scenery between Mars and the Moon. The base itself stays where it is. */
-  setSite(site: Site) {
-    if (site === this.site) return;
+  /**
+   * Switch the scenery: Mars at Gale Crater, Mars at the ice landing site (landing 'arcadia'), or the Moon.
+   * The base itself stays where it is.
+   */
+  setSite(site: Site, landing?: string) {
+    const land: MarsLanding = site !== 'moon' && landing === 'arcadia' ? 'arcadia' : 'gale';
+    if (site === this.site && land === this.landing) return;
     this.site = site;
+    this.landing = land;
     const moon = site === 'moon';
+    const ice = land === 'arcadia';
     if (moon && !this.moonGround) {
       this.moonGround = this.buildMoonGround();
       this.group.add(this.moonGround);
     }
-    this.marsGround.visible = !moon;
+    if (ice && !this.arcadiaGround) {
+      this.arcadiaGround = this.buildArcadiaGround();
+      this.group.add(this.arcadiaGround);
+    }
+    this.marsGround.visible = !moon && !ice;
     if (this.moonGround) this.moonGround.visible = moon;
+    if (this.arcadiaGround) this.arcadiaGround.visible = ice;
     // Hulls look a little whiter on the Moon: no red dust settling on them.
     const white = new THREE.Color('#ffffff');
     for (const { m, base } of this.hull) m.color.copy(base).lerp(white, moon ? 0.35 : 0);
@@ -582,13 +656,18 @@ export class Diorama {
     return this.site;
   }
 
+  /** Where on Mars the base is shown ('gale' on the Moon too). */
+  get currentLanding(): MarsLanding {
+    return this.landing;
+  }
+
   /** Ground height at a scene position, for the current site. */
   groundHeight(x: number, z: number) {
     return this.height(x, z);
   }
 
   setScene(s: StageScene) {
-    this.setSite(s.site ?? 'mars');
+    this.setSite(s.site ?? 'mars', s.landing);
     const prev = this.prevLevels;
     this.scene = s;
     // Panels: 3 rows to start, plus one per upgrade.

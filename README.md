@@ -46,6 +46,8 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 
 **Stars:** up to 3 per crew: Launch, Safe crew (dose under 60% of budget), and Builder (finish an upgrade for the next crew).
 
+**Landing site (Mars):** build at **Gale Crater** (Curiosity's crater, the default) or on the icy plains of **Arcadia Planitia** (47°N), where NASA's Subsurface Water Ice Mapping (SWIM) maps show likely ice in the top meter. Ice means water, so the greenhouse grows twice the food and air; but farther north there is less sunshine (1 fewer power cell) and more cold nights. The sizes of those effects are game values; the ice map is real.
+
 **Modes:** a 3-crew **campaign** (Cadet or Commander), a **Quick mission** (one crew, about 10 minutes), and **Replay History: May 2024**, where the real storms of May 2024 hit your outpost on their real dates, ending with the far-side eruption of May 20, 2024 that Curiosity measured at Gale Crater.
 
 **Daily challenge:** one mission a day for everyone (the day changes at midnight in Charlotte, NC). Everyone gets the same crew, the same weather and the same real NASA DONKI storms, frozen at the day's first request and labeled LIVE or ARCHIVE like the rest of the game. Mars on most days, the Moon on Sundays. Finish the mission and put your crew on today's board with a nickname (or as "Anonymous astronaut"): launched crews rank first, then the fewest sols, then the lowest radiation dose, then the most stars. **Today's best** on the title screen shows the board. Without our server, the challenge still plays from the stored NASA snapshot, and the game says scores can't be sent right now.
@@ -65,6 +67,8 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 | **NASA OSDR** study search | 10 Real Science cards with real study IDs (OSD-###), tied to the greenhouse, shelter and crew. | ARCHIVE (curated at build time) |
 | **NASA/JPL MOXIE**, **NASA BVAD Rev 2** (0.895 kg O2 per person per day), **Opportunity** power history | O2 plant concept, crew oxygen needs, dust-storm power loss. | Published figures |
 | **Canadian Space Agency**: food production on the Moon and in remote areas | Greenhouse Real Science card (partner agency resource). | Reference |
+| **NASA SWIM** (Subsurface Water Ice Mapping, PSI for NASA's Mars Exploration Program) ice-consistency maps | The Arcadia Planitia landing site: its real map values (top meter +0.55 at Arcadia, about 0 at Gale), 3 Real Science cards, the Science Log. | ARCHIVE (values read from the SWIM 2.0 GeoTIFFs) |
+| **NASA Mars Trek** elevations (MOLA + HRSC DEM) | The 3D ground: Gale Crater with Mount Sharp, or the flat plains of Arcadia Planitia. | ARCHIVE |
 
 Full details, raw field names, CORS findings and the source URL for every number are in [`docs/data-notes.md`](docs/data-notes.md). The in-game **Science Log** shows all of this to players.
 
@@ -109,6 +113,9 @@ npm install
 npm run dev          # local dev server
 npm test             # simulation, balance and headless UI tests
 npm run fetch-data   # refresh NASA data snapshots in src/data/snapshots/
+npm run fetch-terrain                              # Gale Crater elevations (NASA Mars Trek)
+node scripts/fetch-terrain.mjs --site=arcadia      # Arcadia Planitia elevations
+node scripts/fetch-swim.mjs                        # SWIM ice-map values at both landing sites
 npm run build        # typecheck + production build into dist/
 ```
 

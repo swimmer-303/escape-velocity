@@ -3,8 +3,7 @@
 // first-time player has something to adjust instead of a blank board. It never changes the
 // Workshop project, and it leaves the big trade-offs (how much to build) modest on purpose.
 
-import { RATES } from './constants';
-import { getBriefing, moduleCap, airPerCell, foodPerGreenhouseCell, fuelPctPerCell, windowSol, emptyAlloc } from './sim';
+import { getBriefing, moduleCap, airPerCell, foodPerGreenhouseCell, greenhouseAirPerCell, fuelPctPerCell, windowSol, emptyAlloc } from './sim';
 import { UPGRADES } from './upgrades';
 import { nightStock, nightsAhead } from './strategies';
 import type { Allocation, MissionState, ModuleId } from './types';
@@ -42,7 +41,7 @@ export function advise(state: MissionState): Advice {
   const foodNeed = (reserve + 1) * crew - state.food;
   const gh = Math.ceil(Math.max(0, foodNeed) / foodPerGreenhouseCell(state));
   give('greenhouse', gh, hardTimesAhead ? 'Hard days ahead: grow extra food now.' : 'Keeps about 2 days of food in store.');
-  const airFromGh = alloc.greenhouse * RATES.airPerGreenhouseCell;
+  const airFromGh = alloc.greenhouse * greenhouseAirPerCell(state);
   const airNeed = (reserve + 1) * crew - state.air - airFromGh;
   give('air', Math.ceil(Math.max(0, airNeed) / airPerCell(state)), hardTimesAhead ? 'Hard days ahead: make extra air now.' : 'Keeps about 2 days of air in store.');
 

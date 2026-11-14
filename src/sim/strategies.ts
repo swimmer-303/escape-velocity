@@ -1,12 +1,11 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // Scripted players used by balance tests (and handy for an "autopilot" demo).
 
-import { RATES } from './constants';
-import { emptyAlloc, getBriefing, runSol, setProject, moduleCap, airPerCell, foodPerGreenhouseCell, fuelPctPerCell, windowSol, createMission, isMoon, isNight } from './sim';
+import { emptyAlloc, getBriefing, runSol, setProject, moduleCap, airPerCell, foodPerGreenhouseCell, greenhouseAirPerCell, fuelPctPerCell, windowSol, createMission, isMoon, isNight } from './sim';
 import { nextCost, type UpgradeId } from './upgrades';
 import { finishExpedition, missionConfigFor, newCampaign, campaignDone, type Campaign } from './campaign';
 import type { Allocation, CrateId, MissionState, ModuleId, SpaceWeatherEvent } from './types';
-import type { Difficulty, Site } from './constants';
+import type { Difficulty, Landing, Site } from './constants';
 
 export interface Move {
   alloc: Allocation;
@@ -55,7 +54,7 @@ function essentials(state: MissionState, f: ReturnType<typeof filler>, opts: { f
   const night = isMoon(state) ? nightStock(state, 5) : 0;
   const foodNeed = (opts.foodDays + dust + night + 1) * state.crew - state.food;
   f.give('greenhouse', Math.ceil(Math.max(0, foodNeed) / foodPerGreenhouseCell(state)));
-  const airFromGh = f.alloc.greenhouse * RATES.airPerGreenhouseCell;
+  const airFromGh = f.alloc.greenhouse * greenhouseAirPerCell(state);
   const airNeed = (opts.airDays + dust + night + 1) * state.crew - state.air - airFromGh;
   f.give('air', Math.ceil(Math.max(0, airNeed) / airPerCell(state)));
   return b;
@@ -153,8 +152,16 @@ export function playOut(state: MissionState, strategy: Strategy, maxSols = 60): 
 }
 
 /** Play a whole campaign (all expeditions) with one strategy. */
-export function playCampaign(seed: string, difficulty: Difficulty, pool: SpaceWeatherEvent[], strategy: Strategy, lightTimeMin = 11, site: Site = 'mars'): Campaign {
-  let c = newCampaign(seed, difficulty, site);
+export function playCampaign(
+  seed: string,
+  difficulty: Difficulty,
+  pool: SpaceWeatherEvent[],
+  strategy: Strategy,
+  lightTimeMin = 11,
+  site: Site = 'mars',
+  landing: Landing = 'gale',
+): Campaign {
+  let c = newCampaign(seed, difficulty, site, landing);
   while (!campaignDone(c)) {
     const end = playOut(createMission(missionConfigFor(c, lightTimeMin, pool)), strategy);
     c = finishExpedition(c, end);

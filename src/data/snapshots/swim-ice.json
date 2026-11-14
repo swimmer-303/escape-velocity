@@ -1,0 +1,208 @@
+{
+ "source": "Subsurface Water Ice Mapping (SWIM) on Mars, SWIM 2.0 global products. Planetary Science Institute, for NASA's Mars Exploration Program (funded through JPL).",
+ "sourceUrls": [
+  "https://swim.psi.edu/SWIM2Products.php",
+  "https://swim.psi.edu/about.php?section=overview",
+  "https://swim.psi.edu/output/SWIM2/Global/Composite/SWIM2_c0_1.tif",
+  "https://swim.psi.edu/output/SWIM2/Global/Composite/SWIM2_c1_5.tif",
+  "https://swim.psi.edu/output/SWIM2/Global/Composite/SWIM2_c_5.tif"
+ ],
+ "paper": {
+  "citation": "Morgan, G.A., Putzig, N.E., Perry, M.R., et al., 2021, Availability of subsurface water-ice resources in the northern mid-latitudes of Mars: Nature Astronomy, v. 5, p. 230-236",
+  "doi": "https://doi.org/10.1038/s41550-020-01290-z",
+  "abstractUrl": "https://pubs.usgs.gov/publication/70226786"
+ },
+ "scale": "Ice consistency C_I, from -1 to +1. -1: the orbital data are inconsistent with ice. +1: consistent with ice. 0: inconclusive, or no data. It is a measure of agreement between independent datasets, not a probability and not an amount of ice.",
+ "fetchedAt": "2026-11-14T18:14:35.745Z",
+ "products": [
+  {
+   "id": "c0_1",
+   "file": "SWIM2_c0_1.tif",
+   "title": "Combined Ice Consistency (0-1 meters)",
+   "depth": "0 to 1 m",
+   "url": "https://swim.psi.edu/output/SWIM2/Global/Composite/SWIM2_c0_1.tif",
+   "lastModified": "Sat, 19 Dec 2020 00:06:36 GMT",
+   "degPerPixel": 0.050006,
+   "noData": -100
+  },
+  {
+   "id": "c1_5",
+   "file": "SWIM2_c1_5.tif",
+   "title": "Combined Ice Consistency (1-5 meters)",
+   "depth": "1 to 5 m",
+   "url": "https://swim.psi.edu/output/SWIM2/Global/Composite/SWIM2_c1_5.tif",
+   "lastModified": "Sat, 19 Dec 2020 00:07:10 GMT",
+   "degPerPixel": 0.050006,
+   "noData": -100
+  },
+  {
+   "id": "c5",
+   "file": "SWIM2_c_5.tif",
+   "title": "Combined Ice Consistency (>5 meters)",
+   "depth": "deeper than 5 m",
+   "url": "https://swim.psi.edu/output/SWIM2/Global/Composite/SWIM2_c_5.tif",
+   "lastModified": "Thu, 11 Feb 2021 05:39:20 GMT",
+   "degPerPixel": 0.050006,
+   "noData": -100
+  }
+ ],
+ "windowDeg": 0.5,
+ "sites": {
+  "arcadia": {
+   "name": "Arcadia Planitia (center of the plain)",
+   "lat": 46.66,
+   "lon": 192,
+   "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/348",
+   "sourceNote": "IAU/USGS Gazetteer of Planetary Nomenclature, feature 348: center latitude 46.66, center longitude 192.00 (planetocentric, +East, 0-360)",
+   "values": {
+    "c0_1": {
+     "center": 0.547,
+     "mean": 0.54,
+     "min": 0.367,
+     "max": 0.638,
+     "pixels": 441
+    },
+    "c1_5": {
+     "center": 0.25,
+     "mean": 0.455,
+     "min": 0,
+     "max": 1,
+     "pixels": 441
+    },
+    "c5": {
+     "center": 0.887,
+     "mean": 0.85,
+     "min": 0.5,
+     "max": 0.979,
+     "pixels": 441
+    }
+   }
+  },
+  "gale": {
+   "name": "Gale Crater (Bradbury Landing, Curiosity landing site)",
+   "lat": -4.5895,
+   "lon": 137.4417,
+   "sourceUrl": "https://en.wikipedia.org/wiki/Bradbury_Landing",
+   "sourceNote": "Same coordinates as src/data/snapshots/gale-terrain.json",
+   "values": {
+    "c0_1": {
+     "center": -0.011,
+     "mean": 0.072,
+     "min": -0.011,
+     "max": 0.21,
+     "pixels": 441
+    },
+    "c1_5": {
+     "center": -0.5,
+     "mean": -0.058,
+     "min": -0.5,
+     "max": 0.5,
+     "pixels": 441
+    },
+    "c5": {
+     "center": 0,
+     "mean": 0,
+     "min": 0,
+     "max": 0,
+     "pixels": 441
+    }
+   }
+  }
+ },
+ "profile": {
+  "product": "c0_1",
+  "lonE": 192,
+  "windowDeg": 0.5,
+  "points": [
+   {
+    "lat": 36,
+    "center": -0.163,
+    "mean": -0.11,
+    "min": -0.261,
+    "max": 0.065,
+    "pixels": 441
+   },
+   {
+    "lat": 38,
+    "center": -0.117,
+    "mean": -0.01,
+    "min": -0.122,
+    "max": 0.129,
+    "pixels": 441
+   },
+   {
+    "lat": 40,
+    "center": 0.236,
+    "mean": 0.197,
+    "min": -0.052,
+    "max": 0.342,
+    "pixels": 441
+   },
+   {
+    "lat": 42,
+    "center": 0.063,
+    "mean": 0.23,
+    "min": 0.063,
+    "max": 0.309,
+    "pixels": 441
+   },
+   {
+    "lat": 44,
+    "center": 0.222,
+    "mean": 0.313,
+    "min": 0.168,
+    "max": 0.443,
+    "pixels": 441
+   },
+   {
+    "lat": 46,
+    "center": 0.517,
+    "mean": 0.516,
+    "min": 0.231,
+    "max": 0.638,
+    "pixels": 441
+   },
+   {
+    "lat": 48,
+    "center": 0.592,
+    "mean": 0.636,
+    "min": 0.43,
+    "max": 0.815,
+    "pixels": 441
+   },
+   {
+    "lat": 50,
+    "center": 0.667,
+    "mean": 0.667,
+    "min": 0.561,
+    "max": 0.792,
+    "pixels": 441
+   },
+   {
+    "lat": 52,
+    "center": 0.731,
+    "mean": 0.679,
+    "min": 0.54,
+    "max": 0.804,
+    "pixels": 441
+   },
+   {
+    "lat": 54,
+    "center": 0.712,
+    "mean": 0.712,
+    "min": 0.566,
+    "max": 0.836,
+    "pixels": 441
+   },
+   {
+    "lat": 56,
+    "center": 0.736,
+    "mean": 0.716,
+    "min": 0.605,
+    "max": 0.848,
+    "pixels": 441
+   }
+  ]
+ },
+ "notes": "Each site value is the map pixel holding the coordinates (center) plus the mean, min and max over a box of +-0.5 degrees around it (no-data pixels skipped). The profile runs north-south along the Arcadia site's longitude, each point the mean of the same-size box. SWIM does not choose landing sites; the Arcadia point is the center of the named plain, picked by the game. Read with HTTP range requests from the full-resolution GeoTIFFs; values rounded to 3 decimals."
+}

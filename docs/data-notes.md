@@ -230,3 +230,51 @@ The title screen and the morning briefing show NASA Solar Dynamics Observatory's
 - **Snapshot:** `npm run fetch-terrain` (scripts/fetch-terrain.mjs) writes `src/data/snapshots/gale-terrain.json`: an 81 x 81 grid, about 3 km spacing, about 240 km across, centered on Bradbury Landing (Curiosity's landing site, 4.5895°S 137.4417°E). Heights range from -4,557 m (crater floor) to +954 m (Mount Sharp's upper slopes); the landing site reads -4,501 m.
 - **In the game:** 1 scene unit = 1 km for the landscape (the outpost's buildings are not to scale), heights exaggerated x1.5, and the real terrain fades in beyond the flat base pad. Stated in the Science Log.
 - **Caveat:** the landing-site coordinates come from Wikipedia's Bradbury Landing article; we did not find a NASA page listing them.
+
+---
+
+## 8. The ice landing site: Arcadia Planitia and NASA SWIM (added 2026-11-14)
+
+On Mars the player can land at **Gale Crater** (default, unchanged) or **Arcadia Planitia**. Code: `landing?: 'gale' | 'arcadia'` on `MissionConfig` and `Campaign` (missing = Gale, so old saves load as before); `ARCADIA` and `ARCADIA_TUNING` in `src/sim/constants.ts`.
+
+### Why Arcadia (sources)
+
+| Claim | What the source says | Source |
+|---|---|---|
+| Where | Arcadia Planitia: center latitude **46.66°**, center longitude **192.00°** (planetocentric, +East, 0-360); extent 34.68-54.68°N, 165-217°E | IAU/USGS Gazetteer of Planetary Nomenclature, feature 348: https://planetarynames.wr.usgs.gov/Feature/348 |
+| SWIM picks it out | "our composite ice-consistency maps indicate that the broad plains of Arcadia and the extensive glacial networks across Deuteronilus Mensae match the greatest number of remote-sensing criteria for accessible ice-rich, subsurface material situated equatorwards of the contemporary ice-stability zone" | Morgan et al. 2021, *Nature Astronomy* 5, 230-236, abstract on USGS: https://pubs.usgs.gov/publication/70226786 (DOI 10.1038/s41550-020-01290-z) |
+| SWIM's purpose | "The SWIM project's products support Mars Human Landing Sites Studies"; "The goal of SWIM is to provide maps of potential buried ice deposits to support the selection of human landing sites." The pilot study "focused on a mid-latitude swath in the Arcadia Planitia region". | https://swim.psi.edu/ ; PSI, Feb 8 2021: https://www.psi.edu/blog/water-ice-resources-identified-in-martian-northern-hemisphere/ |
+| What ice is for | "water for human consumption, growing plants for food, and for the generation of methane fuel and breathable air. But the most important is to provide fuel for the return trip home to Earth." | PSI, Feb 8 2021 (same URL) |
+| The trade-off | "ice buried within 3 meters of the surface should be stable in the current climate at latitudes above 50 degrees ... but these regions are colder and subject to long seasons of extended night. Lower latitudes are warmer, have a manageable length of night and plenty of solar radiation for power generation." NASA/JPL: the northern mid-latitudes are "a literal middle ground between where to find the most water ice (the poles) and where to find the most sunlight and warmth (the equator)". | PSI, Feb 8 2021; NASA/JPL, Feb 8 2021: https://www.jpl.nasa.gov/news/where-should-future-astronauts-land-on-mars-follow-the-water |
+| SWIM does not pick sites | "the paper does not select specific sites best suited for future human exploration" (N. Putzig) | PSI, Feb 8 2021 |
+| Oxygen from water | The ISS Oxygen Generation System's cell stack "electrolyzes, or breaks apart, water" | NASA ECLSS: https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/ |
+| Frost on the northern plains | Viking 2 imaged "a thin layer of water ice frost on the martian surface at Utopia Planitia" on 18 May 1979, "only a couple thousandths of a centimeter thick" | NASA NSSDC: https://nssdc.gsfc.nasa.gov/imgcat/html/object_page/vl2_p21873.html |
+
+Not found: a citable figure for how much less energy per kg of O2 water electrolysis needs than MOXIE-style CO2 splitting (once mining and melting ice are counted). So the game does **not** make the O2 plant better at Arcadia; the ice helps the greenhouse instead.
+
+### SWIM map snapshot (`node scripts/fetch-swim.mjs` -> `src/data/snapshots/swim-ice.json`)
+
+- **Data:** SWIM 2.0 global products, https://swim.psi.edu/SWIM2Products.php. "Combined Ice Consistency" GeoTIFFs for three depth zones: `SWIM2_c0_1.tif` (0-1 m), `SWIM2_c1_5.tif` (1-5 m), `SWIM2_c_5.tif` (>5 m), under `https://swim.psi.edu/output/SWIM2/Global/Composite/`. Each is 7200 x 2400 float32, uncompressed, 128 x 128 tiles, Mars 2000 sphere (R = 3,396,190 m), equirectangular, 0.05°/pixel, 60°S to 60°N, no-data = -100. About 71 MB each; the script reads only the header and ~12 tiles per file with HTTP range requests (checked: a range read is byte-identical to the same bytes of a full download).
+- **Scale:** "ice consistency" from -1 to +1: "-1 indicates that a given measurement is inconsistent with the presence of ice ... +1 ... consistent with the presence of ice. A value of 0 means these data are inconclusive or are absent altogether." (https://swim.psi.edu/about.php?section=overview). The 0-1 m map is `(C_N + C_T + 0.2 C_GS + 0.2 C_RS) / 2.4` (neutron, thermal, shallow landforms, SHARAD surface power). It is agreement between datasets, not a probability or an amount.
+- **Values (fetched 2026-11-14), pixel at the site / mean over ±0.5°:**
+
+| | 0-1 m | 1-5 m | >5 m |
+|---|---|---|---|
+| Arcadia Planitia (46.66°N, 192.00°E) | **+0.547** / +0.540 | +0.250 / +0.455 | +0.887 / +0.850 |
+| Gale Crater (4.5895°S, 137.4417°E) | -0.011 / +0.072 | -0.500 / -0.058 | 0.000 / 0.000 |
+
+- **Profile** along 192°E (0-1 m, ±0.5° box means): -0.11 at 36°N, +0.20 at 40°N, +0.31 at 44°N, +0.64 at 48°N, +0.68 at 52°N, +0.72 at 56°N. More likely ice farther north: the same trade-off the sources describe.
+- The game shows the 0-1 m pixel value (rounded to 2 decimals) in the expedition intro and all three in the Science Log.
+
+### Arcadia terrain (`node scripts/fetch-terrain.mjs --site=arcadia` -> `src/data/snapshots/arcadia-terrain.json`)
+
+- Same Mars Trek product and method as Gale (section 7), centered on 46.66°N 192.00°E (asked for as -168.00, since the image server uses -180..180). The server only returns square pixels in degrees, so at 46.66°N a pixel is 3 km north-south but 2.06 km east-west; the grid is **119 x 81** so it reaches about ±120 km both ways. (The script's default run still writes Gale's 81 x 81 grid: re-running it reproduced `gale-terrain.json` exactly except `fetchedAt`.)
+- Heights -4,079 to -3,653 m (426 m of relief in 240 km; Gale: 5,511 m); the base site reads -4,008 m (full-resolution check: -4,008 m). Shown at Gale's scale (1 unit = 1 km, x1.5 heights). The frost patches are made up for the look.
+
+### Game values at Arcadia (labeled in the Science Log)
+
+- **Sunshine:** 6 starting solar cells instead of 7. Sanity check (our own estimate, not a NASA figure): yearly-mean sunlight at the top of the atmosphere from the standard daily-insolation formula, with Mars' obliquity 25.19° (NASA Mars Fact Sheet), is about 0.73 of Gale's at 46.66°N (the latitude ratio of yearly means does not depend on orbital eccentricity). So the game's 1-in-7 cut is gentler than real.
+- **Cold:** 2 more cold snaps per mission (Cadet 4, Commander 5).
+- **Water:** each greenhouse cell grows 2x the food and gives 2x the plant air.
+- Everything else (crews, fuel, windows, storms, background radiation) is the Gale value. Radiation: the game keeps Curiosity's Gale measurement; Arcadia's base site is about as low (-4,008 m vs -4,501 m).
+- **Balance** (`npm run balance`, 100 campaigns each): Cadet builder wins 100 / 99 / 100% of crews 1-3 (Gale: 100 / 100 / 100); a careful non-builder 100 / 100 / 100% (Gale: 100 / 100 / 73), but crew 1 is slower (median 13 sols vs 10). Greed always loses. Commander is harder at Arcadia (scripted builder 19 / 18 / 8%; the "Suggest a plan" advisor alone reaches 0 / 100 / 68% vs Gale 4 / 100 / 97%).

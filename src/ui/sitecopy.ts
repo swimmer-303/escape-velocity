@@ -4,16 +4,79 @@
 
 import { h } from './dom';
 import { icon } from './icons';
-import { REAL, type Difficulty, type Site } from '../sim/constants';
+import { ARCADIA, REAL, TUNING, ARCADIA_TUNING, landingOf, type Difficulty, type Landing, type Site } from '../sim/constants';
 import { isNight } from '../sim/sim';
 import type { Briefing, MissionState } from '../sim/types';
+import { SWIM, fmtIce, swimAt } from '../data/swim';
+
+/** Mars only: the two places the base can land, for the mission chooser. */
+export const LANDING_CHOICES: Array<{ landing: Landing; name: string; blurb: string }> = [
+  {
+    landing: 'gale',
+    name: 'Gale Crater',
+    blurb: "Curiosity's crater, near the equator. More sunshine and milder nights, but little ice near the surface.",
+  },
+  {
+    landing: 'arcadia',
+    name: 'Arcadia Planitia',
+    blurb: "Icy plains far to the north (47°N). NASA's ice maps say there is ice under the ground: water for your greenhouse. But less sunshine and colder nights.",
+  },
+];
+
+/** The "Landing site" picker (Mars only). */
+export function landingPicker(current: Landing, pick: (l: Landing) => void): HTMLElement {
+  return h(
+    'div',
+    { class: 'landing-pick' },
+    h('h3', null, 'Landing site'),
+    h(
+      'div',
+      { class: 'crates', role: 'group', 'aria-label': 'Landing site' },
+      LANDING_CHOICES.map((c) =>
+        h(
+          'button',
+          { class: 'crate', 'aria-pressed': String(current === c.landing), onclick: () => pick(c.landing) },
+          h('b', null, c.name),
+          h('span', null, c.blurb),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * The expedition intro card for the ice landing site: the real SWIM map value, and what it means in the game.
+ * Nothing at Gale Crater or on the Moon.
+ */
+export function landingCard(c: { site?: Site; landing?: Landing; difficulty: Difficulty }): HTMLElement | null {
+  if (landingOf(c) !== 'arcadia') return null;
+  const here = swimAt('arcadia', 'c0_1');
+  const gale = swimAt('gale', 'c0_1');
+  const colds = ARCADIA_TUNING[c.difficulty].coldSnaps;
+  return h(
+    'div',
+    { class: 'card landing-card' },
+    h('b', null, `Landing site: Arcadia Planitia, ${ARCADIA.lat.toFixed(1)}°N. `),
+    `NASA's Subsurface Water Ice Mapping project (SWIM) combined data from three Mars orbiters. For the top meter of ground here, its map reads `,
+    h('b', null, fmtIce(here)),
+    ` on a scale from -1 (the data say no ice) to +1 (every clue says ice). At Gale Crater it reads ${fmtIce(gale)}: no sign either way.`,
+    h(
+      'ul',
+      { class: 'clean landing-effects' },
+      h('li', null, h('b', null, 'Water from ice: '), `each greenhouse cell grows ${ARCADIA.greenhouseBoost === 2 ? 'twice' : `${ARCADIA.greenhouseBoost} times`} the food and air.`),
+      h('li', null, h('b', null, 'Less sunshine this far north: '), `your solar panels make ${ARCADIA.sunCellsLost} fewer cell${ARCADIA.sunCellsLost === 1 ? '' : 's'} every sol.`),
+      h('li', null, h('b', null, 'Colder nights: '), `${colds} cold snaps instead of ${TUNING[c.difficulty].coldSnaps}.`),
+    ),
+    h('div', { class: 'title-foot' }, `The ice map is real (SWIM map values read on ${new Date(SWIM.fetchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}). How much each effect changes the game is our choice, and the Science Log says so.`),
+  );
+}
 
 /** The two places you can build, for the mission chooser. */
 export const SITE_CHOICES: Array<{ site: Site; name: string; blurb: string }> = [
   {
     site: 'mars',
     name: 'Mars',
-    blurb: 'Gale Crater. Dust storms, freezing nights, and messages from Earth that take minutes to arrive.',
+    blurb: 'Dust storms, freezing nights, and messages from Earth that take minutes to arrive. Land at Gale Crater or on the icy northern plains.',
   },
   {
     site: 'moon',

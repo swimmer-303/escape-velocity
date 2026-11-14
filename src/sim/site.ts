@@ -6,7 +6,7 @@
 // escape velocity 2.38 km/s; mean distance 384,400 km, so radio messages take about 1.3 seconds;
 // synodic month 29.53 days, so lunar day and lunar night each last about 14.8 Earth days.
 
-import { REAL, siteOf, type Site } from './constants';
+import { REAL, landingOf, siteOf, type Landing, type Site } from './constants';
 
 export type { Site };
 
@@ -63,10 +63,14 @@ const MOON: SiteText = {
   delay: () => `about ${REAL.moonLightSec} seconds`,
 };
 
+/** Mars at the ice landing site: the same words, a different place. */
+const ARCADIA: SiteText = { ...MARS, where: 'Arcadia Planitia' };
+
 /** Words for this site. Accepts a Site, or anything with an optional `site` (a mission config, a campaign). */
-export function siteText(x: Site | { site?: Site } | null | undefined): SiteText {
+export function siteText(x: Site | { site?: Site; landing?: Landing } | null | undefined): SiteText {
   const site = typeof x === 'string' ? x : siteOf(x);
-  return site === 'moon' ? MOON : MARS;
+  if (site === 'moon') return MOON;
+  return typeof x !== 'string' && landingOf(x) === 'arcadia' ? ARCADIA : MARS;
 }
 
 /** "1 sol" / "3 days". */
