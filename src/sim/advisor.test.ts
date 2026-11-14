@@ -26,4 +26,20 @@ describe('Suggest a plan', () => {
       expect(wins).toBeGreaterThanOrEqual(n * 0.8);
     }, 60000);
   }
+
+  it('on Commander, following it wins most first crews: it shelters "just in case" when fast storms could beat Earth\'s warning', () => {
+    let wins = 0;
+    const n = 40;
+    for (let i = 0; i < n; i++) {
+      let s = createMission(testConfig(`adv-cmd-${i}`, 'commander', 1, freshBase(), 0, 'mars'));
+      while (s.status === 'playing') {
+        const { alloc } = advise(s);
+        expect(checkAlloc(s, alloc).ok).toBe(true);
+        s = runSol(s, alloc, 'food').next;
+      }
+      if (s.status === 'won') wins++;
+    }
+    // Before this rule, following the advice on Commander lost about 97% of first crews to radiation.
+    expect(wins).toBeGreaterThanOrEqual(n * 0.6);
+  }, 60000);
 });
