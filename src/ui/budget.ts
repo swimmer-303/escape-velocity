@@ -193,6 +193,22 @@ export class BudgetDock {
   }
 
   private render() {
+    // Re-rendering must not move the player: keep scroll positions and keyboard focus.
+    const prevScroll = this.root.querySelector<HTMLElement>('.dock-left')?.scrollTop ?? 0;
+    const pageScroll = window.scrollY;
+    const active = document.activeElement as HTMLElement | null;
+    const focusLabel = active && this.root.contains(active) ? active.getAttribute('aria-label') : null;
+    this.renderDock();
+    const dockLeft = this.root.querySelector<HTMLElement>('.dock-left');
+    if (dockLeft) dockLeft.scrollTop = prevScroll;
+    if (window.scrollY !== pageScroll) window.scrollTo({ top: pageScroll });
+    if (focusLabel) {
+      const same = this.root.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusLabel)}"]`);
+      same?.focus({ preventScroll: true });
+    }
+  }
+
+  private renderDock() {
     clear(this.root);
     const left = this.left();
     const tray = h(

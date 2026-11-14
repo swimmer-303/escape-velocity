@@ -152,6 +152,10 @@ export class App {
   }
 
   private modal(content: Child, opts: { wide?: boolean; label: string; onClose?: () => void } = { label: 'Dialog' }) {
+    // Re-drawing the same dialog (e.g. picking a Workshop project) keeps its scroll position.
+    const prev = this.modalRoot.querySelector<HTMLElement>('.modal');
+    const sameDialog = prev?.getAttribute('aria-label') === opts.label;
+    const keepScroll = sameDialog ? { box: prev!.scrollTop, root: this.modalRoot.scrollTop } : null;
     clear(this.modalRoot);
     const box = h(
       'div',
@@ -160,6 +164,11 @@ export class App {
       content,
     );
     this.modalRoot.append(box);
+    if (keepScroll) {
+      box.scrollTop = keepScroll.box;
+      this.modalRoot.scrollTop = keepScroll.root;
+      return box;
+    }
     const focusable = box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>('button.primary, button.go, button');
     focusable?.focus();
     return box;
