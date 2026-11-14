@@ -6,7 +6,9 @@ import { h, clear, fmt1 } from './dom';
 import { icon, type IconName } from './icons';
 import { RATES } from '../sim/constants';
 import { moduleCap, airPerCell, foodPerGreenhouseCell, fuelPctPerCell, type Preview } from '../sim/sim';
-import { UPGRADES, nextCost } from '../sim/upgrades';
+import { UPGRADES, nextCost, upgradeDef } from '../sim/upgrades';
+import { MOON_BATTERY } from '../sim/constants';
+import { siteText, type Site } from '../sim/site';
 import type { Allocation, Briefing, ModuleId, MissionState } from '../sim/types';
 
 interface SlotDef {
@@ -22,6 +24,8 @@ interface ModuleDef {
   slots: SlotDef[];
   /** Only shown once built. */
   needs?: 'monitor' | 'battery';
+  /** Different wording for a Moon base. */
+  moonDesc?: string;
 }
 
 export const MODULES: ModuleDef[] = [
@@ -30,13 +34,21 @@ export const MODULES: ModuleDef[] = [
     name: 'O2 Plant',
     icon: 'o2',
     desc: 'Pulls oxygen out of Mars air. Same machine, two jobs: air to breathe OR oxygen for the rocket.',
+    moonDesc: 'Bakes oxygen out of Moon soil (regolith). Same machine, two jobs: air to breathe OR oxygen for the rocket.',
     slots: [
       { id: 'air', label: 'Air', icon: 'air' },
       { id: 'fuel', label: 'Fuel', icon: 'rocket' },
     ],
   },
   { key: 'greenhouse', name: 'Greenhouse', icon: 'greenhouse', desc: 'Grow lights make food, plus a little air.', slots: [{ id: 'greenhouse', label: 'Grow', icon: 'food' }] },
-  { key: 'heaters', name: 'Heaters', icon: 'heater', desc: 'Keep the batteries warm through the freezing night.', slots: [{ id: 'heaters', label: 'Heat', icon: 'heater' }] },
+  {
+    key: 'heaters',
+    name: 'Heaters',
+    icon: 'heater',
+    desc: 'Keep the batteries warm through the freezing night.',
+    moonDesc: 'Keep the base and batteries warm. The lunar night is far colder, so heaters need more then.',
+    slots: [{ id: 'heaters', label: 'Heat', icon: 'heater' }],
+  },
   { key: 'shelter', name: 'Storm Shelter', icon: 'shelter', desc: 'Shields the crew from solar storms. Only works when powered.', slots: [{ id: 'shelter', label: 'Shield', icon: 'shelter' }] },
   {
     key: 'monitor',
@@ -51,6 +63,7 @@ export const MODULES: ModuleDef[] = [
     name: 'Battery',
     icon: 'cell',
     desc: 'Store cells today, get them back tomorrow.',
+    moonDesc: `Save cells for the lunar night (holds ${MOON_BATTERY.capacity}). Each night it gives back up to ${MOON_BATTERY.releasePerNight}.`,
     slots: [{ id: 'battery', label: 'Store', icon: 'cell' }],
     needs: 'battery',
   },
@@ -106,6 +119,10 @@ export class BudgetDock {
     return this.briefing.cells - Object.values(this.alloc).reduce((a, b) => a + b, 0);
   }
 
+  private get site(): Site {
+    return siteText(this.state.config).site;
+  }
+
   private cap(id: ModuleId) {
     return moduleCap(this.state, id);
   }
@@ -147,7 +164,10 @@ export class BudgetDock {
     switch (id) {
       case 'air': {
         const d = (a * airPerCell(s)) / crew;
-        return { text: a ? h('span', null, h('b', null, `+${fmt1(d)}`), ` day${Math.abs(d - 1) < 0.05 ? '' : 's'} of air (crew uses 1 a sol)`) : 'No air made', cls: a ? 'good' : 'warn' };
+        return {
+          text: a ? h('span', null, h('b', null, `+${fmt1(d)}`), ` day${Math.abs(d - 1) < 0.05 ? '' : 's'} of air (crew uses 1 a ${siteText(this.site).turn})`) : 'No air made',
+          cls: a ? 'good' : 'warn',
+        };
       }
       case 'fuel':
         return { text: a ? h('span', null, h('b', null, `+${fmt1(a * fuelPctPerCell(s))}%`), ' rocket fuel') : 'No fuel made', cls: a ? 'good' : '' };
@@ -177,8 +197,16 @@ export class BudgetDock {
       }
       case 'monitor':
         return { text: a ? 'ON: warns you tomorrow' : 'Off', cls: a ? 'good' : '' };
-      case 'battery':
+      case 'battery': {
+        if (this.site === 'moon') {
+          const held = (this.briefing.batteryHeld ?? 0) + a;
+          return {
+            text: h('span', null, h('b', null, `${held}/${MOON_BATTERY.capacity}`), a ? ' saved for the night, nothing today' : ' saved for the night'),
+            cls: a ? 'good' : '',
+          };
+        }
         return { text: a ? h('span', null, h('b', null, `+${a}`), ` cell${a === 1 ? '' : 's'} tomorrow, nothing today`) : 'Empty', cls: a ? 'good' : '' };
+      }
       case 'build': {
         const p = s.base.project;
         if (!p) return { text: 'Everything is built!', cls: 'good' };
@@ -225,7 +253,7 @@ export class BudgetDock {
               return el;
             }),
           )
-        : h('span', { class: 'tray-empty' }, 'All cells placed. Ready to run the sol!'),
+        : h('span', { class: 'tray-empty' }, `All cells placed. Ready to run the ${siteText(this.site).turn}!`),
       h('span', { class: 'tray-hint' }, left > 0 ? 'Drag a cell onto a module, or tap a slot.' : ''),
     );
 
@@ -246,11 +274,11 @@ export class BudgetDock {
                 'div',
                 { class: 'module-desc' },
                 project ? h('b', null, UPGRADES[project].name) : 'All projects done',
-                project ? h('div', null, UPGRADES[project].effect) : null,
+                project ? h('div', null, upgradeDef(project, this.site).effect) : null,
                 project ? this.progressBar() : null,
                 h('button', { class: 'btn small', style: 'margin-top:6px', onclick: () => this.cb.onOpenWorkshop() }, 'Choose project'),
               )
-            : h('div', { class: 'module-desc' }, m.desc),
+            : h('div', { class: 'module-desc' }, this.site === 'moon' && m.moonDesc ? m.moonDesc : m.desc),
           m.slots.map((s) => this.slotRow(s, m.slots.length > 1)),
         );
       }),
@@ -258,8 +286,8 @@ export class BudgetDock {
 
     const run = h(
       'button',
-      { class: 'btn go', disabled: left > 0 ? true : undefined, onclick: () => this.cb.onRun(), 'aria-label': `Run sol ${this.briefing.sol}` },
-      `Run sol ${this.briefing.sol}`,
+      { class: 'btn go', disabled: left > 0 ? true : undefined, onclick: () => this.cb.onRun(), 'aria-label': `Run ${siteText(this.site).turn} ${this.briefing.sol}` },
+      `Run ${siteText(this.site).turn} ${this.briefing.sol}`,
       h('span', { class: 'arrow' }),
     );
     const hint = h('div', { class: 'run-hint' }, left > 0 ? `Place ${left} more cell${left === 1 ? '' : 's'} first.` : 'Every cell has a job. Go!');

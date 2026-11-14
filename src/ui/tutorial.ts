@@ -5,6 +5,7 @@
 import { h, clear } from './dom';
 import { icon } from './icons';
 import type { Allocation } from '../sim/types';
+import { siteText, type Site, type SiteText } from '../sim/site';
 
 export type CoachPhase = 'briefing' | 'plan' | 'running' | 'debrief' | 'other';
 
@@ -12,12 +13,14 @@ export interface CoachContext {
   phase: CoachPhase;
   alloc: Allocation;
   heaterNeed: number;
+  /** Mars or the Moon: the bubbles say "sol" or "day". */
+  site?: Site;
 }
 
 interface Step {
   phase: CoachPhase;
   target: string;
-  text: string;
+  text: string | ((t: SiteText) => string);
   /** Move on automatically when this is true. Without it, the bubble shows a Next button. */
   done?: (c: CoachContext) => boolean;
   nextLabel?: string;
@@ -27,7 +30,10 @@ const STEPS: Step[] = [
   {
     phase: 'briefing',
     target: '.modal button.primary',
-    text: 'Good morning, Commander! Every sol (a Mars day) starts with a briefing: weather, power, and news from Earth. Tap PLAN THE DAY.',
+    text: (t) =>
+      t.site === 'moon'
+        ? 'Good morning, Commander! Every day on the Moon starts with a briefing: power, the coming lunar night, and news from Earth. Tap PLAN THE DAY.'
+        : 'Good morning, Commander! Every sol (a Mars day) starts with a briefing: weather, power, and news from Earth. Tap PLAN THE DAY.',
     done: (c) => c.phase === 'plan',
   },
   {
@@ -51,13 +57,16 @@ const STEPS: Step[] = [
   {
     phase: 'plan',
     target: '.module.greenhouse',
-    text: 'Your crew eats every sol too. Give the greenhouse 2 cells to grow food.',
+    text: (t) => `Your crew eats every ${t.turn} too. Give the greenhouse 2 cells to grow food.`,
     done: (c) => c.alloc.greenhouse >= 2,
   },
   {
     phase: 'plan',
     target: '.module.heaters',
-    text: 'Mars nights are freezing, far colder than a winter night at home. Give the heaters a cell, or the batteries get too cold and you get less power tomorrow.',
+    text: (t) =>
+      t.site === 'moon'
+        ? 'The Moon gets far colder than a winter night at home, most of all in the lunar night. Give the heaters a cell, or the batteries get too cold and you get less power tomorrow.'
+        : 'Mars nights are freezing, far colder than a winter night at home. Give the heaters a cell, or the batteries get too cold and you get less power tomorrow.',
     done: (c) => c.alloc.heaters >= c.heaterNeed,
   },
   {
@@ -69,13 +78,13 @@ const STEPS: Step[] = [
   {
     phase: 'plan',
     target: '.module.build',
-    text: 'Spare cells? The Workshop builds upgrades that stay for every crew after you. Place your last cells anywhere you like, then press RUN SOL.',
+    text: (t) => `Spare cells? The Workshop builds upgrades that stay for every crew after you. Place your last cells anywhere you like, then press RUN ${t.TURN}.`,
     done: (c) => c.phase === 'running' || c.phase === 'debrief',
   },
   {
     phase: 'debrief',
     target: '.modal .headline',
-    text: 'After each sol, the debrief tells you what your choices caused. Fill the rocket before the launch window closes. You\'ve got this!',
+    text: (t) => `After each ${t.turn}, the debrief tells you what your choices caused. Fill the rocket before the launch window closes. You've got this!`,
     nextLabel: 'Let\'s go!',
   },
 ];
@@ -161,7 +170,7 @@ export class Coach {
     this.ring.style.display = here ? '' : 'none';
     this.bubble.append(
       h('div', { class: 'coach-head' }, icon('rocket', 22), h('span', null, `Tutorial ${this.i + 1}/${STEPS.length}`)),
-      h('p', null, s.text),
+      h('p', null, typeof s.text === 'function' ? s.text(siteText(this.ctx.site)) : s.text),
       h(
         'div',
         { class: 'coach-actions' },

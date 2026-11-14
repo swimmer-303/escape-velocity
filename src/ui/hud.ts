@@ -5,6 +5,7 @@
 import { h, clear, fmt1 } from './dom';
 import { icon } from './icons';
 import type { Snapshot } from '../sim/types';
+import { siteText, type Site } from '../sim/site';
 
 export interface HudModel {
   sol: number;
@@ -18,6 +19,8 @@ export interface HudModel {
   crew: number;
   /** e.g. "CREW 2 OF 3" */
   label: string;
+  /** Moon missions count Earth days instead of sols. */
+  site?: Site;
 }
 
 const LIFE_SCALE = 8; // days shown as a full bar
@@ -83,12 +86,13 @@ export function renderHud(root: HTMLElement, m: HudModel, right: HTMLElement[]) 
     h('div', { class: 'meter-sub' }, 'Fill it to launch home'),
   );
 
+  const t = siteText(m.site);
   const sol = h(
     'div',
-    { class: 'sol-chip', 'aria-label': `${m.label}, ${m.crew} astronauts, sol ${m.sol} of ${m.windowSol}` },
+    { class: 'sol-chip', 'aria-label': `${m.label}, ${m.crew} astronauts, ${t.turn} ${m.sol} of ${m.windowSol}` },
     h('small', null, m.label),
-    `SOL ${m.sol}`,
-    h('small', null, `${m.crew} crew · window sol ${m.windowSol}`),
+    `${t.TURN} ${m.sol}`,
+    h('small', null, `${m.crew} crew · window ${t.turn} ${m.windowSol}`),
   );
 
   root.append(power, life, dose, fuel, h('div', { class: 'hud-right' }, sol, ...right));

@@ -23,7 +23,7 @@ playescapevelocity.com {
 	}
 }
 
-# One address for everyone: www and the droplet's old sslip.io address redirect to the domain.
-www.playescapevelocity.com, 143-110-195-117.sslip.io {
+# One address for everyone: www redirects to the domain.
+www.playescapevelocity.com {
 	redir https://playescapevelocity.com{uri} permanent
 }

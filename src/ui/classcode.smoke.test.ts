@@ -115,6 +115,7 @@ describe('class codes in the UI', () => {
     await waitFor(() => button(/Quick mission/));
     expect(modalText()).toMatch(/Class code B4XN9 is ready/);
     button(/Quick mission/)!.click();
+    (await waitFor(() => button(/Start quick mission/))).click();
     expect(internals(app).campaign.seed).toBe('B4XN9');
     expect(document.querySelector('.class-code')!.textContent).toMatch(/B4XN9 is on/);
 
@@ -151,6 +152,7 @@ describe('class codes in the UI', () => {
   it('a code typed on the Quick mission screen re-seeds it; removing it goes back to a random Mars', async () => {
     const app = new App(new CssStage());
     (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
     const randomSeed = internals(app).campaign.seed;
     typeCode('q9mtk');
     expect(internals(app).campaign.seed).toBe('Q9MTK');

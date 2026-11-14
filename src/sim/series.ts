@@ -6,6 +6,15 @@
 import { UPGRADE_IDS, type UpgradeId } from './upgrades';
 import type { LoseReason, MissionState, Severity } from './types';
 
+/** "sol" on Mars, "day" on the Moon. Set by the chart renderer before it writes any text. */
+let TURN: 'sol' | 'day' = 'sol';
+export function setTurnWord(w: 'sol' | 'day') {
+  TURN = w;
+}
+export function turnWord(n?: number) {
+  return n === undefined || n === 1 ? TURN : `${TURN}s`;
+}
+
 /** How well the shelter covered the crew during a solar storm. */
 export type ShelterCover = 'full' | 'part' | 'none';
 
@@ -150,7 +159,7 @@ export function runsOf(sols: number[]): Array<[number, number]> {
 
 /** "sol 5" or "sols 4 to 6". */
 export function solSpan([a, b]: [number, number]): string {
-  return a === b ? `sol ${a}` : `sols ${a} to ${b}`;
+  return a === b ? `${TURN} ${a}` : `${TURN}s ${a} to ${b}`;
 }
 
 /** The dust storm during which fuel clearly slowed down, if any. */
@@ -177,7 +186,7 @@ export interface SeriesOutcome {
 /** One plain sentence that says why the mission went the way it did, read straight from the chart's data. */
 export function seriesTakeaway(s: MissionSeries, outcome: SeriesOutcome): string {
   const n = seriesSols(s);
-  if (n < 1) return 'This crew did not finish a sol.';
+  if (n < 1) return `This crew did not finish a ${TURN}.`;
   const recentDust = s.dust.some((k) => k >= n - 2);
 
   if (outcome.status === 'lost') {
@@ -185,27 +194,27 @@ export function seriesTakeaway(s: MissionSeries, outcome: SeriesOutcome): string
       case 'air':
       case 'food': {
         const what = outcome.loseReason === 'air' ? 'air' : 'food';
-        return recentDust ? `The ${what} ran out on sol ${n}, just after a dust storm cut your power.` : `The ${what} ran out on sol ${n}, so the crew had to go home early.`;
+        return recentDust ? `The ${what} ran out on ${TURN} ${n}, just after a dust storm cut your power.` : `The ${what} ran out on ${TURN} ${n}, so the crew had to go home early.`;
       }
       case 'dose': {
-        if (s.storms.some((st) => st.sol === n && st.dose >= 1)) return `The solar storm on sol ${n} pushed the dose past the limit.`;
+        if (s.storms.some((st) => st.sol === n && st.dose >= 1)) return `The solar storm on ${TURN} ${n} pushed the dose past the limit.`;
         const big = s.storms.filter((st) => st.shelter !== 'full' && st.dose >= 2).sort((a, b) => b.dose - a.dose)[0];
         return big
-          ? `The storm on sol ${big.sol} hit the crew outside the shelter, so the dose passed the limit on sol ${n}.`
-          : `The dose crept up every sol until it passed the limit on sol ${n}.`;
+          ? `The storm on ${TURN} ${big.sol} hit the crew outside the shelter, so the dose passed the limit on ${TURN} ${n}.`
+          : `The dose crept up every ${TURN} until it passed the limit on ${TURN} ${n}.`;
       }
       case 'window':
-        return `The tank was only ${Math.floor(s.fuel[n])}% full when the launch window closed on sol ${n}.`;
+        return `The tank was only ${Math.floor(s.fuel[n])}% full when the launch window closed on ${TURN} ${n}.`;
       default:
         break;
     }
   }
 
   const speed = fuelSpeedup(s);
-  if (speed) return `Your fuel climbed faster after you built ${UPGRADE_PHRASE[speed.id]} on sol ${speed.sol}.`;
+  if (speed) return `Your fuel climbed faster after you built ${UPGRADE_PHRASE[speed.id]} on ${TURN} ${speed.sol}.`;
 
   const hit = s.storms.filter((st) => st.shelter !== 'full' && st.dose >= 2).sort((a, b) => b.dose - a.dose)[0];
-  if (hit) return `The solar storm on sol ${hit.sol} hit ${hit.shelter === 'part' ? 'with the shelter only half on' : 'while the shelter was off'}, so the dose jumped.`;
+  if (hit) return `The solar storm on ${TURN} ${hit.sol} hit ${hit.shelter === 'part' ? 'with the shelter only half on' : 'while the shelter was off'}, so the dose jumped.`;
 
   const dust = dustSlowdown(s);
   if (dust) return `Fuel grew slowly during the dust storm on ${solSpan(dust)}, when the panels made less power.`;
@@ -215,6 +224,6 @@ export function seriesTakeaway(s: MissionSeries, outcome: SeriesOutcome): string
     const low = s.dose[n] < s.doseBudget * 0.6;
     return low ? `You sheltered from ${all}, so the dose stayed low.` : `You sheltered from ${all}. The rest of the dose came from living on Mars.`;
   }
-  if (outcome.status === 'won') return `Your crew filled the tank in ${n} sol${n === 1 ? '' : 's'}.`;
-  return `After ${n} sol${n === 1 ? '' : 's'}, the tank was ${Math.floor(s.fuel[n])}% full.`;
+  if (outcome.status === 'won') return `Your crew filled the tank in ${n} ${turnWord(n)}.`;
+  return `After ${n} ${turnWord(n)}, the tank was ${Math.floor(s.fuel[n])}% full.`;
 }

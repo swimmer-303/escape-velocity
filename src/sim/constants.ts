@@ -15,8 +15,33 @@ export const REAL = {
   marsSurfaceUgyPerDay: 210,
   /** Deep-space cruise dose-equivalent rate, mSv/day. Curiosity RAD cruise, Zeitlin et al., Science 2013. */
   cruiseMsvPerDay: 1.8,
-  /** Moon surface dose-equivalent rate, µSv/day. Chang'e 4 LND, Zhang et al., Science Advances 2020. (~1.9x the ISS total of 731; 2.6x is vs. the ISS GCR-only 523.) */
+  /**
+   * Moon surface dose-equivalent rate, µSv/day. Chang'e 4 LND, Zhang et al., "First measurements of the radiation
+   * dose on the lunar surface", Science Advances 6, eaaz1334 (2020): "LND measured an average dose equivalent of
+   * 1369 μSv/day on the surface of the Moon." https://doi.org/10.1126/sciadv.aaz1334
+   * (~1.9x the ISS total of 731; 2.6x is vs. the ISS GCR-only 523, same paper.)
+   */
   moonSurfaceUsvPerDay: 1369,
+  /** Moon surface ABSORBED dose rate in silicon, µGy/hour (13.2 ± 1). Same paper (abstract). 13.2 x 24 = 317 µGy/day. */
+  moonSurfaceUgyPerHour: 13.2,
+  /** ISS dose equivalent over the same period, µSv/day (DOSIS 3D DOSTEL). Zhang et al. 2020. */
+  issSameTimeUsvPerDay: 731,
+  /** Mean Earth-Moon distance, km (semimajor axis 0.3844 x 10^6 km). NASA Moon Fact Sheet: https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html */
+  moonDistanceKm: 384_400,
+  /** Synodic month (sunrise to sunrise on the Moon), days. NASA Moon Fact Sheet. Lunar day and lunar night each last about half: 14.8 days. */
+  moonSynodicDays: 29.53,
+  /** Equatorial surface temperature range, kelvin (95 K to 390 K, about -178 °C to 117 °C). NASA Moon Fact Sheet. */
+  moonTempMinK: 95,
+  moonTempMaxK: 390,
+  /** Sunlight at the Moon, W/m², the same as at Earth. NASA Moon Fact Sheet. */
+  moonSolarWm2: 1361,
+  /**
+   * Oxygen in lunar regolith, % by weight. ESA, "ESA opens oxygen plant - making air out of moondust" (17 Jan 2020):
+   * "Samples returned from the lunar surface confirm that lunar regolith is made up of 40-45% percent oxygen by weight."
+   * https://www.esa.int/Enabling_Support/Space_Engineering_Technology/ESA_opens_oxygen_plant_making_air_out_of_moondust
+   */
+  regolithO2PctMin: 40,
+  regolithO2PctMax: 45,
   /** May 20 2024 solar event at Gale Crater, Curiosity RAD absorbed dose, µGy. NASA/JPL news release, June 2024. */
   may2024EventUgy: 8100,
   may2024EventChestXrays: 30,
@@ -31,16 +56,24 @@ export const REAL = {
   oppy2018StormWh: 22,
   /** Sol length in minutes (24 h 39 min 35 s). */
   solMinutes: 24 * 60 + 39.6,
-  /** Escape velocity, km/s. NASA planetary fact sheets. */
+  /** Escape velocity, km/s. NASA planetary fact sheets (Moon: https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html). */
   marsEscapeKms: 5.03,
   moonEscapeKms: 2.38,
   /** One-way light time range Earth-Mars, minutes. */
   marsLightMinMin: 3,
   marsLightMaxMin: 22,
+  /** One-way Earth-Moon light time, seconds: 384,400 km / 299,792 km/s = 1.28 s (1.21 s at perigee, 1.35 s at apogee). */
   moonLightSec: 1.3,
 } as const;
 
 export type Difficulty = 'cadet' | 'commander';
+
+/** Where the base is. Missing (old saves) means Mars. */
+export type Site = 'mars' | 'moon';
+
+export function siteOf(x: { site?: Site } | null | undefined): Site {
+  return x?.site === 'moon' ? 'moon' : 'mars';
+}
 
 /**
  * Units: air and food are counted in PERSON-DAYS (1 = one astronaut for one sol).
@@ -93,6 +126,59 @@ export const TUNING: Record<Difficulty, Tuning> = {
   },
 };
 
+/**
+ * Moon tuning (site 'moon'). The Moon has no air, so no dust storms, wind or cold snaps; Earth is 1.3 light-seconds
+ * away, so there is no solar-conjunction blackout. Instead, every mission has a lunar night.
+ */
+export interface MoonTuning extends Tuning {
+  /** Turns of lunar night in each mission. A real lunar night lasts about 14.8 Earth days: the game compresses it. */
+  nightLength: number;
+}
+
+export const MOON_TUNING: Record<Difficulty, MoonTuning> = {
+  cadet: {
+    baseCells: 7,
+    startAirDays: 4,
+    startFoodDays: 6,
+    doseBudget: 36,
+    windowBonus: 3,
+    stormCount: 3,
+    maxMajor: 1,
+    dustStorms: 0,
+    coldSnaps: 0,
+    blackout: false,
+    nightLength: 4,
+  },
+  commander: {
+    baseCells: 7,
+    startAirDays: 3,
+    startFoodDays: 5,
+    doseBudget: 36,
+    windowBonus: 1,
+    stormCount: 4,
+    maxMajor: 2,
+    dustStorms: 0,
+    coldSnaps: 0,
+    blackout: false,
+    nightLength: 4,
+  },
+};
+
+export function tuningFor(difficulty: Difficulty, site?: Site): Tuning {
+  return site === 'moon' ? MOON_TUNING[difficulty] : TUNING[difficulty];
+}
+
+/** Lunar night rules (game values). */
+export const MOON_NIGHT = {
+  /** Heaters need this many extra cells on a lunar night. */
+  heaterExtra: 1,
+  /** With the panels dark, the base's small backup battery always gives at least this many cells (just enough heat for a normal night). */
+  floorCells: 2,
+} as const;
+
+/** On the Moon the Battery bank saves cells for the night: up to 2 a day go in, up to `releasePerNight` come out each night. */
+export const MOON_BATTERY = { capacity: 6, releasePerNight: 2 } as const;
+
 /** The campaign: each expedition is a new crew that inherits the base the last crew built. */
 export interface ExpeditionSpec {
   n: number;
@@ -135,6 +221,30 @@ export const EXPEDITIONS: ExpeditionSpec[] = [
     blurb: 'Six astronauts: the biggest crew yet. Everything the earlier crews built is now keeping this one alive.',
   },
 ];
+
+/** The same three crews on the Moon, at a base near the lunar south pole. Windows and fuel are game values. */
+export const MOON_EXPEDITIONS: ExpeditionSpec[] = [
+  {
+    ...EXPEDITIONS[0],
+    fuelNeeded: 34,
+    blurb: "Four astronauts land at a brand-new outpost near the Moon's south pole, the region NASA plans to explore with Artemis. Make enough rocket oxygen to get home, and start building a base for the crews who come after you.",
+  },
+  {
+    ...EXPEDITIONS[1],
+    fuelNeeded: 44,
+    blurb: 'A crew of five arrives at the base the first crew left. More people means more air and food. Can your base keep up?',
+  },
+  {
+    ...EXPEDITIONS[2],
+    fuelNeeded: 50,
+    blurb: 'Six astronauts: the biggest crew yet. Everything the earlier crews built is now keeping this one alive through the long lunar night.',
+  },
+];
+
+export function expeditionFor(n: number, site?: Site): ExpeditionSpec {
+  const list = site === 'moon' ? MOON_EXPEDITIONS : EXPEDITIONS;
+  return list[Math.max(0, Math.min(list.length - 1, n - 1))];
+}
 
 /** Production per power cell, in person-days. */
 export const RATES = {

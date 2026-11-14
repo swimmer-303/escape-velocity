@@ -6,17 +6,17 @@ import { balanced, builder, evenSplit, ignoresRadiation, pureGreed, greedyBreath
 import { TEST_POOL } from './fixtures.test-util';
 import { totalStars } from './campaign';
 import { freshBase } from './upgrades';
-import type { Difficulty } from './constants';
+import type { Difficulty, Site } from './constants';
 import { may2024Pool } from '../data/donki';
 
-function campaignStats(strategy: Strategy, difficulty: Difficulty, n = 100) {
+function campaignStats(strategy: Strategy, difficulty: Difficulty, n = 100, site: Site = 'mars') {
   const wins = [0, 0, 0];
   const sols: number[][] = [[], [], []];
   const reasons: Record<string, number> = {};
   let stars = 0;
   const levels: Record<string, number> = {};
   for (let i = 0; i < n; i++) {
-    const c = playCampaign(`seed-${i}`, difficulty, TEST_POOL, strategy);
+    const c = playCampaign(`seed-${i}`, difficulty, TEST_POOL, strategy, 11, site);
     stars += totalStars(c);
     for (const r of c.results) {
       if (r.status === 'won') {
@@ -48,6 +48,37 @@ describe('balance', () => {
         pureGreed: campaignStats(pureGreed, d),
       };
       for (const [k, v] of Object.entries(table)) console.log(d.padEnd(9), k.padEnd(17), JSON.stringify(v));
+      expect(table.builder.winPct[0]).toBeGreaterThan(0);
+    });
+  }
+
+  for (const d of ['cadet', 'commander'] as Difficulty[]) {
+    it(`moon ${d}: campaign and quick-mission report`, () => {
+      const table = {
+        builder: campaignStats(builder, d, 100, 'moon'),
+        balancedNoBuild: campaignStats(balanced, d, 100, 'moon'),
+        evenSplit: campaignStats(evenSplit, d, 100, 'moon'),
+        ignoresRadiation: campaignStats(ignoresRadiation, d, 100, 'moon'),
+        greedyBreathing: campaignStats(greedyBreathing, d, 100, 'moon'),
+        pureGreed: campaignStats(pureGreed, d, 100, 'moon'),
+      };
+      for (const [k, v] of Object.entries(table)) console.log(`moon ${d}`.padEnd(15), k.padEnd(17), JSON.stringify(v));
+      const quick = (strategy: Strategy) => {
+        const turns: number[] = [];
+        let wins = 0;
+        for (let i = 0; i < 100; i++) {
+          const end = playOut(
+            createMission({ seed: `q-${i}`, difficulty: d, site: 'moon', lightTimeMin: 1.3 / 60, eventPool: TEST_POOL, expedition: 1, base: freshBase(), prefillPct: 0 }),
+            strategy,
+          );
+          if (end.status === 'won') {
+            wins++;
+            turns.push(end.log.length);
+          }
+        }
+        return { wins, medDays: turns.length ? turns.sort((a, b) => a - b)[Math.floor(turns.length / 2)] : null };
+      };
+      console.log(`moon ${d} quick mission /100`, { builder: quick(builder), balanced: quick(balanced), greedyBreathing: quick(greedyBreathing), pureGreed: quick(pureGreed) });
       expect(table.builder.winPct[0]).toBeGreaterThan(0);
     });
   }

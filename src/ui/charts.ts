@@ -15,7 +15,7 @@ import { h, fmt1 } from './dom';
 import { iconSvg, type IconName } from './icons';
 import { UPGRADES } from '../sim/upgrades';
 import { EXPEDITIONS } from '../sim/constants';
-import { missionSeries, runsOf, seriesSols, seriesTakeaway, solSpan, upgradePhrase, type MissionSeries, type SeriesOutcome } from '../sim/series';
+import { setTurnWord, turnWord, missionSeries, runsOf, seriesSols, seriesTakeaway, solSpan, upgradePhrase, type MissionSeries, type SeriesOutcome } from '../sim/series';
 import type { ExpeditionResult } from '../sim/campaign';
 import type { MissionState } from '../sim/types';
 
@@ -86,7 +86,7 @@ function solEvents(sr: MissionSeries, k: number): string[] {
 export function seriesSummary(sr: MissionSeries): string {
   const n = seriesSols(sr);
   const parts = [
-    `Chart of ${n} sol${n === 1 ? '' : 's'}.`,
+    `Chart of ${n} ${turnWord(n)}.`,
     `The fuel tank went from ${fuelPct(sr.fuel[0])} to ${fuelPct(sr.fuel[n])}.`,
     `Air was lowest at ${days(Math.min(...sr.air))} and food at ${days(Math.min(...sr.food))}.`,
     `The radiation dose ended at ${pctOf(sr.dose[n], sr.doseBudget)}% of the limit.`,
@@ -95,9 +95,9 @@ export function seriesSummary(sr: MissionSeries): string {
     const safe = sr.storms.filter((t) => t.shelter === 'full').length;
     parts.push(`${sr.storms.length} solar storm${sr.storms.length === 1 ? '' : 's'}, ${safe} with the crew in the shelter.`);
   }
-  if (sr.built.length) parts.push(`Built: ${sr.built.map((b) => `${UPGRADES[b.id].name} on sol ${b.sol}`).join(', ')}.`);
+  if (sr.built.length) parts.push(`Built: ${sr.built.map((b) => `${UPGRADES[b.id].name} on ${turnWord()} ${b.sol}`).join(', ')}.`);
   if (sr.dust.length) parts.push(`Dust storm on ${runsOf(sr.dust).map(solSpan).join(' and ')}.`);
-  if (sr.cold.length) parts.push(`Heaters skipped on ${sr.cold.length} sol${sr.cold.length === 1 ? '' : 's'}.`);
+  if (sr.cold.length) parts.push(`Heaters skipped on ${sr.cold.length} ${turnWord(sr.cold.length)}.`);
   return parts.join(' ');
 }
 
@@ -328,10 +328,10 @@ function drawChart(sr: MissionSeries, width: number, compact: boolean, label: st
   const axisY = y + (compact ? 13 : 15);
   for (let k = every; k <= n; k += every) back.append(s('text', { x: x(k - 0.5), y: axisY, 'text-anchor': 'middle', class: 'mc-tick' }, String(k)));
   if (compact) {
-    back.append(s('text', { x: left - 5, y: axisY, 'text-anchor': 'end', class: 'mc-tick' }, 'Sol'));
+    back.append(s('text', { x: left - 5, y: axisY, 'text-anchor': 'end', class: 'mc-tick' }, cap(turnWord())));
     y = axisY + 4;
   } else {
-    back.append(s('text', { x: left + (right - left) / 2, y: axisY + 17, 'text-anchor': 'middle', class: 'mc-axis-title' }, 'Sol (one Mars day each)'));
+    back.append(s('text', { x: left + (right - left) / 2, y: axisY + 17, 'text-anchor': 'middle', class: 'mc-axis-title' }, turnWord() === 'day' ? 'Day (one Earth day each)' : 'Sol (one Mars day each)'));
     y = axisY + 22;
   }
 
@@ -418,7 +418,7 @@ function table(sr: MissionSeries): HTMLElement {
       h(
         'table',
         { class: 'log' },
-        h('thead', null, h('tr', null, ['Sol', 'Fuel', 'Air (days)', 'Food (days)', 'Dose', 'What happened'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('thead', null, h('tr', null, [cap(turnWord()), 'Fuel', 'Air (days)', 'Food (days)', 'Dose', 'What happened'].map((t) => h('th', { scope: 'col' }, t)))),
         h('tbody', null, rows),
       ),
     ),
@@ -431,7 +431,7 @@ function table(sr: MissionSeries): HTMLElement {
 export function missionChart(sr: MissionSeries, outcome: SeriesOutcome): HTMLElement {
   const n = seriesSols(sr);
   const caption = h('figcaption', { class: 'kicker' }, 'How your mission went');
-  if (n < 1) return h('figure', { class: 'card mchart' }, caption, h('p', { class: 'mchart-none' }, 'No sols to chart yet.'));
+  if (n < 1) return h('figure', { class: 'card mchart' }, caption, h('p', { class: 'mchart-none' }, `No ${turnWord(2)} to chart yet.`));
 
   const summary = seriesSummary(sr);
   const readout = h('p', { class: 'mchart-readout', 'aria-live': 'polite' });
@@ -439,7 +439,7 @@ export function missionChart(sr: MissionSeries, outcome: SeriesOutcome): HTMLEle
     class: 'mchart-plot',
     tabindex: '0',
     role: 'group',
-    'aria-label': 'Mission chart. Use the left and right arrow keys to step through the sols.',
+    'aria-label': `Mission chart. Use the left and right arrow keys to step through the ${turnWord(2)}.`,
   });
   let geo: Geometry | null = null;
   let sel = n;
@@ -447,10 +447,10 @@ export function missionChart(sr: MissionSeries, outcome: SeriesOutcome): HTMLEle
 
   const showReadout = () => {
     const k = sel;
-    const head = k === 0 ? 'Landing day' : `End of sol ${k}`;
+    const head = k === 0 ? 'Landing day' : `End of ${turnWord()} ${k}`;
     const values = `Fuel ${fuelPct(sr.fuel[k])} · Air ${days(sr.air[k])} · Food ${days(sr.food[k])} · Dose ${pctOf(sr.dose[k], sr.doseBudget)}% of the limit`;
     const ev = k === 0 ? [] : solEvents(sr, k);
-    readout.replaceChildren(h('b', null, `${head}: `), values, h('br'), h('span', { class: 'mchart-events' }, k === 0 ? 'The crew lands at the base.' : ev.length ? ev.join(' ') : 'A quiet sol.'));
+    readout.replaceChildren(h('b', null, `${head}: `), values, h('br'), h('span', { class: 'mchart-events' }, k === 0 ? 'The crew lands at the base.' : ev.length ? ev.join(' ') : `A quiet ${turnWord()}.`));
   };
   const highlight = () => {
     const hl = plot.querySelector('.mc-hl');
@@ -508,6 +508,7 @@ export function missionChart(sr: MissionSeries, outcome: SeriesOutcome): HTMLEle
 
 /** The end screen's chart, straight from the mission log. */
 export function missionChartFor(m: MissionState): HTMLElement {
+  setTurnWord(m.config.site === 'moon' ? 'day' : 'sol');
   return missionChart(missionSeries(m), { status: m.status, loseReason: m.loseReason });
 }
 
@@ -526,7 +527,8 @@ function crewChart(r: ExpeditionResult): HTMLElement {
 }
 
 /** The finale's row of crew charts, with one shared key. */
-export function crewCharts(results: ExpeditionResult[]): HTMLElement {
+export function crewCharts(results: ExpeditionResult[], site: 'mars' | 'moon' = 'mars'): HTMLElement {
+  setTurnWord(site === 'moon' ? 'day' : 'sol');
   const withSeries = results.map((r) => r.series).filter((x): x is MissionSeries => !!x && seriesSols(x) > 0);
   const merged: MissionSeries | null = withSeries.length
     ? {
@@ -544,4 +546,8 @@ export function crewCharts(results: ExpeditionResult[]): HTMLElement {
     merged ? legend(merged) : null,
     h('div', { class: 'mchart-grid' }, results.map(crewChart)),
   );
+}
+
+function cap(w: string) {
+  return w.charAt(0).toUpperCase() + w.slice(1);
 }
