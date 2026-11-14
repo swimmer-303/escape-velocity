@@ -6,6 +6,8 @@
 
 import { normalizeDonki } from '../src/data/donki-normalize.js';
 
+declare const process: { env: Record<string, string | undefined> };
+
 const CCMC = 'https://ccmc.gsfc.nasa.gov/DONKI/WS/get';
 const NASA = 'https://api.nasa.gov/DONKI';
 
