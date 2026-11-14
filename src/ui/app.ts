@@ -3,6 +3,7 @@
 //   Campaign:  title -> [expedition intro -> (briefing -> budget -> run -> debrief) x sols -> expedition end -> 26 months later] x 3 -> campaign end
 //   Quick:     one expedition.   History: the real May 2024 storms.
 
+import { emitGame, runInterstitial, renderTitleExtras, setMetaContext, type InterstitialContext } from '../meta/hooks';
 import { h, clear, $, prefersReducedMotion, type Child } from './dom';
 import { icon } from './icons';
 import { renderHud } from './hud';
@@ -222,6 +223,15 @@ export class App {
       else this.refreshHud();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
+    // Meta features (rank, Storm Cards, mini-games, Hangar) reach the game only through this context.
+    setMetaContext({
+      stage: this.stage,
+      audio: this.audio,
+      modal: (content, opts) => this.modal(content, opts),
+      closeModal: () => this.closeModal(),
+      showTitle: () => this.showTitle(),
+      reducedMotion: () => this.settings.reducedMotion,
+    });
     // The planning panel must fit under the HUD, which wraps to two rows on narrower screens (style.css reads --hud-h).
     if (typeof ResizeObserver === 'function') {
       new ResizeObserver(() => document.documentElement.style.setProperty('--hud-h', `${this.hud.offsetHeight}px`)).observe(this.hud);
@@ -449,6 +459,7 @@ export class App {
         h('h1', null, 'Escape Velocity'),
         h('p', { class: 'tagline' }, 'Build a base on Mars, crew after crew. Make air to breathe and oxygen for the rocket home, and leave the base better for the next crew.'),
         this.codes.titleNote(),
+        h('div', { class: 'title-meta' }, ...renderTitleExtras()),
         h(
           'div',
           { class: 'menu' },
@@ -1091,9 +1102,18 @@ export class App {
     this.campaignAtStart = c;
     this.mission = createMission(this.mode === 'daily' && this.daily ? dailyMissionConfig(this.daily.config) : missionConfigFor(c, this.light.oneWayMinutes, pool));
     this.save();
+    if (!this.demoActive) {
+      this.closeModal();
+      await runInterstitial('landing', this.interstitialContext());
+    }
     this.showBriefing();
     // First time playing: a one-minute guided first sol.
     if (!Coach.seen() && c.expedition === 1 && (this.mode === 'campaign' || this.mode === 'quick' || this.mode === 'daily')) this.startTutorial();
+  }
+
+  private interstitialContext(): InterstitialContext {
+    const m = this.mission!;
+    return { mission: m, mode: this.mode ?? 'quick', site: siteOf(m.config), root: this.modalRoot, stage: this.stage, audio: this.audio, reducedMotion: this.settings.reducedMotion };
   }
 
   // ------------------------------------------------------------------ one sol
@@ -1447,6 +1467,7 @@ export class App {
     if (this.phase !== 'running' || this.mission !== m) return;
 
     this.mission = next;
+    emitGame('sol', { before: m, after: next, report, mode: this.mode ?? 'quick', demo: this.demoActive });
     if (report.built) this.audio.sfx('good');
     this.save();
     this.showDebrief(report);
@@ -1506,6 +1527,7 @@ export class App {
       if (this.mode === 'campaign' || this.mode === 'quick') classBoard.report(this.campaign?.classCode, m, this.mode);
       if (won) {
         this.closeModal();
+        if (!this.demoActive) await runInterstitial('launch', this.interstitialContext());
         this.audio.playMusic('launch');
         this.audio.sfx('win');
         await this.stage.launch();
@@ -1514,6 +1536,7 @@ export class App {
         this.campaign = finishExpedition(this.campaign, m);
         this.save();
       }
+      emitGame('mission-end', { mission: m, won, mode: this.mode ?? 'quick', stars: starsFor(m), demo: this.demoActive });
     }
     const end = endingFor(m);
     const stars = starsFor(m);
@@ -1652,6 +1675,7 @@ export class App {
 
   private showFinale() {
     const c = this.campaign!;
+    if (this.phase !== 'finale' && !this.demoActive) emitGame('campaign-complete', { campaign: c });
     this.phase = 'finale';
     this.mission = null;
     clear(this.dock);

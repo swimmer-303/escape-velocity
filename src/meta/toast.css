@@ -1,0 +1,13 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* Small pop-ups for rewards ("+50 XP", "New Storm Card!"), stacked at the top of the screen. */
+.ev-toasts { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; width: min(420px, calc(100vw - 24px)); }
+.ev-toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: var(--panel, #1e1a3a); color: var(--ink, #f4ead8); border: 3px solid #000; box-shadow: 4px 4px 0 rgba(0,0,0,0.5), inset 0 0 0 2px var(--toast-accent, #ffb627); padding: 8px 12px; font-size: 15px; line-height: 1.3; width: 100%; }
+.ev-toast b { font-family: var(--font-px, monospace); font-weight: 400; color: var(--toast-accent, #ffb627); }
+.ev-toast.good { --toast-accent: #7ddc5a; }
+.ev-toast.cyan { --toast-accent: #5ef2e6; }
+.ev-toast.gold { --toast-accent: #ffd34d; }
+.ev-toast .ev-toast-icon { flex: none; line-height: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.reduce-motion) .ev-toast { animation: ev-toast-in 0.25s steps(4) both; }
+  @keyframes ev-toast-in { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+}

@@ -1074,3 +1074,7 @@ html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, 
 .title-screen .btn.github { background: var(--ink); color: #15122b; text-decoration: none; }
 .btn .gh-mark { display: inline-flex; line-height: 0; flex: none; }
 html.ev-contrast .title-screen .btn.github { background: #fff; color: #000; }
+
+/* ---------- Meta features on the title screen (rank, Storm Cards, Hangar; see src/meta) ---------- */
+.title-screen .title-meta { display: grid; gap: 10px; max-width: 760px; margin: 14px auto 0; }
+.title-screen .title-meta:empty { display: none; }

@@ -1,6 +1,7 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 import './ui/style.css';
 import { App } from './ui/app';
+import './meta';
 import { CssStage, SwappableStage } from './render/stage';
 import { dashboardParams } from './class/protocol';
 
