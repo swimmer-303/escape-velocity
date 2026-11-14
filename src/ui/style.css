@@ -306,3 +306,79 @@ table.log th { font-family: var(--font-px); font-weight: 400; font-size: 12px; c
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { animation: none !important; transition: none !important; }
+
+/* ---------- Charts ---------- */
+/* "How your mission went" (src/ui/charts.ts). Line colors are the HUD hues stepped into the
+   dark chart band (OKLCH L 0.48-0.67) and validated on the card surface #211b40. */
+.mchart, .mchart-crews {
+  --mc-surface: var(--panel-2);
+  --mc-fuel: #1ca89e;
+  --mc-air: #329fdb;
+  --mc-food: #57a937;
+  --mc-dose: #c48800;
+  --mc-grid: #362d63;
+  --mc-axis: var(--line);
+  --mc-dust: #ecc98f;
+}
+.mchart { margin: 12px 0; }
+.mchart figcaption.kicker { margin-bottom: 2px; }
+.mchart-takeaway { font-size: 18px; line-height: 1.35; color: var(--ink); margin: 2px 0 8px; }
+.mchart-legend { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--muted); }
+.mchart-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.mc-key { flex: none; overflow: visible; }
+.mc-dust-key { display: inline-block; width: 16px; height: 14px; background: rgba(236, 201, 143, 0.16); border: 1px solid rgba(236, 201, 143, 0.4); }
+.mchart-plot { position: relative; margin-top: 6px; touch-action: pan-y; }
+.mchart-plot:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+.mchart .mc-svg { display: block; width: 100%; max-width: 100%; height: auto; overflow: visible; user-select: none; -webkit-user-select: none; }
+.mchart svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
+.mchart .mc-title { font-size: 12.5px; font-weight: 700; fill: var(--ink); }
+.mchart .mc-tick { font-variant-numeric: tabular-nums; }
+.mchart .mc-ref { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: var(--mc-surface); stroke-width: 3px; stroke-linejoin: round; }
+.mchart .mc-label { font-size: 11.5px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--mc-surface); stroke-width: 3px; stroke-linejoin: round; }
+.mchart .mc-axis-title { font-size: 11.5px; fill: var(--muted); }
+.mchart .mc-grid { stroke: var(--mc-grid); stroke-width: 1; shape-rendering: crispEdges; }
+.mchart .mc-base { stroke: var(--mc-axis); stroke-width: 1; shape-rendering: crispEdges; }
+.mchart .mc-guide { stroke: var(--ink); stroke-opacity: 0.35; stroke-width: 1; shape-rendering: crispEdges; }
+.mchart .mc-dust { fill: var(--mc-dust); opacity: 0.16; }
+.mchart .mc-col { fill: var(--ink); opacity: 0.1; }
+.mc-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.mc-line.fuel { stroke: var(--mc-fuel); }
+.mc-line.air { stroke: var(--mc-air); }
+.mc-line.food { stroke: var(--mc-food); stroke-dasharray: 6 4; stroke-linecap: butt; }
+.mc-line.dose { stroke: var(--mc-dose); }
+.mc-area { stroke: none; opacity: 0.12; }
+.mc-area.fuel { fill: var(--mc-fuel); }
+.mc-area.dose { fill: var(--mc-dose); }
+.mc-dot { stroke: var(--mc-surface); stroke-width: 2; }
+.mc-dot.fuel { fill: var(--mc-fuel); }
+.mc-dot.air { fill: var(--mc-air); }
+.mc-dot.food { fill: var(--mc-food); }
+.mc-dot.dose { fill: var(--mc-dose); }
+.mchart-readout { font-size: 15px; line-height: 1.35; min-height: 2.7em; margin: 6px 0 0; color: var(--ink); }
+.mchart-readout b { font-family: var(--font-px); font-weight: 400; font-size: 13px; color: var(--muted); }
+.mchart-events { color: var(--muted); }
+.mchart-none { color: var(--muted); font-size: 15px; margin: 6px 0 0; }
+.mchart-table { margin-top: 8px; }
+.mchart-table summary { cursor: pointer; font-family: var(--font-px); font-size: 13px; color: var(--cyan); min-height: 32px; display: flex; align-items: center; }
+.mchart-scroll { overflow-x: auto; margin-top: 4px; }
+.mchart-scroll table.log { font-size: 14px; min-width: 460px; }
+.mchart-scroll table.log th, .mchart-scroll table.log td { padding: 5px 6px; }
+.mchart-scroll table.log td:nth-child(-n + 5) { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mchart-crews h3 { margin-bottom: 6px; }
+.mchart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 10px; }
+.mchart.compact { margin: 8px 0; padding: 8px 10px; }
+.mchart.compact figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; font-size: 15px; }
+.mchart.compact figcaption b { font-family: var(--font-px); font-weight: 400; font-size: 13px; color: var(--amber); }
+.mchart-result { color: var(--muted); font-size: 14px; }
+.mchart.compact .mchart-takeaway { font-size: 15px; margin: 4px 0 2px; }
+.mchart.compact .mc-title { font-size: 10.5px; }
+.mchart.compact svg text { font-size: 10px; }
+@media (max-width: 480px) {
+  .mchart:not(.compact) { padding: 10px 8px; }
+  .mchart-takeaway { font-size: 17px; }
+}
+@media (forced-colors: active) {
+  .mchart .mc-line, .mchart .mc-grid, .mchart .mc-base, .mchart .mc-guide { stroke: CanvasText; }
+  .mchart svg text { fill: CanvasText; }
+  .mchart .mc-ref, .mchart .mc-label { stroke: Canvas; }
+}

@@ -35,6 +35,7 @@ import { renderScienceLog } from './sciencelog';
 import { renderCredits } from './credits';
 import { Coach, type CoachPhase } from './tutorial';
 import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange } from './views';
+import { missionChartFor, crewCharts } from './charts';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale';
 type Mode = 'campaign' | 'quick' | 'history';
@@ -1089,6 +1090,7 @@ export class App {
         this.mode !== 'history' ? starRow(stars) : null,
         h('h3', null, 'What happened'),
         h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),
+        missionChartFor(m),
         m.builtThisExpedition.length
           ? h(
               'div',
@@ -1206,6 +1208,7 @@ export class App {
             ),
           ),
         ),
+        crewCharts(c.results),
         h(
           'div',
           { class: 'card good' },
