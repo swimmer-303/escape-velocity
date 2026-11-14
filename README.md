@@ -87,6 +87,8 @@ src/render/   Stage interface (3D diorama plugs in here)
 src/ui/       HUD, power-budget dock (drag and drop, tap, keyboard), briefing, debrief, Science Log, credits, audio
 src/room/     Mission Control: shared protocol, pure room rules (stations, legal moves, running a sol), the in-memory room store and its HTTP + SSE API
 src/ui/room/  Mission Control screens: join/create, the teacher's projector view and the student's station view
+src/class/    Teacher dashboard: shared protocol, result checks, class summary, and the class-board store (saved to STATE_DIR) and HTTP API
+src/ui/dashboard/  the teacher dashboard page (/?dashboard=CODE&key=KEY); src/ui/classboard.ts sends results from the game
 api/          spaceweather.ts: the DONKI proxy handler (run by the droplet's server)
 deploy/       droplet server (server.ts), Caddyfile, systemd service, one-time setup script
 scripts/      fetch-data.mjs (build-time data snapshots), process-art.py (retro art processing + watermark), process-portraits.py (crew portrait sheets + watermark)
@@ -108,6 +110,8 @@ Every push to `main` runs the tests, builds the game, and deploys it to our Digi
 
 **Mission Control rooms** (`/api/rooms`, `src/room/http.ts`) live only in the Node process's memory: nothing is written to disk, and a restart (every deploy) closes open rooms. Routes: `POST /api/rooms` (teacher: returns the code and a secret teacher token), `GET /api/rooms/:code` (no names), `POST /api/rooms/:code/join` (`{name}` or `{token}` to rejoin), `POST /api/rooms/:code/action` (place, remove, move, project, crate, ready, ping, leave), `POST /api/rooms/:code/teacher` (start, plan, run, next, restart, assign, autoAssign, autoRun, kick, end) and `GET /api/rooms/:code/events?token=` (or `?teacher=`): Server-Sent Events with the full public room state on every change and a heartbeat every 20 s. Limits: 200 rooms, 40 players per room, names of up to 12 letters and numbers through a small blocklist, rooms expire after 3 h idle, per-address rate limits on making and joining rooms, 2 KB request bodies. Caddy passes the event stream straight through (`flush_interval -1`, and the stream is `no-transform`).
 
+**Teacher dashboard** (`/api/class`, `src/class/http.ts`): when a teacher makes a class code, the game registers it and gets a secret dashboard key. Games played with that code send one small result per crew (a random player id, an optional nickname and game numbers; no addresses or anything else). Routes: `POST /api/class` (`{code}` -> `{code, key}`), `POST /api/class/:code/report`, `GET /api/class/:code?key=&since=` (the dashboard) and `POST /api/class/:code/teacher` (`remove` a student, `clear` every result). Class boards are saved as `classes.json` in `STATE_DIR` (systemd's `StateDirectory=escape-velocity`, so `/var/lib/escape-velocity`; written atomically a couple of seconds after a change and on shutdown), and deleted 7 days after their last result. Limits: 500 classes, 60 students per class, the latest result for each of the 3 crews per student (plus running totals, at most 100 results), 2 KB bodies, per-address rate limits, nicknames of up to 12 letters and numbers through the same blocklist. The key is stored only as a hash.
+
 Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to let the proxy fall back to api.nasa.gov; the default CCMC DONKI host needs no key.
 
 ### Tests
@@ -116,6 +120,7 @@ Optional: put `NASA_API_KEY=...` in `/etc/escape-velocity.env` on the droplet to
 - **Balance:** a player who builds up the base wins every Cadet expedition; never building makes the last crew's mission much harder (the generational lesson); pure greed (all power to fuel) always loses. Run `npm run balance` for the full report.
 - **Campaign:** the base and Workshop progress pass to the next crew, even after an early return; saves round-trip.
 - **Headless UI test:** boots the real interface and clicks through a whole 3-crew campaign, a save-and-resume, and the May 2024 scenario, offline.
+- **Teacher dashboard:** the class-board store (registering, result checks, nickname blocklist, limits, expiry, saving and loading `classes.json` in a temp folder), the real server over HTTP (including a restart), the dashboard page from a fixture, and a student's quick mission sending its result and naming itself on the end screen.
 - **Mission Control:** the room rules (joining, names, stations, illegal moves, running a sol only when every cell is placed, reconnecting, expiry, limits), an integration test that starts the real server on a random port, joins 4 students, places cells over HTTP and reads the live event stream, and headless teacher and student screens.
 
 ## Use of AI tools

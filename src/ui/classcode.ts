@@ -2,9 +2,13 @@
 // The "Class code" area on the New campaign and Quick mission screens: students type the
 // code from the board, and teachers make a new code (shown big, plus a link to share).
 // Also the reminder line shown in the pause menu and on the end screens.
+// Making a code also registers it for the teacher dashboard (see classboard.ts); if the server
+// can't be reached, the code works exactly the same, just without a dashboard.
 
 import { h, clear } from './dom';
 import { checkClassCode, classCodeFromSearch, makeClassCode, type CodeProblem } from '../sim/classcode';
+import { dashboardLink } from '../class/protocol';
+import { dashboardBox, registerClass, teacherKeyFor } from './classboard';
 
 const PROBLEM: Record<CodeProblem, string> = {
   empty: 'Type the code from your teacher first.',
@@ -40,6 +44,9 @@ export class ClassCodes {
   private message = '';
   /** A code a teacher just made, shown big. */
   private teacherCode: string | null = null;
+  /** Registering codes for the teacher dashboard: code -> its key (null = no dashboard). */
+  private boards = new Map<string, Promise<string | null>>();
+  private takenRetries = 0;
 
   constructor(search: string = typeof location === 'undefined' ? '' : location.search) {
     this.active = classCodeFromSearch(search);
@@ -91,6 +98,12 @@ export class ClassCodes {
       'Make a code for my class',
     );
     const teacherRow = h('div', { class: 'cc-teacher-row' }, h('span', { class: 'title-foot' }, 'Teacher? '), makeBtn);
+    // On the teacher's own device, the dashboard link for the code in use.
+    const key = teacherKeyFor(this.active);
+    const dashNote =
+      this.active && key
+        ? h('p', { class: 'title-foot cc-dash-note' }, 'Your teacher dashboard for this code: ', h('a', { href: dashboardLink(this.active, key, location.origin), target: '_blank', rel: 'noopener' }, 'open it'), '.')
+        : null;
 
     if (this.active) {
       return [
@@ -117,6 +130,7 @@ export class ClassCodes {
             'Remove code',
           ),
         ),
+        ...(dashNote ? [dashNote] : []),
         teacherRow,
       ];
     }
@@ -167,8 +181,34 @@ export class ClassCodes {
     ];
   }
 
+  /** Register a teacher's new code for the dashboard (once per code). */
+  private board(code: string, draw: (focus?: string) => void): Promise<string | null> {
+    let p = this.boards.get(code);
+    if (!p) {
+      const known = teacherKeyFor(code);
+      p = known
+        ? Promise.resolve(known)
+        : registerClass(code).then((r) => {
+            if (r !== 'taken') return r ? r.key : null;
+            // Someone already registered this code: make another one (rare), a few times at most.
+            if (this.teacherCode === code && this.takenRetries++ < 3) {
+              this.teacherCode = makeClassCode();
+              draw('.cc-copy');
+            }
+            return null;
+          });
+      this.boards.set(code, p);
+    }
+    return p;
+  }
+
   private teacherView(code: string, draw: (focus?: string) => void, opts: PanelOptions): HTMLElement[] {
     const link = classCodeLink(code);
+    const dash = h('div', { class: 'cc-dash-slot' }, h('p', { class: 'title-foot' }, 'Setting up your teacher dashboard...'));
+    void this.board(code, draw).then((key) => {
+      if (key) dash.replaceChildren(dashboardBox(code, key, () => opts.sfx?.('click')));
+      else dash.replaceChildren();
+    });
     const linkBox = h('input', { class: 'cc-link-text', type: 'text', readonly: true, value: link, 'aria-label': 'Link to share', onfocus: (e: Event) => (e.target as HTMLInputElement).select() });
     const status = h('p', { class: 'cc-msg', role: 'status' });
     const copy = async () => {
@@ -193,6 +233,7 @@ export class ClassCodes {
       h('div', { class: 'cc-row' }, linkBox, h('button', { class: 'btn small cc-copy', onclick: () => void copy() }, 'Copy link')),
       status,
       h('p', { class: 'title-foot' }, "Use it during the same class period: the solar storms come from NASA's live data, which can change from day to day."),
+      dash,
       h(
         'div',
         { class: 'cc-row' },

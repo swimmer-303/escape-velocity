@@ -565,3 +565,109 @@ table.mc-players td { vertical-align: middle; }
 .today-event { box-shadow: inset 0 0 0 3px var(--amber); }
 .today-calm { box-shadow: inset 0 0 0 3px var(--green); }
 @media (max-width: 900px) { .tray-actions { margin-left: 0; width: 100%; } }
+
+/* ---------- Teacher dashboard ---------- */
+/* The class board (src/ui/dashboard) and its pieces in the game: the dashboard link for teachers
+   (src/ui/classcode.ts) and the nickname card on the end screen (src/ui/classboard.ts).
+   One chart hue: the game's fuel cyan, validated on the card surface (#211b40). */
+.cc-dash { margin-top: 12px; padding-top: 10px; border-top: 2px dashed var(--line); }
+.cc-dash .cc-row a.btn { display: inline-flex; }
+.cc-dash-note { margin: 6px 0 0; }
+.cb-card .cc-row { margin-top: 6px; }
+.cb-card label { display: block; }
+.cb-name { font-family: var(--font-body); font-size: 20px; letter-spacing: 0; text-transform: none; }
+.cb-note { font-size: 16px; }
+.cb-note b { color: var(--cyan); font-weight: 700; }
+
+html.dash-mode, html.dash-mode body { height: auto; overflow: auto; }
+html.dash-mode #app, html.dash-mode #modal-root { display: none; }
+.db {
+  --mc-fuel: #1ca89e;
+  --mc-grid: #362d63;
+  --mc-surface: var(--panel-2);
+  max-width: 1360px; margin: 0 auto; padding: 18px 16px 40px; font-size: 18px; line-height: 1.4;
+}
+.db h1, .db h2 { font-family: var(--font-px); font-weight: 400; line-height: 1.15; margin: 0; }
+.db h1 { font-size: clamp(26px, 3.4vw, 40px); color: var(--amber); text-shadow: 3px 3px 0 var(--rust); display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.db h1 .cc-chip.big { font-size: clamp(24px, 3vw, 36px); text-shadow: none; }
+.db h2 { font-size: 19px; color: var(--amber); margin-bottom: 10px; }
+.db a { color: var(--cyan); }
+.db-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 20px; }
+.db-title .kicker { color: var(--cyan); }
+.db-join { margin: 8px 0 0; font-size: 20px; }
+.db-join b { color: var(--amber); }
+.db-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.db-tools .btn[aria-pressed='true'] { box-shadow: inset 0 0 0 3px var(--green), 4px 4px 0 var(--shadow); }
+.db-status { margin: 10px 0 0; font-size: 15px; color: var(--muted); }
+.db-status.offline { color: var(--amber); font-weight: 700; }
+.db-card { background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); padding: 14px 16px; margin: 14px 0 0; min-width: 0; }
+.db-problem { max-width: 720px; }
+.db-problem p { margin: 0 0 8px; }
+.db-empty, .db-note { color: var(--muted); margin: 0 0 8px; font-size: 16px; }
+.db-ask { margin: 4px 0 0; font-size: 17px; }
+.db-ask b { color: var(--cyan); }
+
+/* Summary tiles */
+.db-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.db-tile { background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); padding: 12px 14px; min-width: 0; }
+.db-tile-value { font-family: var(--font-px); font-size: clamp(32px, 4vw, 48px); line-height: 1.05; color: var(--ink); font-variant-numeric: tabular-nums; }
+.db-tile-label { font-family: var(--font-px); font-size: 14px; text-transform: uppercase; color: var(--amber); margin-top: 6px; }
+.db-tile-sub { font-size: 15px; color: var(--muted); }
+
+/* Trouble and upgrades: labeled bars, the number always written out */
+.db-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+.db-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.db-bar-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.db-bar-label { font-weight: 700; }
+.db-bar-count { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.db-bar { height: 12px; margin-top: 4px; background: var(--mc-grid); }
+.db-bar span { display: block; height: 100%; background: var(--mc-fuel); border-radius: 0 4px 4px 0; }
+
+/* Students table */
+.db-table-wrap { overflow-x: auto; }
+.db-table { font-size: 17px; min-width: 760px; }
+.db-table th, .db-table td { padding: 8px 10px; vertical-align: middle; }
+.db-table thead th { padding: 2px 6px; white-space: nowrap; }
+.db-table tbody th { font-family: var(--font-body); font-size: 18px; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+.db-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.db-table tbody tr:nth-child(even) { background: #ffffff08; }
+.db-sort { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; text-transform: uppercase; }
+.db-sort:hover { color: var(--ink); }
+.db-sort:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
+th[aria-sort='ascending'] .db-sort, th[aria-sort='descending'] .db-sort { color: var(--amber); }
+.db-sort-arrow { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; }
+.db-sort-arrow.up { border-bottom: 7px solid currentColor; }
+.db-sort-arrow.down { border-top: 7px solid currentColor; }
+.db-outcome.won { color: var(--green); font-weight: 700; }
+.db-outcome.lost { color: var(--amber); }
+.db-remove { text-transform: none; }
+
+/* Fuel lines: one small chart per student */
+.db-sparks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.db-spark { margin: 0; padding: 8px 10px; background: var(--panel); border: 2px solid #000; box-shadow: inset 0 0 0 1px var(--line); min-width: 0; }
+.db-spark figcaption { display: flex; flex-direction: column; margin-bottom: 4px; }
+.db-spark figcaption b { overflow-wrap: anywhere; }
+.db-spark figcaption span { font-size: 14px; color: var(--muted); }
+.db-spark-svg { display: block; width: 100%; height: 64px; overflow: visible; }
+.db-spark-full { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.db-spark-base { stroke: var(--line); stroke-width: 1; }
+
+.db-foot { margin-top: 18px; font-size: 15px; color: var(--muted); }
+.db-foot p { margin: 0 0 8px; }
+.db-manage { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 8px 0; padding: 10px 12px; border: 2px dashed var(--line); }
+.db-manage p { margin: 0; }
+
+@media (max-width: 900px) {
+  .db-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .db-grid { grid-template-columns: 1fr; }
+  .db { font-size: 17px; }
+}
+@media (max-width: 420px) {
+  .db-tile-value { font-size: 28px; }
+  .db-join { font-size: 17px; }
+}
+@media (forced-colors: active) {
+  .db-bar { border: 1px solid CanvasText; background: Canvas; }
+  .db-bar span { background: CanvasText; forced-color-adjust: none; }
+  .db-spark-svg .mc-line { stroke: CanvasText; }
+}
