@@ -1,7 +1,7 @@
 # Escape Velocity
 
 **A retro 3D Mars outpost game for kids aged 7 to 12, powered by real NASA data.**
-NASA Space Apps Challenge 2026, Charlotte, NC · Team Sendy1 (Spencer Hedges and Sandeep Talari)
+NASA Space Apps Challenge 2026, Charlotte, NC · Team Escape Velocity (Spencer Hedges and Sandeep Talari)
 
 > Build a base in Gale Crater on Mars, crew after crew. Keep each crew breathing, fed and safe from solar storms, make enough oxygen to fill the rocket that flies them home, and leave the base better for the next crew. Fill the tank and you hit **escape velocity**.
 
@@ -131,7 +131,7 @@ We used AI tools, and here is exactly where and how:
 
 ## Credits
 
-**Team Sendy1:** Spencer Hedges and Sandeep Talari.
+**Team Escape Velocity:** Spencer Hedges and Sandeep Talari.
 Fonts: Silkscreen (Jason Kottke) and Atkinson Hyperlegible (Braille Institute), both SIL Open Font License 1.1. Libraries: Three.js, Vite, Vitest (MIT).
 Data: NASA DONKI (CCMC), JPL Solar System Dynamics, NASA OSDR and RadLab, NASA/JPL mission results, Canadian Space Agency.
 This is a hackathon project and is not endorsed by NASA or any space agency.

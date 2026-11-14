@@ -7,7 +7,7 @@ export function renderCredits(): HTMLElement[] {
   return [
     h('div', { class: 'kicker' }, 'Credits'),
     h('h2', null, 'Escape Velocity'),
-    h('p', null, 'Made by Team Sendy1 (Spencer Hedges and Sandeep Talari) in Charlotte, NC, for the 2026 NASA Space Apps Challenge: "Build a Junior Astronaut Mission Trainer".'),
+    h('p', null, 'Made by Team Escape Velocity (Spencer Hedges and Sandeep Talari) in Charlotte, NC, for the 2026 NASA Space Apps Challenge: "Build a Junior Astronaut Mission Trainer".'),
     h('p', { class: 'title-foot' }, 'This is a student hackathon project. It is not made, endorsed or reviewed by NASA or any space agency.'),
 
     h('h3', null, 'Use of AI tools'),

@@ -2,7 +2,7 @@
   "name": "escape-velocity",
   "private": true,
   "version": "0.1.0",
-  "description": "Escape Velocity: a retro 3D Mars outpost game for kids about real engineering trade-offs. NASA Space Apps Challenge 2026, Team Sendy1. Code written with AI assistance (Claude Code); see README 'Use of AI tools'.",
+  "description": "Escape Velocity: a retro 3D Mars outpost game for kids about real engineering trade-offs. NASA Space Apps Challenge 2026, Team Escape Velocity. Code written with AI assistance (Claude Code); see README 'Use of AI tools'.",
   "type": "module",
   "scripts": {
     "dev": "vite",
