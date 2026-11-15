@@ -56,6 +56,15 @@ const STEP = 1 / 60;
 /** How close the rover can get to a sample rock, m. */
 const ROCK_RADIUS = 3.2;
 
+/** A touch screen with no mouse or keyboard pointer (a phone or tablet): no Space key to name in prompts. */
+export function touchOnly(): boolean {
+  try {
+    return !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
+  } catch {
+    return false;
+  }
+}
+
 function reducedWanted(flag: boolean): boolean {
   try {
     return flag || prefersReducedMotion() || document.documentElement.classList.contains('reduce-motion');
@@ -502,6 +511,7 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
     let alert: HomeAlert = 'ok';
     let hudTimer = 0;
     let boosting = false;
+    const scanHint = touchOnly() ? 'Hold SCAN to collect' : 'Hold SCAN (Space) to collect';
     const cooldown = new Map<string, number>();
     const once = (key: string, secs: number) => {
       const t = cooldown.get(key) ?? -1e9;
@@ -735,7 +745,7 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
         hud.update(view());
       }
       const t = scanIdx >= 0 ? states[scanIdx] : null;
-      if (mode === 'drive' && t) hud.setPrompt(scan > 0 ? `Scanning: ${sampleKind(t.kind)?.name ?? 'sample'}` : 'Hold SCAN (Space) to collect', scan);
+      if (mode === 'drive' && t) hud.setPrompt(scan > 0 ? `Scanning: ${sampleKind(t.kind)?.name ?? 'sample'}` : scanHint, scan);
       else hud.setPrompt(null);
       sound.motor(mode === 'drive' ? Math.min(1, Math.abs(s.speed) / 20) : 0, boosting);
       sound.scan(mode === 'drive' && scan > 0 ? scan : null);
