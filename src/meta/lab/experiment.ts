@@ -160,7 +160,9 @@ export function changesList(lab: LabSettings): string[] {
 export function summaryLine(lab: LabSettings): string {
   const changed = changedDials(lab);
   if (!changed.length) return `Real conditions at ${WORLD_SHORT[lab.world]}.`;
-  const bits = changed.map((d) => `${DIAL_NAME[d].toLowerCase()}: ${dialValue(lab, d).toLowerCase()}`);
+  // Lower-case only the first letter, and never a proper noun ("Mars in its orbit", not "mars in its orbit").
+  const lowerFirst = (t: string) => (/^(Mars|Moon|Earth|Sun)\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1));
+  const bits = changed.map((d) => `${lowerFirst(DIAL_NAME[d])}: ${lowerFirst(dialValue(lab, d))}`);
   return `${WORLD_SHORT[lab.world][0].toUpperCase()}${WORLD_SHORT[lab.world].slice(1)}, ${bits.join(', ')}.`;
 }
 
