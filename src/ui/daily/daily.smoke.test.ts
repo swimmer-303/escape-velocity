@@ -167,6 +167,8 @@ describe('daily challenge screens', () => {
     (await waitFor(() => button(/^Daily challenge/))).click();
     await waitFor(() => button(/Land the crew/));
     expect(text()).toMatch(/can't reach the scoreboard/);
+    // The pool also holds the real May 2024 storms (their cards show 2024 dates): the intro says so.
+    expect(document.querySelector('.daily-pool')!.textContent).toMatch(/plus the real storms of May 2024/);
     button(/Land the crew/)!.click();
     await waitFor(() => button(/Plan the day/));
     expect(document.querySelector('.data-badge')!.textContent).toMatch(/^ARCHIVE/);

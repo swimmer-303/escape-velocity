@@ -79,7 +79,7 @@ a { color: var(--cyan); }
   padding: 6px 10px 8px; min-width: 150px; flex: 1 1 150px; max-width: 260px;
 }
 .meter-head { display: flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 13px; text-transform: uppercase; color: var(--muted); }
-.meter-value { margin-left: auto; color: var(--ink); font-size: 15px; }
+.meter-value { margin-left: auto; color: var(--ink); font-size: 15px; white-space: nowrap; }
 .meter-sub { display: flex; gap: 10px; font-size: 13px; color: var(--muted); margin-top: 4px; }
 .meter-sub b { color: var(--ink); font-family: var(--font-px); font-weight: 400; }
 .bar { position: relative; height: 12px; margin-top: 6px; background: #000; border: 2px solid #000; overflow: hidden; }
@@ -166,7 +166,13 @@ a { color: var(--cyan); }
 .cell-ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -50%) rotate(-6deg) scale(1.15); }
 .tray-empty { font-size: 15px; color: var(--green); }
 
-.modules { display: grid; grid-template-columns: 1.5fr repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.modules { display: grid; grid-template-columns: 1fr; gap: 8px; }
+/* Wide screens: the modules sit side by side (the O2 plant, with its AIR and FUEL rows, takes two columns), so the 3D base
+   stays in view above the panel. The old rule mixed a 1.5fr column with auto-fit, which CSS throws away: one tall column. */
+@media (min-width: 901px) {
+  html:not(.ev-large-text) #app:not(.mc) .modules { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  html:not(.ev-large-text) #app:not(.mc) .modules .module.o2 { grid-column: span 2; }
+}
 .tray-hint { margin-left: auto; font-size: 14px; color: var(--muted); }
 .module {
   background: var(--panel-2); border: 3px solid #000; padding: 8px; display: flex; flex-direction: column; gap: 6px;
@@ -179,7 +185,7 @@ a { color: var(--cyan); }
 .slot-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .slot-row + .slot-row { border-top: 2px dashed var(--line); padding-top: 6px; }
 .slot-label { font-family: var(--font-px); font-size: 12px; display: flex; align-items: center; gap: 4px; min-width: 72px; }
-.slot-boxes { display: flex; gap: 4px; }
+.slot-boxes { display: flex; flex-wrap: wrap; gap: 4px; }
 .slot-box {
   width: 30px; height: 40px; border: 3px dashed #5a4f8a; background: #0b0a18; cursor: pointer; padding: 0;
   position: relative;
@@ -255,7 +261,7 @@ ul.clean li { margin: 4px 0; }
 .science .kicker { color: var(--cyan); }
 .science .src { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .stars { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
-.stars.compact { gap: 2px; margin: 0; }
+.stars.compact { gap: 2px; margin: 0; flex-wrap: nowrap; }
 .star { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 13px; color: var(--muted); opacity: 0.35; filter: grayscale(1); }
 .star.on { opacity: 1; filter: none; color: var(--amber); }
 .stars:not(.compact) .star { border: 3px solid #000; background: var(--panel-2); padding: 6px 10px; }
@@ -564,7 +570,8 @@ table.mc-players td { vertical-align: middle; }
 .today-bad b { color: var(--red); }
 .today-event { box-shadow: inset 0 0 0 3px var(--amber); }
 .today-calm { box-shadow: inset 0 0 0 3px var(--green); }
-@media (max-width: 900px) { .tray-actions { margin-left: 0; width: 100%; } }
+/* Small screens: Suggest and Clear get their own line (the tray must wrap, or the page scrolls sideways on a phone). */
+@media (max-width: 900px) { .tray { flex-wrap: wrap; } .tray-actions { margin-left: 0; width: 100%; } }
 
 /* ---------- AI disclosure (title screen footer) ---------- */
 .ai-disclosure { font-size: 13px; color: var(--muted); margin: 14px auto 0; max-width: 640px; line-height: 1.4; border-top: 2px dashed var(--line); padding-top: 10px; }
@@ -1063,7 +1070,8 @@ html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, 
    and the Run button always stays in view. Small screens scroll the whole page instead (see above). */
 @media (min-width: 901px) {
   .dock { min-height: 0; max-height: calc(100vh - var(--hud-h, 110px) - 56px); max-height: calc(100dvh - var(--hud-h, 110px) - 56px); }
-  .dock-right { min-height: 0; justify-content: flex-start; }
+  /* A fixed width: sized by its text, the column (and every module beside it) jumped each time a cell was placed. */
+  .dock-right { min-height: 0; justify-content: flex-start; flex: 0 0 clamp(240px, 26vw, 360px); }
   .dock-right > .brief-mini { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
   .dock-right > :last-child { flex: none; margin-top: auto; }
 }

@@ -340,7 +340,7 @@ export function drawCertificate(ctx: CertContext, d: CertData, o: DrawOptions): 
   ctx.fillStyle = C.ink;
   ctx.fillRect(W - 150 - 430, fy, 430, 4);
   text(ctx, 'MISSION DIRECTOR', W - 150, fy + 32, `20px ${PX}`, C.line, 'right');
-  text(ctx, 'Escape Velocity · Team Sendy1', W / 2, 1176, `24px ${PX}`, C.rust);
+  text(ctx, 'Escape Velocity · made by Team Escape Velocity', W / 2, 1176, `24px ${PX}`, C.rust);
 
   ctx.restore();
   return { usedArt };

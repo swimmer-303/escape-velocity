@@ -92,7 +92,8 @@ export class ThreeStage implements Stage {
   private breathAmp = 0;
   private frameNo = 0;
   private diorama!: Diorama;
-  private clock = new THREE.Clock();
+  /** Frame timing (THREE.Clock is deprecated in r187 and warns in the console). */
+  private clock = new THREE.Timer();
   private raf = 0;
   private reduced = false;
   private dayT = 0.25;
@@ -220,7 +221,8 @@ export class ThreeStage implements Stage {
   private onVisibility = () => {
     if (document.hidden) cancelAnimationFrame(this.raf);
     else {
-      this.clock.getDelta();
+      // Skip the time spent hidden, so nothing jumps when the tab comes back.
+      this.clock.update();
       this.loop();
     }
   };
@@ -496,8 +498,9 @@ export class ThreeStage implements Stage {
   private loop = () => {
     this.raf = requestAnimationFrame(this.loop);
     const work0 = performance.now();
+    this.clock.update();
     const dt = Math.min(0.1, this.clock.getDelta());
-    const time = this.clock.elapsedTime;
+    const time = this.clock.getElapsed();
     this.watchFrame(dt);
     // The shadow map is redrawn every other frame (moving shadows at 30 per second look the same in this style).
     this.diorama.sunLight.shadow.needsUpdate = (this.frameNo++ & 1) === 0;

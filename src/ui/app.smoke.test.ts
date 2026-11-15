@@ -229,6 +229,65 @@ describe('UI smoke test', () => {
     expect(document.querySelector('.sol-chip')!.textContent).toMatch(/DAY 1/);
   }, 20000);
 
+  it('Escape closes the certificate and the menu like their X, and the debrief fuel matches the tank', async () => {
+    const app = new App(new CssStage());
+    const internals = app as unknown as AppInternals;
+    (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
+    // One sol, then check the debrief's fuel number against the whole percents the HUD and headline show.
+    await play(app, () => !!document.querySelector('.sol-tally'));
+    await sleep(800); // the numbers count up
+    const r = internals.mission.log[0];
+    const shown = document.querySelector('.sol-tally .fuel b')!.textContent;
+    expect(shown).toBe(`+${Math.floor(r.after.fuel) - Math.floor(r.before.fuel)}%`);
+    await play(app, () => !!button(/Get my certificate/) || !!button(/Play again/));
+    const esc = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    const cert = button(/Get my certificate/);
+    if (cert) {
+      cert.click();
+      expect(document.querySelector('[aria-label="Junior Astronaut certificate"]')).not.toBeNull();
+      esc();
+      await waitFor(() => !document.querySelector('[aria-label="Junior Astronaut certificate"]'));
+      expect(button(/Play again/)).not.toBeNull();
+    }
+    // The menu, from the end screen: Escape goes back to the end screen.
+    document.querySelector<HTMLButtonElement>('#hud button[aria-label="Menu"]')!.click();
+    expect(document.querySelector('#modal-root [aria-label="Menu"]')).not.toBeNull();
+    esc();
+    await waitFor(() => !document.querySelector('#modal-root [aria-label="Menu"]'));
+    expect(button(/Play again/)).not.toBeNull();
+    // A dialog without an X (the end screen itself) stays put.
+    esc();
+    await sleep(20);
+    expect(button(/Play again/)).not.toBeNull();
+  }, 30000);
+
+  it('while a sol plays, the HUD buttons stay put and the Menu pauses the sol', async () => {
+    new App(new CssStage());
+    (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
+    (await waitFor(() => button(/Land the crew/))).click();
+    (await waitFor(() => button(/Plan the day/))).click();
+    button(/Suggest a plan/)!.click();
+    button(/^Run sol/)!.click();
+    await waitFor(() => document.querySelector('.run-bar'));
+    await sleep(60); // the sol's first frame draws its HUD
+    const menu = await waitFor(() => document.querySelector<HTMLButtonElement>('#hud button[aria-label="Menu"]'));
+    await sleep(120); // several more frames
+    expect(menu.isConnected).toBe(true); // the same button: a press that spans a frame still lands
+    menu.click();
+    expect(document.querySelector('#modal-root [aria-label="Menu"]')).not.toBeNull();
+    expect(button(/^Workshop$/)).toBeNull(); // today's plan is locked in
+    const clock = () => document.querySelector('.run-bar .clock')?.textContent;
+    const before = clock();
+    await sleep(200);
+    expect(clock()).toBe(before);
+    button(/^Resume$/)!.click();
+    await waitFor(() => clock() !== before);
+    button(/^Skip$/)!.click();
+    await waitFor(() => document.querySelector('[aria-label="Sol 1 debrief"]'));
+  }, 20000);
+
   it('plays the May 2024 history scenario', async () => {
     const app = new App(new CssStage());
     (await waitFor(() => button(/May 2024 storms/))).click();
@@ -240,6 +299,15 @@ describe('UI smoke test', () => {
 });
 
 describe('title screen data refresh', () => {
+  it('keeps keyboard focus on PLAY when the lobby redraws with the NASA data', async () => {
+    vi.stubGlobal('fetch', () => new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('slow and offline')), 40)));
+    new App(new CssStage());
+    const play = await waitFor(() => document.querySelector<HTMLElement>('.play-big'));
+    expect(document.activeElement).toBe(play);
+    await waitFor(() => document.querySelector('.play-big') !== play); // the redraw
+    expect((document.activeElement as HTMLElement | null)?.classList.contains('play-big')).toBe(true);
+  });
+
   it('does not wipe out the chooser when NASA data arrives late', async () => {
     // Every data request fails a moment later, after the player has already opened the chooser.
     vi.stubGlobal('fetch', () => new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('slow and offline')), 40)));

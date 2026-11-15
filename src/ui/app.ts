@@ -39,7 +39,7 @@ import { renderCredits } from './credits';
 import { meetCrew, crewSays } from './crew';
 import { sunPanel } from './sunpanel';
 import { Coach, type CoachPhase } from './tutorial';
-import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange, planWarnings, adviceLines, todayBanner, earthCard } from './views';
+import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange, planWarnings, adviceLines, todayBanner, earthCard, builtList } from './views';
 import { advise } from '../sim/advisor';
 import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
@@ -277,6 +277,8 @@ export class App {
     const prev = this.modalRoot.querySelector<HTMLElement>('.modal');
     const sameDialog = prev?.getAttribute('aria-label') === opts.label;
     const keepScroll = sameDialog ? { box: prev!.scrollTop, root: this.modalRoot.scrollTop } : null;
+    const active = document.activeElement;
+    const hadFocus = sameDialog && active instanceof HTMLElement && prev!.contains(active) ? active : null;
     clear(this.modalRoot);
     this.modalRoot.classList.toggle('lobby-root', !!opts.lobby);
     document.documentElement.classList.toggle('ev-lobby', !!opts.lobby);
@@ -291,6 +293,9 @@ export class App {
       decorateDialog(box);
       box.scrollTop = keepScroll.box;
       this.modalRoot.scrollTop = keepScroll.root;
+      // The old copy had the keyboard focus (PLAY, a crate, a Workshop button): put it back on the same control,
+      // or on the dialog's main button, so a redraw never drops a keyboard player back to the page.
+      if (hadFocus) (sameControl(box, hadFocus, prev!) ?? box.querySelector<HTMLElement>('[data-autofocus], button.primary'))?.focus({ preventScroll: true });
       return box;
     }
     const focusable = box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>('button.primary, button.go, button');
@@ -423,12 +428,15 @@ export class App {
 
   private onKey(e: KeyboardEvent) {
     if (e.key === 'Escape' && this.modalRoot.firstChild && this.phase === 'plan') this.closeModalAndPlan();
-    // In the lobby, Escape closes the open dialog (Storm Cards, Settings, Credits...) like its X button.
+    // Escape closes a dialog that has an X button (Storm Cards, Settings, Credits, the Menu, the certificate...) like the X.
+    // Planning has its own rule above; Mission Control and the teacher board handle their own keys.
     // Checked after every other handler: the mini-games and the builder use Escape themselves.
-    if (e.key === 'Escape' && this.phase === 'title' && !this.modalRoot.classList.contains('lobby-root')) {
+    const from = this.phase;
+    if (e.key === 'Escape' && from !== 'plan' && from !== 'room' && from !== 'dashboard' && !this.modalRoot.classList.contains('lobby-root')) {
       const before = this.modalRoot.firstElementChild;
+      if (!before) return;
       window.setTimeout(() => {
-        if (e.defaultPrevented || this.phase !== 'title' || this.modalRoot.classList.contains('lobby-root')) return;
+        if (e.defaultPrevented || this.phase !== from || this.modalRoot.classList.contains('lobby-root')) return;
         if (this.modalRoot.firstElementChild !== before) return;
         this.modalRoot.querySelector<HTMLButtonElement>(':scope > .modal > .close-x')?.click();
       }, 0);
@@ -619,7 +627,8 @@ export class App {
     const a = report.after;
     const b = report.before;
     const items: Array<{ cls: string; label: string; delta: number; unit: string; digits: number }> = [
-      { cls: 'fuel', label: 'Fuel', delta: a.fuel - b.fuel, unit: '%', digits: 0 },
+      // Whole percents, as the HUD and the headline show the tank (7% to 15% reads +8%, never a different number).
+      { cls: 'fuel', label: 'Fuel', delta: Math.floor(a.fuel) - Math.floor(b.fuel), unit: '%', digits: 0 },
       { cls: a.air >= b.air ? 'up' : 'down', label: 'Air', delta: a.air - b.air, unit: ' d', digits: 1 },
       { cls: a.food >= b.food ? 'up' : 'down', label: 'Food', delta: a.food - b.food, unit: ' d', digits: 1 },
       { cls: a.dose - b.dose > 0.05 ? 'down' : 'up', label: 'Dose', delta: a.dose - b.dose, unit: '', digits: 1 },
@@ -932,7 +941,7 @@ export class App {
         ),
         h('div', { class: 'actions end' }, h('button', { class: 'btn primary', onclick: back }, 'Got it')),
       ],
-      { label: 'How to play' },
+      { label: 'How to play', onClose: back },
     );
   }
 
@@ -1012,8 +1021,9 @@ export class App {
           'div',
           { class: 'actions' },
           h('button', { class: 'btn primary', onclick: () => this.resume() }, 'Resume'),
-          this.mission ? h('button', { class: 'btn', onclick: () => this.showWorkshop(() => this.resume()) }, 'Workshop') : null,
-          this.mission
+          // Not while a sol plays out: today's plan is already locked in.
+          this.mission && this.phase !== 'running' ? h('button', { class: 'btn', onclick: () => this.showWorkshop(() => this.resume()) }, 'Workshop') : null,
+          this.mission && this.phase !== 'running'
             ? h(
                 'button',
                 {
@@ -1757,11 +1767,24 @@ export class App {
     if (report.after.fuel >= 100 && report.before.fuel < 100) moments.push({ at: 0.86, kind: 'full' });
     moments.sort((a, b) => a.at - b.at);
     let momentsFired = 0;
+    let firstFrame = true;
+    // The Menu (or a dialog opened from it) pauses the sol: its clock stops until the player closes it.
+    let pausedAt: number | null = null;
+    let pausedFor = 0;
     await new Promise<void>((resolve) => {
       const tick = (now: number) => {
         // The player left mid-sol (back to the title, or tapped out of the demo): stop drawing.
         if (this.phase !== 'running' || this.mission !== m) return resolve();
-        let t = Math.min(1, (now - start) / duration);
+        if (this.modalRoot.querySelector(':scope > .modal') && !this.ff) {
+          pausedAt ??= now;
+          requestAnimationFrame(tick);
+          return;
+        }
+        if (pausedAt !== null) {
+          pausedFor += now - pausedAt;
+          pausedAt = null;
+        }
+        let t = Math.min(1, (now - start - pausedFor) / duration);
         if (this.ff) t = 1;
         this.stage.setTimeOfDay(site === 'moon' ? moonSky(m, m.sol, t) : t);
         const mins = Math.floor((6 * 60 + t * hours * 60) % (24 * 60));
@@ -1798,8 +1821,10 @@ export class App {
             label: this.hudLabel(m),
             site,
           },
-          this.hudButtons(),
+          // New buttons on the first frame only: then a press on Menu or Sound that spans a frame still lands.
+          firstFrame ? this.hudButtons() : 'keep',
         );
+        firstFrame = false;
         if (t < 1) requestAnimationFrame(tick);
         else resolve();
       };
@@ -1949,7 +1974,7 @@ export class App {
               'div',
               { class: 'card good' },
               h('b', null, 'Your crew built: '),
-              m.builtThisExpedition.map((id, i) => [i ? ', ' : '', UPGRADES[id].name]),
+              builtList(m.builtThisExpedition),
               isCampaign && !last ? '. The next crew inherits all of it.' : '.',
             )
           : null,
@@ -2056,7 +2081,7 @@ export class App {
                 h('td', null, r.status === 'won' ? 'Launched home' : 'Came home early'),
                 h('td', null, String(r.sols)),
                 h('td', null, starRow(r.stars, true)),
-                h('td', null, r.built.length ? r.built.map((id) => UPGRADES[id].name).join(', ') : 'nothing'),
+                h('td', null, r.built.length ? builtList(r.built) : 'nothing'),
               ),
             ),
           ),
@@ -2084,6 +2109,19 @@ export class App {
       { label: 'Campaign complete' },
     );
   }
+}
+
+/**
+ * The control in a redrawn dialog that matches one from the old copy (same kind, same label or text, still usable).
+ * A label used more than once (the Workshop's "Work on this" buttons) is ambiguous: then there is no match.
+ */
+function sameControl(box: HTMLElement, old: HTMLElement, oldBox: HTMLElement): HTMLElement | null {
+  const sel = 'button, a[href], input, select, [tabindex]';
+  const key = (el: Element) => `${el.tagName}|${el.getAttribute('aria-label') ?? ''}|${(el.textContent ?? '').trim()}`;
+  const want = key(old);
+  if ([...oldBox.querySelectorAll(sel)].filter((el) => key(el) === want).length > 1) return null;
+  const found = [...box.querySelectorAll<HTMLElement>(sel)].filter((el) => key(el) === want && !el.hasAttribute('disabled'));
+  return found.length === 1 ? found[0] : null;
 }
 
 function starRow(stars: StarId[], compact = false): HTMLElement {

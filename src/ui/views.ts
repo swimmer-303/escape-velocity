@@ -12,6 +12,14 @@ import { EARTH_LINKS } from '../data/earth';
 import { windowSol } from '../sim/sim';
 import { siteText, type Site } from '../sim/site';
 import type { StageCue } from '../render/stage';
+import { UPGRADES, type UpgradeId } from '../sim/upgrades';
+
+/** What a crew built, with repeats counted: "Solar panel row x3, Battery bank" (not the same name three times). */
+export function builtList(ids: readonly UpgradeId[]): string {
+  const counts = new Map<UpgradeId, number>();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+  return [...counts].map(([id, n]) => `${UPGRADES[id].name}${n > 1 ? ` x${n}` : ''}`).join(', ');
+}
 
 export function shortRange(a: string, b: string) {
   const f = (s: string) => new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -343,16 +351,17 @@ export function earthCard(m: MissionState): HTMLElement {
   const grew = m.log.some((r) => r.alloc.greenhouse > 0);
   const stored = m.log.some((r) => r.alloc.battery > 0) || m.base.levels.battery > 0 || m.base.levels.panel > 0;
   const picks = EARTH_LINKS.filter((l) => l.id === 'water' || (l.id === 'farm' && grew) || (l.id === 'battery' && stored));
+  const moon = m.config.site === 'moon';
   return h(
     'div',
     { class: 'card earth-card' },
-    h('div', { class: 'kicker' }, 'From Mars to Earth'),
-    h('p', { style: 'margin:4px 0 8px' }, 'Living within limits on Mars teaches us how to take care of Earth. These space ideas already help people here:'),
+    h('div', { class: 'kicker' }, moon ? 'From the Moon to Earth' : 'From Mars to Earth'),
+    h('p', { style: 'margin:4px 0 8px' }, `Living within limits on ${moon ? 'the Moon' : 'Mars'} teaches us how to take care of Earth. These space ideas already help people here:`),
     h(
       'ul',
       { class: 'clean' },
       picks.map((l) =>
-        h('li', null, h('b', null, l.mars), ' ', l.earth, ' ', h('a', { href: l.url, target: '_blank', rel: 'noopener', class: 'title-foot' }, l.source)),
+        h('li', null, h('b', null, moon ? (l.moon ?? l.mars) : l.mars), ' ', l.earth, ' ', h('a', { href: l.url, target: '_blank', rel: 'noopener', class: 'title-foot' }, l.source)),
       ),
     ),
   );

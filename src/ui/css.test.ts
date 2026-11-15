@@ -29,4 +29,14 @@ describe('style.css', () => {
     expect(block).toMatch(/\.dock-right > :last-child \{[^}]*flex: none/);
     expect(block).toMatch(/\.dock \{[^}]*max-height: calc\(100dvh - var\(--hud-h/);
   });
+
+  it('never mixes a flexible (fr) column with auto-fit or auto-fill: CSS drops that whole rule', () => {
+    const css = readFileSync(fileURLToPath(new URL('./style.css', import.meta.url)), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/grid-template-columns:\s*([^;}]+)/g)) {
+      const value = m[1];
+      if (!/repeat\(\s*auto-(fit|fill)/.test(value)) continue;
+      const outside = value.replace(/repeat\((?:[^()]|\([^()]*\))*\)/g, '');
+      expect(outside, `invalid grid-template-columns: ${value}`).not.toMatch(/\d(\.\d+)?fr\b/);
+    }
+  });
 });

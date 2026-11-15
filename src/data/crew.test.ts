@@ -18,6 +18,10 @@ describe('crew roster', () => {
     for (const spec of EXPEDITIONS) expect(crewFor(spec.n).members).toHaveLength(spec.crew);
   });
 
+  it('fits a Moon base too: no fun fact names Mars or Mars-only weather', () => {
+    for (const m of CREWS.flatMap((c) => c.members)) expect(m.fact).not.toMatch(/Mars|martian|dust devil|dust storm/i);
+  });
+
   it('never repeats a name, even across crews', () => {
     const names = CREWS.flatMap((c) => c.members.map((m) => m.name.toLowerCase()));
     expect(new Set(names).size).toBe(names.length);
