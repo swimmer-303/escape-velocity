@@ -59,6 +59,19 @@ export function renderTile(): HTMLElement {
 // ------------------------------------------------------------------ start card
 let starting = false;
 
+/** "Sample Museum: 3 of 20 found. Best trip: 4 samples." */
+function progressLine(store: RoverStore): HTMLElement {
+  const { found, total } = museumCounts(store);
+  const best = Math.max(...SITES.map((s) => store.best[s].haul));
+  return h(
+    'p',
+    { class: 'ev-rover-progress' },
+    h('b', null, 'Sample Museum: '),
+    `${found} of ${total} found.`,
+    best > 0 ? ` Best trip: ${best} ${best === 1 ? 'sample' : 'samples'}.` : ' Bank your first sample today!',
+  );
+}
+
 function keyRow(keys: string[], what: string): HTMLElement {
   return h('li', null, ...keys.map((k) => h('kbd', null, k)), h('span', null, what));
 }
@@ -114,6 +127,7 @@ export function openStart(ctx: MetaContext, pick?: RoverSite): HTMLElement {
       h('div', { class: 'kicker' }, 'Rover Expeditions'),
       h('h2', null, 'Explore the real ground around your base'),
       h('p', null, 'Drive out, scan science targets, and bring your samples home to the charging pad before the battery runs out.'),
+      progressLine(store),
       choices,
       h(
         'div',

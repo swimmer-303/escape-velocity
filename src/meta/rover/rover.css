@@ -5,6 +5,8 @@
 /* ---------- start card ---------- */
 .ev-rover-start h2, .ev-rover-museum h2 { margin: 2px 0 6px; }
 .ev-rover-sites { display: grid; gap: 8px; margin: 10px 0; }
+.ev-rover-progress { margin: 4px 0; color: var(--muted); }
+.ev-rover-progress b { color: var(--green); }
 .ev-rover-site {
   display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; cursor: pointer;
   background: var(--panel-2); border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--shadow);
