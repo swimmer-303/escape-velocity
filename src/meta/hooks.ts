@@ -6,13 +6,23 @@
 // Features talk to each other through this file too (XP, level rewards), so none imports another.
 
 import type { MissionState, SolReport, SpaceWeatherEvent } from '../sim/types';
+import type { LabSettings } from '../sim/lab';
 import type { Difficulty } from '../sim/constants';
 import type { Campaign, StarId } from '../sim/campaign';
 import type { Stage } from '../render/stage';
 import type { GameAudio } from '../ui/audio';
 import type { Child } from '../ui/dom';
 
-export type PlayMode = 'campaign' | 'quick' | 'history' | 'daily';
+/**
+ * How the mission on screen is being played. 'lab' is a Space Lab what-if mission (a quick mission whose config has
+ * `lab`): it never counts for stars, Rival Race, the daily board, the season or rank rewards (see countsForRewards).
+ */
+export type PlayMode = 'campaign' | 'quick' | 'history' | 'daily' | 'lab';
+
+/** Should a feature reward this sol or mission? Never in the self-playing demo, never in a Space Lab experiment. */
+export function countsForRewards(p: { mode: PlayMode; demo: boolean }): boolean {
+  return !p.demo && p.mode !== 'lab';
+}
 
 // ------------------------------------------------------------------ events
 export interface GameEventMap {
@@ -22,8 +32,12 @@ export interface GameEventMap {
   'mission-end': { mission: MissionState; won: boolean; mode: PlayMode; stars: StarId[]; demo: boolean };
   /** The last crew of a campaign is done. */
   'campaign-complete': { campaign: Campaign };
-  /** Award XP (the rank module listens). `reason` is shown to the player, e.g. "Survived an X-class storm". */
-  xp: { amount: number; reason: string };
+  /**
+   * Award XP (the rank module listens). `reason` is shown to the player, e.g. "Survived an X-class storm".
+   * `source: 'lab'`: the Space Lab's small, capped experiment XP. It counts for rank only (never the season pass or
+   * its weekly challenges).
+   */
+  xp: { amount: number; reason: string; source?: 'lab' };
   /** The rank module announces a new level. */
   'level-up': { level: number; rank: string };
 }
@@ -75,6 +89,8 @@ export interface QuickStart {
   eventPool?: SpaceWeatherEvent[];
   /** Earth-Mars light time to use, minutes (it changes a little every day). */
   lightTimeMin?: number;
+  /** A Space Lab experiment: these what-if settings go into the mission config (the world comes from them too). */
+  lab?: LabSettings;
 }
 
 let ctx: MetaContext | null = null;
@@ -251,6 +267,31 @@ export function renderHudExtras(mission: MissionState, mode: PlayMode): HTMLElem
       if (el) out.push(el);
     } catch (err) {
       console.error(`[meta] HUD extra ${e.id} failed`, err);
+    }
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ end screen
+/** Something a feature adds to the end screen, right under the score (e.g. the Space Lab's result card). */
+export interface EndExtra {
+  id: string;
+  render(mission: MissionState, mode: PlayMode): HTMLElement | null;
+}
+const endExtras: EndExtra[] = [];
+export function addEndExtra(extra: EndExtra): void {
+  const i = endExtras.findIndex((e) => e.id === extra.id);
+  if (i >= 0) endExtras.splice(i, 1);
+  endExtras.push(extra);
+}
+export function renderEndExtras(mission: MissionState, mode: PlayMode): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  for (const e of endExtras) {
+    try {
+      const el = e.render(mission, mode);
+      if (el) out.push(el);
+    } catch (err) {
+      console.error(`[meta] end extra ${e.id} failed`, err);
     }
   }
   return out;

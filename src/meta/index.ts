@@ -8,3 +8,4 @@ import './season';
 import './rover';
 import './race';
 import './builder';
+import './lab';

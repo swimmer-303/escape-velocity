@@ -35,6 +35,8 @@ export interface StageScene {
   site?: 'mars' | 'moon';
   /** Mars only: the landing site ('gale', the default, or 'arcadia', the ice-rich plains). Ignored on the Moon. */
   landing?: string;
+  /** Space Lab, Mars only: sunlight compared with normal (Mars nearer or farther from the Sun). Missing = 1. */
+  labSun?: number;
   /** A storm warning is in today, from Earth (radio) or from the base's own radiation monitor. The 3D stage shows a comms beam. */
   warning?: 'monitor' | 'earth' | null;
 }

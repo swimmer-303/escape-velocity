@@ -303,7 +303,9 @@ export class ThreeStage implements Stage {
     u.uNight.value = night * (1 - dust * 0.9);
     u.uStars.value = 0;
     u.uHardSun.value = 0;
-    u.uSunSize.value = MARS_SUN_SIZE;
+    // Space Lab: Mars nearer the Sun (perihelion) gets brighter sunlight and sees a bigger Sun; farther, dimmer and smaller.
+    const labSun = Math.max(0.5, Math.min(1.6, this.sceneInfo?.labSun ?? 1));
+    u.uSunSize.value = MARS_SUN_SIZE * Math.sqrt(labSun);
 
     const fog = this.scene.fog as THREE.FogExp2;
     fog.color.copy(hor);
@@ -313,7 +315,7 @@ export class ThreeStage implements Stage {
     const L = this.diorama;
     L.sunLight.position.copy(sunDir).multiplyScalar(60);
     L.shadeFrom(sunDir);
-    L.sunLight.intensity = day ? (0.42 + elev * 2.5) * (1 - dust * 0.75) * Math.min(1, elev * 12 + 0.25) : 0;
+    L.sunLight.intensity = day ? (0.42 + elev * 2.5) * (1 - dust * 0.75) * Math.min(1, elev * 12 + 0.25) * labSun : 0;
     L.sunLight.color.copy(MARS.key).lerp(MARS.keyDusk, dusk);
     L.ambient.color.copy(MARS.skyDay).lerp(MARS.skyNight, night).lerp(MARS.skyStorm, dust * 0.6 * dim);
     L.ambient.groundColor.copy(MARS.groundDay).lerp(MARS.groundNight, night);

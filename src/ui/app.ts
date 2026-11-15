@@ -3,7 +3,8 @@
 //   Campaign:  title -> [expedition intro -> (briefing -> budget -> run -> debrief) x sols -> expedition end -> 26 months later] x 3 -> campaign end
 //   Quick:     one expedition.   History: the real May 2024 storms.
 
-import { emitGame, runInterstitial, renderTitleExtras, renderHudExtras, setMetaContext, type InterstitialContext, type QuickStart } from '../meta/hooks';
+import { emitGame, runInterstitial, renderTitleExtras, renderHudExtras, renderEndExtras, setMetaContext, type InterstitialContext, type PlayMode, type QuickStart } from '../meta/hooks';
+import { labLanding, labLightMin, labSite, labStageLook, sanitizeLab } from '../sim/lab';
 import { h, clear, $, prefersReducedMotion, type Child } from './dom';
 import { icon } from './icons';
 import { renderHud } from './hud';
@@ -345,6 +346,10 @@ export class App {
     if (this.mode === 'history') {
       text = 'ARCHIVE · real DONKI data from May 2024';
       cls = 'archive';
+    } else if (this.mission?.config.lab) {
+      // Space Lab experiments deal from the stored DONKI records, so every run can meet the same storms.
+      text = 'ARCHIVE · real DONKI data (Space Lab)';
+      cls = 'archive';
     } else if (f.status === 'live') {
       const t = new Date(f.fetchedAt ?? Date.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       text = `LIVE from NASA DONKI · fetched ${t}`;
@@ -391,7 +396,13 @@ export class App {
     return siteText(this.mission?.config ?? this.campaign ?? this.site);
   }
 
+  /** The play mode features hear about: a quick mission with Space Lab settings is 'lab' (it counts for nothing). */
+  private playMode(m: MissionState | null = this.mission): PlayMode {
+    return m?.config.lab ? 'lab' : (this.mode ?? 'quick');
+  }
+
   private hudLabel(m: MissionState) {
+    if (m.config.lab) return 'SPACE LAB';
     if (this.mode === 'daily' && this.daily) return dailyHudLabel(this.daily.config);
     return this.mode === 'history' ? (this.shortDemo ? 'SHORT DEMO · MAY 2024' : 'MAY 2024') : this.mode === 'campaign' ? `CREW ${m.config.expedition} OF ${EXPEDITIONS.length}` : 'QUICK MISSION';
   }
@@ -465,9 +476,12 @@ export class App {
     const b = getBriefing(m);
     const p = m.base.project;
     const cost = p ? nextCost(p, m.base.levels) : null;
+    // Space Lab: the dust dial thickens the sky and Mars' orbit brightens or dims the Sun.
+    const look = m.config.lab ? labStageLook(m.config.lab, b.weather) : null;
     this.stage.setScene({
       sol: m.sol,
-      weather: b.weather,
+      weather: look?.weather ?? b.weather,
+      ...(look ? { labSun: look.labSun } : {}),
       alloc: this.alloc,
       fuel: m.fuel,
       sheltered: this.alloc.shelter > 0,
@@ -599,7 +613,7 @@ export class App {
     this.streak = perfect ? (report.sol === 1 ? 1 : this.streak + 1) : 0;
     this.lastPerfect = perfect;
     const xp = streakXp(this.streak);
-    if (xp && !this.demoActive && !this.shortDemo) emitGame('xp', { amount: xp, reason: `Perfect ${siteText(next.config).turn} streak x${this.streak}` });
+    if (xp && !this.demoActive && !this.shortDemo && !next.config.lab) emitGame('xp', { amount: xp, reason: `Perfect ${siteText(next.config).turn} streak x${this.streak}` });
   }
 
   /** The debrief's "Perfect sol" banner and what the sol made, counting up. */
@@ -650,7 +664,7 @@ export class App {
     if (!this.endScore || this.endScore.mission !== m) {
       const score = scoreMission(m, windowSol(m), `${siteText(m.config).Turn}s`);
       const save = first && !this.demoActive && !this.shortDemo;
-      const key = `${this.mode ?? 'quick'}-${siteOf(m.config)}`;
+      const key = `${this.playMode(m)}-${siteOf(m.config)}`;
       const best = save ? recordBest(key, score.score) : { isNew: false, previous: null };
       this.endScore = { mission: m, score, isNew: best.isNew, previous: best.previous };
     }
@@ -1267,7 +1281,11 @@ export class App {
     this.audio.sfx('click');
     this.mode = 'quick';
     const q = this.quickStart;
-    this.campaign = q ? newCampaign(q.seed, q.difficulty ?? 'cadet', q.site ?? 'mars') : { ...campaignWithCode(this.codes.active, this.seed(), 'cadet'), ...this.place() };
+    // A Space Lab experiment picks its world (and Mars landing site) on the lab's World dial.
+    const lab = q?.lab ? sanitizeLab(q.lab) : null;
+    this.campaign = q
+      ? newCampaign(q.seed, q.difficulty ?? 'cadet', lab ? labSite(lab) : (q.site ?? 'mars'), lab ? labLanding(lab) : 'gale')
+      : { ...campaignWithCode(this.codes.active, this.seed(), 'cadet'), ...this.place() };
     this.showExpeditionIntro();
   }
 
@@ -1332,7 +1350,8 @@ export class App {
     const windowSols = spec.windowSol + tuningFor(c.difficulty, c.site).windowBonus;
     const t = siteText(c);
     // A brand-new player who pressed PLAY: the goal in one line and the crew's faces, then straight to the landing.
-    if (this.firstRun && this.mode === 'quick') {
+    const labCrew = this.mode === 'quick' ? this.quickStart?.lab?.crew : undefined;
+    if (this.firstRun && this.mode === 'quick' && !labCrew) {
       const roster = crewFor(c.expedition);
       this.modal(
         [
@@ -1358,7 +1377,7 @@ export class App {
     }
     this.modal(
       [
-        h('div', { class: 'kicker' }, isCampaign ? `Crew ${c.expedition} of ${EXPEDITIONS.length}` : this.mode === 'daily' && this.daily ? dailyKicker(this.daily.config) : 'Quick mission'),
+        h('div', { class: 'kicker' }, isCampaign ? `Crew ${c.expedition} of ${EXPEDITIONS.length}` : this.mode === 'daily' && this.daily ? dailyKicker(this.daily.config) : labCrew ? 'Space Lab experiment' : 'Quick mission'),
         h('h2', null, spec.name),
         t.site === 'mars'
           ? h('div', { class: 'art' }, h('img', { src: c.expedition === 1 ? '/art/title.png' : '/art/event-resupply.png', alt: 'The Mars outpost (AI-generated art)' }))
@@ -1369,7 +1388,7 @@ export class App {
         h(
           'div',
           { class: 'card' },
-          h('b', null, `Crew: ${spec.crew} astronauts. `),
+          h('b', null, `Crew: ${labCrew ?? spec.crew} astronauts. `),
           `Each one breathes about ${REAL.o2PerCrewKgPerDay.toFixed(1)} kg of oxygen a day. `,
           h('b', null, 'Goal: '),
           `fill the rocket and launch home by ${t.turn} ${windowSols}, when the launch window closes.`,
@@ -1437,7 +1456,10 @@ export class App {
     const pool = await this.pool().finally(() => (this.landing = false));
     this.campaignAtStart = c;
     const q = this.mode === 'quick' && !this.demoActive ? this.quickStart : null;
-    this.mission = createMission(this.mode === 'daily' && this.daily ? dailyMissionConfig(this.daily.config) : missionConfigFor(c, q?.lightTimeMin ?? this.light.oneWayMinutes, q?.eventPool ?? pool));
+    const lab = q?.lab ? sanitizeLab(q.lab) : null;
+    const light = lab ? labLightMin(lab, this.light.oneWayMinutes) : (q?.lightTimeMin ?? this.light.oneWayMinutes);
+    const config = this.mode === 'daily' && this.daily ? dailyMissionConfig(this.daily.config) : missionConfigFor(c, light, q?.eventPool ?? pool);
+    this.mission = createMission(lab ? { ...config, lab } : config);
     this.save();
     if (!this.demoActive) {
       this.closeModal();
@@ -1450,7 +1472,7 @@ export class App {
 
   private interstitialContext(): InterstitialContext {
     const m = this.mission!;
-    return { mission: m, mode: this.mode ?? 'quick', site: siteOf(m.config), root: this.modalRoot, stage: this.stage, audio: this.audio, reducedMotion: this.settings.reducedMotion };
+    return { mission: m, mode: this.playMode(m), site: siteOf(m.config), root: this.modalRoot, stage: this.stage, audio: this.audio, reducedMotion: this.settings.reducedMotion };
   }
 
   // ------------------------------------------------------------------ one sol
@@ -1833,7 +1855,7 @@ export class App {
     if (this.phase !== 'running' || this.mission !== m) return;
 
     this.mission = next;
-    emitGame('sol', { before: m, after: next, report, mode: this.mode ?? 'quick', demo: this.demoActive });
+    emitGame('sol', { before: m, after: next, report, mode: this.playMode(m), demo: this.demoActive });
     this.trackStreak(report, next);
     if (report.built) this.audio.sfx('good');
     this.save();
@@ -1890,11 +1912,13 @@ export class App {
     clear(this.dock);
     this.refreshHud();
     const won = m.status === 'won';
+    // A Space Lab experiment: no stars, no class board, no certificate. The lab adds its result card instead.
+    const lab = !!m.config.lab;
     // The self-playing demo: remember it now, because a tap during the launch below ends the demo (and clears the flag).
     const demo = this.demoActive;
     if (first) {
       // Class code: send this crew's result to the teacher's class board (in the background).
-      if (!demo && (this.mode === 'campaign' || this.mode === 'quick')) classBoard.report(this.campaign?.classCode, m, this.mode);
+      if (!demo && !lab && (this.mode === 'campaign' || this.mode === 'quick')) classBoard.report(this.campaign?.classCode, m, this.mode);
       if (won) {
         this.closeModal();
         if (!demo) await runInterstitial('launch', this.interstitialContext());
@@ -1908,7 +1932,7 @@ export class App {
         this.campaign = finishExpedition(this.campaign, m);
         this.save();
       }
-      emitGame('mission-end', { mission: m, won, mode: this.mode ?? 'quick', stars: starsFor(m), demo });
+      emitGame('mission-end', { mission: m, won, mode: this.playMode(m), stars: lab ? [] : starsFor(m), demo });
     }
     const end = endingFor(m);
     const stars = starsFor(m);
@@ -1926,6 +1950,7 @@ export class App {
         h('div', { class: 'kicker' }, won ? `${this.hudLabel(m)} · Mission complete` : `${this.hudLabel(m)} · Heading home early`),
         h('h2', { class: won ? 'tone-good' : '' }, end.title),
         this.scorePanel(m, first),
+        ...renderEndExtras(m, this.playMode(m)),
         won
           ? h(
               'p',
@@ -1937,9 +1962,9 @@ export class App {
           : null,
         won && siteOf(m.config) !== 'moon' && this.mode !== 'history' ? tripHomeLine(this.mode === 'campaign' ? m.config.expedition : 1) : null,
         crewSays(m.config.expedition, won),
-        this.mode !== 'history' ? starRow(stars) : null,
-        this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
-        this.mode !== 'history' ? classBoard.card(this.campaign?.classCode) : null,
+        this.mode !== 'history' && !lab ? starRow(stars) : null,
+        this.mode !== 'history' && !lab ? classCodeLine(this.campaign?.classCode) : null,
+        this.mode !== 'history' && !lab ? classBoard.card(this.campaign?.classCode) : null,
         this.mode === 'daily' && this.daily ? dailyEndPanel(this.daily, m) : null,
         // Play again (or the next crew) right under the score, then other modes to try; the full story follows.
         h(
@@ -1954,7 +1979,7 @@ export class App {
                 'Play again',
               )
             : null,
-          won
+          won && !lab
             ? h(
                 'button',
                 { class: 'btn cyan', onclick: () => this.showCertificate(certForMission(m, { campaign: isCampaign ? this.campaign : null, history: this.mode === 'history' })) },
