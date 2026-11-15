@@ -161,12 +161,21 @@ export function sanitize(raw: unknown, rand: () => number = Math.random): Season
 }
 
 export function loadState(): SeasonState {
+  let raw: string | null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? sanitize(JSON.parse(raw)) : freshState();
+    raw = localStorage.getItem(STORAGE_KEY);
   } catch {
     return freshState();
   }
+  let s: SeasonState;
+  try {
+    s = raw ? sanitize(JSON.parse(raw)) : freshState();
+  } catch {
+    s = freshState();
+  }
+  // A new player keeps the callsign they were first shown (Rival Race links read it from here too).
+  if (!raw) saveState(s);
+  return s;
 }
 
 export function saveState(s: SeasonState): void {
