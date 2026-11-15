@@ -3,16 +3,36 @@
 // first-time player has something to adjust instead of a blank board. It never changes the
 // Workshop project, and it leaves the big trade-offs (how much to build) modest on purpose.
 
-import { getBriefing, moduleCap, airPerCell, foodPerGreenhouseCell, greenhouseAirPerCell, fuelPctPerCell, windowSol, emptyAlloc, previewSol, backgroundDose } from './sim';
+import { getBriefing, moduleCap, airPerCell, foodPerGreenhouseCell, greenhouseAirPerCell, fuelPctPerCell, windowSol, emptyAlloc, previewSol, backgroundDose, isIceSite } from './sim';
 import { UPGRADES } from './upgrades';
 import { nightStock, nightsAhead } from './strategies';
 import { tuningFor } from './constants';
-import type { Allocation, MissionState, ModuleId } from './types';
+import type { Allocation, Briefing, MissionState, ModuleId } from './types';
 
 export interface Advice {
   alloc: Allocation;
   /** Why each module got its cells, in kid-friendly words. */
   reasons: Array<{ id: ModuleId; text: string }>;
+}
+
+/**
+ * Sols to spare that the ice-site shelter check keeps before the launch window closes. It judges the trip by today's
+ * power, so the spare sols cover the dust storms and cold snaps still to come.
+ */
+const ICE_SHELTER_SPARE_SOLS = 4;
+
+/**
+ * Room for a "just in case" shelter at the ice site (Arcadia Planitia). The Gale Crater rule wants 3 cells to spare
+ * after heat and the fuel pace: 2 for the shelter and about 1 more for food. Arcadia's smaller solar array never has 3
+ * to spare, so with that rule the advice never sheltered there and nearly every Commander first crew was lost to
+ * radiation. But Arcadia's greenhouse feeds the crew on much less power, so check the whole trip instead: after 2
+ * shelter cells today, can today's power (less heat, food and air) still fill the rocket with a few sols to spare?
+ */
+function iceSiteHasRoom(state: MissionState, b: Briefing, fuelCellsLeft: number, solsLeft: number): boolean {
+  const ghCells = state.crew / foodPerGreenhouseCell(state);
+  const airCells = Math.max(0, state.crew - ghCells * greenhouseAirPerCell(state)) / airPerCell(state);
+  const fuelPerSol = b.cells - b.heaterNeed - ghCells - airCells;
+  return fuelPerSol * (solsLeft - ICE_SHELTER_SPARE_SOLS) - 2 >= fuelCellsLeft;
 }
 
 export function advise(state: MissionState): Advice {
@@ -49,7 +69,7 @@ export function advise(state: MissionState): Advice {
     // Never at the cost of the launch window: only when today's power covers the fuel pace as well.
     const solsLeft = Math.max(1, windowSol(state) - state.sol + 1);
     const pace = Math.ceil(fuelCellsLeft / Math.max(1, solsLeft - 2));
-    const roomForShelter = b.cells - b.heaterNeed - pace >= 3;
+    const roomForShelter = isIceSite(state) ? iceSiteHasRoom(state, b, fuelCellsLeft, solsLeft) : b.cells - b.heaterNeed - pace >= 3;
     if (roomForShelter && bigHit > 0 && bigLeft + smallLeft > 0 && headroom < bigHit * bigLeft + bigHit * 0.4 * smallLeft + 1) give('shelter', 2, 'The Sun is active and a big storm could beat Earth\'s warning: shelter, just in case.');
   }
   if (b.hasMonitor && b.outlook !== 'quiet' && left >= 2) give('monitor', 1, 'The Sun is active: the monitor watches for storms tonight.');

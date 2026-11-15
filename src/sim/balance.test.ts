@@ -8,6 +8,10 @@ import { totalStars } from './campaign';
 import { freshBase } from './upgrades';
 import type { Difficulty, Landing, Site } from './constants';
 import { may2024Pool } from '../data/donki';
+import { advise } from './advisor';
+
+/** A player who presses "Suggest a plan" every sol and takes the food crate. */
+const followsAdvice: Strategy = (state) => ({ alloc: advise(state).alloc, crate: 'food' });
 
 function campaignStats(strategy: Strategy, difficulty: Difficulty, n = 100, site: Site = 'mars', landing: Landing = 'gale') {
   const wins = [0, 0, 0];
@@ -86,6 +90,7 @@ describe('balance', () => {
   for (const d of ['cadet', 'commander'] as Difficulty[]) {
     it(`arcadia (ice landing site) ${d}: campaign and quick-mission report`, () => {
       const table = {
+        followsAdvice: campaignStats(followsAdvice, d, 100, 'mars', 'arcadia'),
         builder: campaignStats(builder, d, 100, 'mars', 'arcadia'),
         balancedNoBuild: campaignStats(balanced, d, 100, 'mars', 'arcadia'),
         evenSplit: campaignStats(evenSplit, d, 100, 'mars', 'arcadia'),
@@ -105,7 +110,7 @@ describe('balance', () => {
         }
         return wins;
       };
-      console.log(`arcadia ${d} quick mission wins /100`, { builder: quick(builder), balanced: quick(balanced), greedyBreathing: quick(greedyBreathing), pureGreed: quick(pureGreed) });
+      console.log(`arcadia ${d} quick mission wins /100`, { followsAdvice: quick(followsAdvice), builder: quick(builder), balanced: quick(balanced), greedyBreathing: quick(greedyBreathing), pureGreed: quick(pureGreed) });
       expect(table.builder.winPct[0]).toBeGreaterThan(0);
     });
   }
