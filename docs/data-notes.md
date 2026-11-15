@@ -288,9 +288,9 @@ Not found: a citable figure for how much less energy per kg of O2 water electrol
 
 - **Sunshine:** 6 starting solar cells instead of 7. Sanity check (our own estimate, not a NASA figure): yearly-mean sunlight at the top of the atmosphere from the standard daily-insolation formula, with Mars' obliquity 25.19° (NASA Mars Fact Sheet), is about 0.73 of Gale's at 46.66°N (the latitude ratio of yearly means does not depend on orbital eccentricity). So the game's 1-in-7 cut is gentler than real.
 - **Cold:** 2 more cold snaps per mission (Cadet 4, Commander 5).
-- **Water:** each greenhouse cell grows 2x the food and gives 2x the plant air.
+- **Water:** each greenhouse cell grows 3x the food and gives 3x the plant air (2x until 2026-11-15; raised because Commander was close to unwinnable, see Balance).
 - Everything else (crews, fuel, windows, storms, background radiation) is the Gale value. Radiation: the game keeps Curiosity's Gale measurement; Arcadia's base site is about as low (-4,008 m vs -4,501 m).
-- **Balance** (`npm run balance`, 100 campaigns each): Cadet builder wins 100 / 99 / 100% of crews 1-3 (Gale: 100 / 100 / 100); a careful non-builder 100 / 100 / 100% (Gale: 100 / 100 / 73), but crew 1 is slower (median 13 sols vs 10). Greed always loses. Commander is harder at Arcadia (scripted builder 19 / 18 / 8%; the "Suggest a plan" advisor alone reaches 0 / 100 / 68% vs Gale 4 / 100 / 97%).
+- **Balance** (`npm run balance`, 100 campaigns each, after the 2026-11-15 retune): Cadet builder wins 100 / 100 / 100% of crews 1-3 and a careful non-builder 100 / 100 / 100%; greed always loses. Commander is harder at Arcadia than at Gale: following "Suggest a plan" wins 72 / 61 / 45% (Gale 86 / 96 / 96%), the scripted builder 55 / 49 / 68% (Gale 43 / 98 / 97%), a balanced non-builder 26 / 99 / 0%, and ignoring radiation 0 / 55 / 0%. Before the retune (2x greenhouse, and an advisor that never sheltered "just in case" at Arcadia because its 6-cell array never had 3 cells to spare) the advisor won 1% of Commander first crews and the builder 19%.
 
 ## 9. Trip planner: Mars-to-Earth trajectories (added 2026-11-14)
 

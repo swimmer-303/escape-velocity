@@ -65,7 +65,7 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 
 **Stars:** up to 3 per crew: Launch, Safe crew (dose under 60% of budget), and Builder (finish an upgrade for the next crew).
 
-**Landing site (Mars):** build at **Gale Crater** (Curiosity's crater, the default) or on the icy plains of **Arcadia Planitia** (47°N), where NASA's Subsurface Water Ice Mapping (SWIM) maps show likely ice in the top meter. Ice means water, so the greenhouse grows twice the food and air; but farther north there is less sunshine (1 fewer power cell) and more cold nights. The sizes of those effects are game values; the ice map is real.
+**Landing site (Mars):** build at **Gale Crater** (Curiosity's crater, the default) or on the icy plains of **Arcadia Planitia** (47°N), where NASA's Subsurface Water Ice Mapping (SWIM) maps show likely ice in the top meter. Ice means water, so the greenhouse grows three times the food and air; but farther north there is less sunshine (1 fewer power cell) and more cold nights. The sizes of those effects are game values; the ice map is real.
 
 **Modes:** a 3-crew **campaign** (Cadet or Commander), a **Quick mission** (one crew, about 10 minutes), and **Replay History: May 2024**, where the real storms of May 2024 hit your outpost on their real dates, ending with the far-side eruption of May 20, 2024 that Curiosity measured at Gale Crater.
 
