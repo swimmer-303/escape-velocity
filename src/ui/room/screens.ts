@@ -4,7 +4,7 @@
 
 import { h, type Child } from '../dom';
 import { icon } from '../icons';
-import { eventCard, scienceCard, weatherLine, upcomingRegion, compareCard, briefingArt } from '../views';
+import { eventCard, scienceCard, weatherLine, upcomingRegion, compareCard, briefingArt, builtList } from '../views';
 import { missionChartFor, crewCharts } from '../charts';
 import { crewSays } from '../crew';
 import { checkAlloc, getBriefing, planFor, windowSol } from '../../sim/sim';
@@ -349,7 +349,7 @@ export function endContent(view: RoomView): Child[] {
     h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),
     m.log.length ? missionChartFor(m) : null,
     m.builtThisExpedition.length
-      ? h('div', { class: 'card good' }, h('b', null, 'Your class built: '), m.builtThisExpedition.map((id, i) => [i ? ', ' : '', UPGRADES[id].name]), view.crews > 1 && !campaignOver ? '. The next crew inherits all of it.' : '.')
+      ? h('div', { class: 'card good' }, h('b', null, 'Your class built: '), builtList(m.builtThisExpedition), view.crews > 1 && !campaignOver ? '. The next crew inherits all of it.' : '.')
       : null,
     h('div', { class: 'card' }, h('b', null, won ? 'Next challenge: ' : 'Try this next time: '), end.tip),
     campaignOver ? crewCharts(view.results) : null,

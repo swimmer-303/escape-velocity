@@ -45,11 +45,13 @@ export function poolLabel(cfg: DailyConfig, withDay = false): string {
 
 /** The same, as a sentence for the intro card. */
 function poolSentence(cfg: DailyConfig): string {
+  // The pool also holds the real May 2024 storms (see buildEventPool): say so, since their cards show 2024 dates.
+  const may2024 = cfg.eventPool.some((e) => e.time.startsWith('2024-05')) ? ', plus the real storms of May 2024' : '';
   if (cfg.poolSource === 'live') {
     const t = fetchedTime(cfg.poolFetchedAt, true);
-    return `Today's storms come from NASA DONKI${t ? `, fetched ${t}` : ''}.`;
+    return `Today's storms come from NASA DONKI${t ? `, fetched ${t}` : ''}${may2024}.`;
   }
-  return `Today's storms come from our stored NASA DONKI data${cfg.poolStart && cfg.poolEnd ? `, ${shortRange(cfg.poolStart, cfg.poolEnd)}` : ''}.`;
+  return `Today's storms come from our stored NASA DONKI data${cfg.poolStart && cfg.poolEnd ? `, ${shortRange(cfg.poolStart, cfg.poolEnd)}` : ''}${may2024}.`;
 }
 
 /** The HUD data badge during a daily challenge (opens the Science Log, like the normal badge). */

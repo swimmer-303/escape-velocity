@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { SWIM, fmtIce, swimAt, swimProfileEnds } from './swim';
 import { ARCADIA } from '../sim/constants';
-import { factFor, FACTS } from './science';
+import { factFor, FACTS, OSDR_FACTS } from './science';
 
 describe('SWIM ice map snapshot', () => {
   it('records where it came from and when', () => {
@@ -67,5 +67,16 @@ describe('Real Science cards for the landing site', () => {
       }
       expect(seen.size).toBe(1);
     }
+  });
+});
+
+describe('Real Science cards on the Moon', () => {
+  it('never shows a study about Mars (its soil or its gravity) at a Moon base', () => {
+    expect(OSDR_FACTS.some((f) => f.site === 'mars')).toBe(true);
+    for (const topic of ['greenhouse', 'shelter', 'crew', 'o2'] as const)
+      for (let seed = 0; seed < 60; seed++) {
+        const f = factFor(topic, seed, 'moon');
+        if (f.title.startsWith('OSD-')) expect(`${f.title} ${f.body}`).not.toMatch(/\bMars\b|Martian/i);
+      }
   });
 });

@@ -261,7 +261,7 @@ const OSDR_ART: Record<OsdrCard['tieIn'], string> = {
   o2: 'science-o2',
 };
 
-/** Real NASA OSDR studies, shown as Real Science cards for the matching topic. */
+/** Real NASA OSDR studies, shown as Real Science cards for the matching topic. A study about Mars (its soil, its gravity) is shown only on Mars. */
 export const OSDR_FACTS: ScienceFact[] = OSDR_CARDS.map((c) => ({
   topic: c.tieIn,
   title: `${c.osdId}: ${c.title}`,
@@ -269,6 +269,7 @@ export const OSDR_FACTS: ScienceFact[] = OSDR_CARDS.map((c) => ({
   source: `NASA Open Science Data Repository, study ${c.osdId}`,
   url: c.url,
   art: OSDR_ART[c.tieIn],
+  ...(/\bMars\b|Martian/i.test(`${c.title} ${c.takeaway}`) ? { site: 'mars' as const } : {}),
 }));
 
 /** A Real Science card for what just happened, at this site (Mars at Gale Crater by default). */

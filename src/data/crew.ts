@@ -26,7 +26,7 @@ export const CREWS: CrewRoster[] = [
     members: [
       { name: 'Amara', role: 'Commander', fact: 'Hums a happy song every morning.' },
       { name: 'Kenji', role: 'Engineer', fact: 'Can fix almost anything with tape.' },
-      { name: 'Lucía', role: 'Botanist', fact: 'Grows the best lettuce on Mars.' },
+      { name: 'Lucía', role: 'Botanist', fact: 'Grows the best lettuce in space.' },
       { name: 'Omar', role: 'Doctor', fact: 'Tells the silliest jokes on the crew.' },
     ],
   },
@@ -50,7 +50,7 @@ export const CREWS: CrewRoster[] = [
       { name: 'Aisha', role: 'Doctor', fact: 'Makes sure everyone drinks their water.' },
       { name: 'Lars', role: 'Engineer', fact: 'Plays the harmonica after dinner.' },
       { name: 'Zuri', role: 'Botanist', fact: 'Sings to the tomatoes every day.' },
-      { name: 'Ravi', role: 'Pilot', fact: 'Can spot a dust devil from far away.' },
+      { name: 'Ravi', role: 'Pilot', fact: 'Knows every star in the sky by name.' },
     ],
   },
 ];

@@ -6,6 +6,8 @@
 export interface EarthLink {
   id: 'farm' | 'water' | 'battery';
   mars: string;
+  /** The same line for a Moon base, when the Mars one does not fit there. */
+  moon?: string;
   earth: string;
   source: string;
   url: string;
@@ -31,6 +33,7 @@ export const EARTH_LINKS: EarthLink[] = [
   {
     id: 'battery',
     mars: 'You saved solar power for the dark and stormy days.',
+    moon: 'You saved solar power for the long, dark lunar night.',
     earth:
       'NASA invented a giant "flow battery" in the 1970s to store power in space. A company built on that research now stores solar power in a microgrid that keeps important community buildings running when the power goes out.',
     source: 'NASA Spinoff: Giant Batteries Deliver Renewable Energy When It’s Needed',
