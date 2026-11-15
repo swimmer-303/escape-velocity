@@ -79,7 +79,7 @@ a { color: var(--cyan); }
   padding: 6px 10px 8px; min-width: 150px; flex: 1 1 150px; max-width: 260px;
 }
 .meter-head { display: flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 13px; text-transform: uppercase; color: var(--muted); }
-.meter-value { margin-left: auto; color: var(--ink); font-size: 15px; }
+.meter-value { margin-left: auto; color: var(--ink); font-size: 15px; white-space: nowrap; }
 .meter-sub { display: flex; gap: 10px; font-size: 13px; color: var(--muted); margin-top: 4px; }
 .meter-sub b { color: var(--ink); font-family: var(--font-px); font-weight: 400; }
 .bar { position: relative; height: 12px; margin-top: 6px; background: #000; border: 2px solid #000; overflow: hidden; }
