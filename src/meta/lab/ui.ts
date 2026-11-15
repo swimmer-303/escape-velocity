@@ -229,15 +229,17 @@ export function openLab(): void {
   const persist = () => storeSave(save);
 
   const readouts = {
-    world: h('p', { class: 'lab-readout', id: 'lab-ro-world', 'aria-live': 'polite' }),
-    sun: h('p', { class: 'lab-readout', id: 'lab-ro-sun', 'aria-live': 'polite' }),
-    orbit: h('p', { class: 'lab-readout', id: 'lab-ro-orbit', 'aria-live': 'polite' }),
-    dust: h('p', { class: 'lab-readout', id: 'lab-ro-dust', 'aria-live': 'polite' }),
-    delay: h('p', { class: 'lab-readout', id: 'lab-ro-delay', 'aria-live': 'polite' }),
-    crew: h('p', { class: 'lab-readout', id: 'lab-ro-crew', 'aria-live': 'polite' }),
+    world: h('p', { class: 'lab-readout', id: 'lab-ro-world' }),
+    sun: h('p', { class: 'lab-readout', id: 'lab-ro-sun' }),
+    orbit: h('p', { class: 'lab-readout', id: 'lab-ro-orbit' }),
+    dust: h('p', { class: 'lab-readout', id: 'lab-ro-dust' }),
+    delay: h('p', { class: 'lab-readout', id: 'lab-ro-delay' }),
+    crew: h('p', { class: 'lab-readout', id: 'lab-ro-crew' }),
   };
   const none = () => h('span');
-  const summary = h('p', { class: 'lab-summary', 'aria-live': 'polite' });
+  const summary = h('p', { class: 'lab-summary' });
+  // One polite announcement per change (the changed dial's readout), instead of six readouts talking at once.
+  const announce = h('p', { class: 'sr-only', 'aria-live': 'polite' });
   const seedText = h('span', { class: 'lab-seed' });
 
   const update = (redraw3d = true) => {
@@ -266,6 +268,8 @@ export function openLab(): void {
     persist();
     ctx.audio.sfx('place');
     update();
+    const key = 'world' in patch ? 'world' : 'sun' in patch ? 'sun' : 'orbit' in patch ? 'orbit' : 'dust' in patch ? 'dust' : 'delayMin' in patch ? 'delay' : 'crew' in patch ? 'crew' : null;
+    announce.textContent = key ? readouts[key].textContent : summary.textContent;
   };
 
   // World: three real places, as big radio buttons.
@@ -500,6 +504,7 @@ export function openLab(): void {
     h('p', { class: 'lab-intro' }, 'Change the world around your base, then run a mission and see what happens. This is a what-if lab built on the game\'s own model with real NASA numbers. It is not a real NASA simulation.'),
     h('p', { class: 'lab-rule' }, REWARD_RULE),
     summary,
+    announce,
     h(
       'div',
       { class: 'lab-tools' },

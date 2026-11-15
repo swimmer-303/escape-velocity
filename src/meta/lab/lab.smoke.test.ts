@@ -117,6 +117,8 @@ describe('Space Lab in the game', () => {
     expect(dust.getAttribute('aria-valuetext')).toBe('Dust storm');
     expect(lab.querySelector('#lab-ro-dust')!.textContent).toMatch(/Tau 3: 60% .* Solar power: 4 cells a sol \(normal 7\)/);
     expect(lab.querySelector('.lab-summary')!.textContent).toMatch(/You changed 1 thing: a fair test/);
+    // A screen reader hears the changed dial's readout once.
+    expect(lab.querySelector('[aria-live="polite"]')!.textContent).toMatch(/^Tau 3:/);
     expect(loadSave().settings.dust).toBe('storm');
     // A hypothesis before the run.
     lab.querySelector<HTMLInputElement>('input[name="lab-hyp"][value="later"]')!.click();
