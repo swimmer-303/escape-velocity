@@ -3,7 +3,7 @@
 // welcome-back gifts, the Player Card choices and stats. No DOM here: the screens listen with onSeason().
 // Nothing is ever taken away: a missed day or week only means new challenges, never lost progress.
 
-import type { GameEventMap } from '../hooks';
+import { countsForRewards, type GameEventMap } from '../hooks';
 import { MAX_TIER, seasonOver, tierFor } from './season';
 import { rollCallsign } from './callsign';
 import { BANNERS, DEFAULT_CARD, FRAMES, PATCHES, TIERS, TITLES, tierDef, type CardPatch, type RewardKind, type SeasonReward } from './rewards';
@@ -379,7 +379,7 @@ function builtCount(r: GameEventMap['sol']['report']) {
 }
 
 export function onSol(p: GameEventMap['sol']): void {
-  if (p.demo) return;
+  if (!countsForRewards(p)) return;
   const s = seasonState();
   const r = p.report;
   s.stats.sols++;
@@ -393,7 +393,7 @@ export function onSol(p: GameEventMap['sol']): void {
 }
 
 export function onMissionEnd(p: GameEventMap['mission-end']): void {
-  if (p.demo) return;
+  if (!countsForRewards(p)) return;
   const s = seasonState();
   s.stats.missions++;
   if (p.won) s.stats.launches++;
@@ -410,6 +410,8 @@ export function onCampaignComplete(): void {
 
 /** XP from any other mode (Storm Cards, flight medals, and every new mode) fills the pass too. */
 export function onXp(p: GameEventMap['xp']): void {
+  // Space Lab experiment XP counts for rank only: never the pass or its weekly challenges.
+  if (p?.source === 'lab') return;
   const amount = typeof p?.amount === 'number' && Number.isFinite(p.amount) ? Math.min(SEASON_XP.maxEvent, p.amount) : 0;
   const reason = typeof p?.reason === 'string' ? p.reason : '';
   addSeasonXp(amount, 'bonus', reason);

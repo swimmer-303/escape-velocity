@@ -6,7 +6,7 @@
 // Rarity rules and wording: ./rarity.ts. The collection in localStorage: ./store.ts. What there is to find: ./pool.ts.
 
 import './cards.css';
-import { addTitleExtra, emitGame, metaContext, onGame, whenMetaReady, type GameEventMap } from '../hooks';
+import { addTitleExtra, countsForRewards, emitGame, metaContext, onGame, whenMetaReady, type GameEventMap } from '../hooks';
 import { toast } from '../toast';
 import { miniCard } from './art';
 import { cardTitle, isFarSideGiant, rarityOf, RARITY_WORD, RARITY_XP, SET_BONUS_XP, SPECIAL_BONUS_XP } from './rarity';
@@ -30,7 +30,7 @@ export function xpFor(card: StoredCard): number {
 
 /** Handle one played sol. Exported for tests. */
 export function onSol(p: GameEventMap['sol']): void {
-  if (p.demo || !p.report.storm) return;
+  if (!countsForRewards(p) || !p.report.storm) return;
   const s = p.report.storm;
   const col = loadCollection();
   const res = addMeeting(col, s.event, { shielded: wasShielded(s), site: p.after.config.site === 'moon' ? 'moon' : 'mars' });

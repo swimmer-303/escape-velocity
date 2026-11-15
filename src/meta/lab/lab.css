@@ -1,0 +1,127 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* Space Lab: chunky retro dials on dark panels, pixel headings, big controls for small hands. */
+
+.lab-screen > p { max-width: 70ch; }
+.lab-rule { font-size: 14px; color: var(--muted); border-left: 4px solid var(--amber); padding: 4px 10px; background: #0b0a1866; }
+.lab-summary { font-size: 15px; color: var(--ink); margin: 6px 0 8px; }
+.lab-small { font-size: 14px; color: var(--muted); }
+
+.lab-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+
+.lab-dials { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 10px; }
+@media (min-width: 760px) { .lab-dials { grid-template-columns: 1fr 1fr; } }
+
+.lab-dial {
+  background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line), 4px 4px 0 var(--shadow);
+  padding: 12px 14px; min-width: 0;
+}
+.modal .lab-dial h3 { margin: 0 0 6px; font-size: 16px; color: var(--cyan); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lab-tag { font-family: var(--font-px); font-size: 10px; padding: 1px 5px; border: 2px solid #000; background: var(--sky); color: #000; }
+.lab-what { font-size: 15px; margin: 0 0 8px; }
+.lab-dial.is-off .lab-control, .lab-dial.is-off .lab-row { opacity: 0.4; }
+.lab-off { font-size: 14px; color: var(--muted); font-style: italic; margin: 6px 0 0; }
+
+.lab-readout {
+  margin: 10px 0 6px; padding: 8px 10px; background: #0b0a18; border: 2px solid #000; border-left: 6px solid var(--green);
+  font-weight: 700; font-size: 15px; color: var(--ink);
+}
+.lab-dial.is-off .lab-readout { border-left-color: var(--line); color: var(--muted); }
+
+/* Sliders: a thick track and a big square thumb, easy to grab with a finger. */
+.lab-range { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; background: transparent; margin: 4px 0; cursor: pointer; }
+.lab-range:focus { outline: none; }
+.lab-range:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.lab-range::-webkit-slider-runnable-track { height: 14px; background: var(--panel-3); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); }
+.lab-range::-moz-range-track { height: 14px; background: var(--panel-3); border: 3px solid #000; }
+.lab-range::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -11px; background: var(--amber); border: 3px solid #000; box-shadow: inset -3px -3px 0 #0005, inset 3px 3px 0 #ffffff55; }
+.lab-range::-moz-range-thumb { width: 26px; height: 26px; background: var(--amber); border: 3px solid #000; border-radius: 0; }
+.lab-range:disabled { cursor: not-allowed; }
+.lab-range:disabled::-webkit-slider-thumb { background: var(--line); }
+
+.lab-ticks { display: grid; gap: 4px; }
+.lab-ticks.n3 { grid-template-columns: repeat(3, 1fr); }
+.lab-ticks.n5 { grid-template-columns: repeat(5, 1fr); }
+.lab-ticks.ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.lab-tick {
+  font: inherit; font-size: 13px; line-height: 1.15; color: var(--muted); background: none; border: 2px solid transparent;
+  padding: 4px 2px; min-height: 36px; cursor: pointer; text-align: center; overflow-wrap: anywhere;
+}
+.lab-tick.on { color: #000; background: var(--amber); border-color: #000; font-weight: 700; }
+.lab-ticks.off .lab-tick { cursor: not-allowed; }
+.lab-num-row { display: flex; align-items: center; gap: 12px; }
+.lab-num-row .lab-range { flex: 1 1 auto; min-width: 0; }
+.lab-big { font-family: var(--font-px); font-size: 18px; color: var(--amber); min-width: 96px; text-align: right; white-space: nowrap; }
+.lab-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 6px; }
+
+/* Segmented choices (World, hypothesis): real radio buttons dressed as chunky buttons. */
+.lab-seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.lab-seg-opt { position: relative; flex: 1 1 auto; }
+.lab-seg-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.lab-seg-opt span {
+  display: block; text-align: center; padding: 10px 12px; min-height: 44px; cursor: pointer; font-size: 15px; font-weight: 700;
+  background: var(--panel-3); color: var(--ink); border: 3px solid #000; box-shadow: 3px 3px 0 var(--shadow);
+}
+.lab-seg-opt input:checked + span { background: var(--amber); color: #000; }
+.lab-seg-opt input:focus-visible + span { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+.lab-facts { margin-top: 6px; font-size: 14px; }
+.lab-facts summary { cursor: pointer; color: var(--cyan); min-height: 32px; display: flex; align-items: center; }
+.lab-facts summary:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.lab-facts p { margin: 6px 0 0; color: var(--muted); }
+.lab-src { color: var(--cyan); }
+
+.lab-fair { margin-top: 14px; box-shadow: inset 0 0 0 2px var(--green); }
+.lab-tip { margin: 0 0 6px; }
+.lab-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-weight: 700; }
+.lab-check input { width: 24px; height: 24px; accent-color: var(--amber); }
+.lab-seed { font-family: var(--font-px); font-size: 12px; color: var(--muted); }
+
+.lab-hyp { border: 3px solid #000; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--violet); padding: 10px 12px 4px; margin: 14px 0 0; min-width: 0; }
+.lab-hyp legend { font-family: var(--font-px); font-size: 14px; color: var(--violet); padding: 0 6px; }
+.lab-hyp .lab-small { margin: 8px 0 4px; }
+
+/* The result card on the end screen. */
+.lab-result { box-shadow: inset 0 0 0 2px var(--green); }
+.modal .lab-result h3 { margin-top: 10px; }
+.lab-verdict { padding: 6px 10px; background: #0b0a18; border: 2px solid #000; }
+.lab-verdict.held { border-left: 6px solid var(--green); }
+.lab-verdict.missed { border-left: 6px solid var(--amber); }
+.lab-science { border-left: 4px solid var(--cyan); padding-left: 10px; }
+
+/* Lab Notebook */
+.lab-notebook { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.lab-entry { background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); padding: 10px 12px; font-size: 15px; }
+.lab-entry.won { box-shadow: inset 0 0 0 2px var(--green); }
+.lab-entry > div + div { margin-top: 4px; }
+.lab-entry-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.lab-entry-head span { color: var(--muted); }
+.lab-held { color: var(--green); font-weight: 700; }
+.lab-missed { color: var(--amber); font-weight: 700; }
+
+/* The Settings dialog section. */
+.lab-settings-section { box-shadow: inset 0 0 0 2px var(--green); }
+.lab-settings-section p { font-size: 15px; }
+
+/* HUD badge during a lab mission. */
+.lab-hud-badge {
+  display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 13px; color: #000;
+  background: var(--green); border: 3px solid #000; box-shadow: 3px 3px 0 var(--shadow); padding: 4px 8px; min-height: 36px;
+}
+
+/* "See the base in 3D": hide the lab for a moment so the 3D base shows. */
+html.ev-lab-peek #modal-root { background: transparent; pointer-events: none; }
+html.ev-lab-peek #modal-root > * { visibility: hidden; }
+html body .btn.lab-peek-back { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 200; }
+html:not(.ev-lab-peek) .lab-peek-back { display: none; }
+
+.lab-run-short { display: none; }
+
+@media (max-width: 600px) {
+  .lab-actions { flex-wrap: nowrap; }
+  .lab-run-long { display: none; }
+  .lab-run-short { display: inline; }
+  .lab-dial { padding: 10px; }
+  .lab-tick { font-size: 12px; }
+  .lab-seg-opt span { font-size: 14px; padding: 8px; }
+  .lab-tools .btn { flex: 1 1 auto; }
+}

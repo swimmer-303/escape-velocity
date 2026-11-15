@@ -1,6 +1,7 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 import type { Difficulty, Landing, Site } from './constants';
 import type { BaseState, UpgradeId } from './upgrades';
+import type { LabSettings } from './lab';
 
 export type ModuleId = 'air' | 'fuel' | 'greenhouse' | 'heaters' | 'shelter' | 'monitor' | 'build' | 'battery';
 export const MODULE_IDS: readonly ModuleId[] = ['air', 'fuel', 'greenhouse', 'heaters', 'shelter', 'monitor', 'build', 'battery'];
@@ -76,6 +77,11 @@ export interface MissionConfig {
   prefillPct: number;
   /** Real events already used by earlier expeditions (so each crew meets new storms). */
   usedEventIds?: string[];
+  /**
+   * Space Lab what-if settings (src/sim/lab.ts). Only lab missions have it: every other mission plays exactly as it
+   * always has. Lab missions never count for stars, races, the daily board or the season.
+   */
+  lab?: LabSettings;
 }
 
 export interface Warning {

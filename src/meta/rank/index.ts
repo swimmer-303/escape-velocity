@@ -7,7 +7,7 @@
 //   store.ts   save data ('ev-rank-v1')           engine.ts the rules (XP, levels, mission progress, streak)
 //   badge.ts   pixel rank badges                  ui.ts     pop-ups, title card, dialog, level-up card, XP chip
 
-import { addTitleExtra, onGame, setLevelProvider } from '../hooks';
+import { addTitleExtra, countsForRewards, onGame, setLevelProvider } from '../hooks';
 import { currentLevel, onCampaignComplete, onMissionEnd, onSol, onXp } from './engine';
 import { hideChip, scheduleCelebration, showChip, titleStrip } from './ui';
 
@@ -19,7 +19,8 @@ export const TITLE_DELAY_MS = 500;
 setLevelProvider(currentLevel);
 
 onGame('sol', (p) => {
-  if (p.demo) {
+  // The self-playing demo and Space Lab experiments earn nothing here (the lab gives its own small, capped XP).
+  if (!countsForRewards(p)) {
     hideChip();
     return;
   }
@@ -28,7 +29,7 @@ onGame('sol', (p) => {
 });
 
 onGame('mission-end', (p) => {
-  if (p.demo) return;
+  if (!countsForRewards(p)) return;
   onMissionEnd(p);
   scheduleCelebration('end', END_DELAY_MS);
 });
