@@ -47,7 +47,7 @@
 .evb-palette, .evb-readout, .evb-goal, .evb-timeline {
   position: absolute; z-index: 3; background: rgba(21, 18, 43, 0.92); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line, #4a3f7a), 4px 4px 0 var(--shadow, #05040c);
 }
-.evb-palette { left: 8px; top: 64px; bottom: 70px; width: 228px; display: flex; flex-direction: column; padding: 6px; }
+.evb-palette { left: 8px; top: calc(var(--evb-top-h, 52px) + 12px); bottom: 70px; width: 228px; display: flex; flex-direction: column; padding: 6px; }
 .evb-cats { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 6px; }
 .evb-cat { font-size: 12px !important; padding: 4px 7px !important; min-height: 30px !important; background: var(--panel-2, #211b40); }
 .evb-cat.on { background: #1f6f6a; box-shadow: inset 0 0 0 2px var(--cyan, #5ef2e6); }
@@ -67,7 +67,7 @@
 .evb-part-text small { font-size: 12px; color: var(--muted, #c2b59b); line-height: 1.25; }
 .evb-lock { color: var(--muted, #c2b59b); flex: none; margin-left: auto; }
 
-.evb-readout { right: 8px; top: 64px; width: 284px; max-height: calc(100% - 140px); overflow-y: auto; padding: 8px 10px; touch-action: pan-y; }
+.evb-readout { right: 8px; top: calc(var(--evb-top-h, 52px) + 12px); width: 284px; max-height: calc(100% - 140px); overflow-y: auto; padding: 8px 10px; touch-action: pan-y; }
 .evb-ro-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 4px; }
 .evb-ro-head b { font-family: var(--font-px, monospace); font-weight: 400; color: var(--amber, #ffb627); font-size: 14px; }
 .evb-ro-head span { font-size: 12px; color: var(--muted, #c2b59b); }
@@ -95,7 +95,7 @@
 .evb-test-btn { width: 100%; font-size: 15px; }
 .evb-fine { font-size: 11.5px; color: var(--muted, #c2b59b); margin: 8px 0 0; line-height: 1.35; }
 
-.evb-goal { left: 248px; top: 64px; width: min(360px, calc(100% - 560px)); max-height: 42%; overflow-y: auto; padding: 8px 10px; touch-action: pan-y; }
+.evb-goal { left: 248px; top: calc(var(--evb-top-h, 52px) + 12px); width: min(360px, calc(100% - 560px)); max-height: 42%; overflow-y: auto; padding: 8px 10px; touch-action: pan-y; }
 .evb-goal-head { display: flex; justify-content: space-between; align-items: center; }
 .evb-goal h3 { font-family: var(--font-px, monospace); font-weight: 400; color: var(--cyan, #5ef2e6); font-size: 16px; margin: 2px 0 4px; }
 .evb-goal p { margin: 0 0 6px; font-size: 14px; line-height: 1.35; }
@@ -203,29 +203,40 @@ html.reduce-motion .evb-meter .fill, .ev-builder.calm .evb-meter .fill { transit
 
 /* ---------- narrow screens (phones, small tablets) ---------- */
 .evb-ro-toggle { display: none; }
+/* The panels stack around the top bar and the tool row, whose heights view.ts keeps in --evb-top-h, --evb-tools-h
+   and --evb-pal-h: when the top bar wraps or Turn and Done appear, the panels move instead of being covered. */
 @media (max-width: 860px) {
-  .evb-top { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; touch-action: pan-x; padding-bottom: 4px; }
-  .evb-top > *, .evb-title, .evb-sites, .evb-top-actions { flex: none; flex-wrap: nowrap; }
+  /* The top bar wraps (it never scrolls sideways): the sites and Close on the first row, the tools below. */
+  .evb-top { flex-wrap: wrap; justify-content: flex-start; gap: 4px; padding-bottom: 5px; }
+  .evb-title, .evb-top-actions { display: contents; }
+  .evb-sites { flex-wrap: wrap; gap: 4px; }
+  .evb-top-actions > * { order: 2; }
+  .ev-builder .evb-top .evb-close { order: 1; margin-left: auto; }
+  .evb-top::after { content: ''; order: 1; flex-basis: 100%; height: 0; }
   .ev-builder .evb-top .btn.small { font-size: 12px; padding: 4px 7px; min-height: 34px; }
-  .evb-palette { top: auto; bottom: 62px; left: 8px; right: 8px; width: auto; height: 118px; }
-  .evb-parts { flex-direction: row; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; }
-  .evb-part { flex: 0 0 168px; }
+  .evb-palette { top: auto; bottom: calc(var(--evb-tools-h, 44px) + 16px + env(safe-area-inset-bottom, 0px)); left: 8px; right: 8px; width: auto; height: auto; }
+  .evb-parts { flex: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; }
+  .evb-part { flex: 0 0 156px; }
   .evb-part-text small { display: none; }
-  .evb-readout { top: auto; bottom: 186px; left: 8px; right: 8px; width: auto; max-height: 40%; }
+  .evb-readout { top: auto; bottom: calc(var(--evb-tools-h, 44px) + var(--evb-pal-h, 118px) + 22px + env(safe-area-inset-bottom, 0px)); left: 8px; right: 8px; width: auto; max-height: 34%; }
   .evb-ro-toggle { display: inline-flex; margin-left: auto; min-height: 30px !important; padding: 2px 8px !important; }
   .evb-ro-head span { display: none; }
   .evb-readout:not(.open) .evb-row, .evb-readout:not(.open) .evb-legend, .evb-readout:not(.open) .evb-hard, .evb-readout:not(.open) .evb-fine { display: none; }
   .evb-verdict { margin: 4px 0; }
-  .evb-goal { left: 8px; right: 8px; top: 52px; width: auto; max-height: 24%; }
-  .evb-hint { top: 52px; bottom: auto; max-width: calc(100% - 16px); }
+  .evb-goal { left: 8px; right: 8px; top: calc(var(--evb-top-h, 48px) + 4px); width: auto; max-height: 24%; }
+  .evb-hint { top: calc(var(--evb-top-h, 48px) + 4px); bottom: auto; max-width: calc(100% - 16px); }
   .ev-builder.has-goal .evb-hint { display: none; }
   .evb-flat { width: min(92vw, 40vh); top: 38%; }
   .evb-chips { grid-template-columns: repeat(4, 1fr); }
   .evb-meters { grid-template-columns: repeat(2, 1fr); }
-  .evb-timeline { bottom: 62px; }
+  .evb-timeline { bottom: calc(var(--evb-tools-h, 44px) + 16px + env(safe-area-inset-bottom, 0px)); }
 }
-@media (max-width: 520px) {
-  .evb-title > b { font-size: 14px; }
+@media (max-width: 700px) {
+  /* Phones: the name is in the dialog label already; the sites and buttons get the room. */
+  .evb-title > b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ev-builder .evb-top .btn.small { font-size: 11px; padding: 4px; }
+  .evb-cat { font-size: 11px !important; padding: 4px 5px !important; }
+  .evb-cam .btn.icon-only { min-width: 38px; min-height: 38px; }
 }
 
 html.ev-contrast .evb-palette, html.ev-contrast .evb-readout, html.ev-contrast .evb-goal, html.ev-contrast .evb-timeline, html.ev-contrast .evb-card { background: #000; }

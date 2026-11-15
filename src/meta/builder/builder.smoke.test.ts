@@ -123,6 +123,9 @@ describe('Outpost Architect in the real game', () => {
     part.click(); // what Enter on a focused button does
     const pad = layer.querySelector<HTMLElement>('.evb-stage')!;
     expect(document.activeElement).toBe(pad);
+    // The panels are laid out from the measured top bar and tool row (phones: they wrap).
+    expect(layer.style.getPropertyValue('--evb-top-h')).toMatch(/px$/);
+    expect(layer.style.getPropertyValue('--evb-tools-h')).toMatch(/px$/);
     expect(layer.querySelector(':scope > .sr-only[role="status"]')!.textContent).toMatch(/Habitat in hand.*arrow keys/i);
     // Keys now reach the builder from the pad: arrows move, Enter places.
     key(document.activeElement!, 'ArrowRight');

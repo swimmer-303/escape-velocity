@@ -115,6 +115,8 @@ export class BuilderView {
   private timeline: HTMLElement;
   private undoBtn: HTMLButtonElement;
   private redoBtn: HTMLButtonElement;
+  private topBar: HTMLElement;
+  private sizeObs: ResizeObserver | null = null;
 
   constructor(opts: OpenOptions) {
     const ctx = metaContext();
@@ -154,7 +156,7 @@ export class BuilderView {
     this.undoBtn = h('button', { class: 'btn small', type: 'button', 'aria-keyshortcuts': 'Control+Z', onclick: () => this.undo() }, 'Undo');
     this.redoBtn = h('button', { class: 'btn small', type: 'button', 'aria-keyshortcuts': 'Control+Y', onclick: () => this.redo() }, 'Redo');
 
-    const top = h(
+    const top = (this.topBar = h(
       'div',
       { class: 'evb-top' },
       h('div', { class: 'evb-title' }, h('b', null, BUILDER_LABEL), this.siteBox),
@@ -168,7 +170,7 @@ export class BuilderView {
         h('button', { class: 'btn small', type: 'button', onclick: () => this.showStart() }, 'Blueprints'),
         h('button', { class: 'btn small evb-close', type: 'button', 'aria-keyshortcuts': 'Escape', onclick: () => this.close() }, 'Close'),
       ),
-    );
+    ));
 
     this.el = h(
       'div',
@@ -203,6 +205,7 @@ export class BuilderView {
     this.renderSites();
     this.renderPalette();
     this.refresh();
+    this.watchSizes();
     void this.load3d();
 
     if (opts.challenge && challengeById(opts.challenge)) this.startChallenge(challengeById(opts.challenge)!);
@@ -429,6 +432,22 @@ export class BuilderView {
     // part straight away, Enter puts it down and Escape puts it back.
     this.focusPad();
     this.say(`${PARTS[part].name} in hand. ${PARTS[part].blurb} You are on the build pad: arrow keys move it, Enter places it, R turns it, Escape puts it back.`);
+  }
+
+  /**
+   * The top bar wraps and the tool row grows (Turn, Done...) on small screens. Publish their heights as CSS variables
+   * so the panels sit beside them instead of under them.
+   */
+  private watchSizes() {
+    const sync = () => {
+      this.el.style.setProperty('--evb-top-h', `${this.topBar.offsetHeight}px`);
+      this.el.style.setProperty('--evb-tools-h', `${this.tools.offsetHeight}px`);
+      this.el.style.setProperty('--evb-pal-h', `${this.palette.offsetHeight}px`);
+    };
+    sync();
+    if (typeof ResizeObserver !== 'function') return;
+    this.sizeObs = new ResizeObserver(sync);
+    for (const el of [this.topBar, this.tools, this.palette]) this.sizeObs.observe(el);
   }
 
   /** Focus the build pad without scrolling the page (keys work from there). */
@@ -1248,6 +1267,8 @@ export class BuilderView {
     }
     this.scene = null;
     this.el.removeEventListener('keydown', this.onKey);
+    this.sizeObs?.disconnect();
+    this.sizeObs = null;
     this.el.remove();
     for (const { el, had } of this.inertEls) if (!had) el.removeAttribute('inert');
     this.inertEls = [];
