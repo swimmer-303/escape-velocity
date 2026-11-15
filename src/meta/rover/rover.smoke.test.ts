@@ -11,7 +11,7 @@ import { STORE_KEY } from './store';
 import { targetCount, todayKey } from './targets';
 import { defaultSite, freshStore } from './store';
 import { bankHaul } from './bank';
-import { LESSON, resultsCard } from './ui';
+import { LESSON, museumView, resultsCard } from './ui';
 import './index';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -96,6 +96,24 @@ describe('Rover Expeditions in the real game', () => {
     new App(new SwappableStage(new CssStage()));
     const t = await waitFor(tile);
     expect(t.textContent).toContain('new targets today');
+  });
+
+  it('opens the in-trip Sample Museum at its top, with focus on the heading (not the button at the bottom)', async () => {
+    const { RoverShell } = await import('./game');
+    const root = document.createElement('div');
+    document.body.append(root);
+    const shell = new RoverShell({ root, audio: null, reducedMotion: true }, 'Rover expedition: Gale Crater');
+    const picked = shell.choose(museumView(), [{ id: 'back', label: 'Back to results', primary: true }], 'Sample Museum', { fromTop: true });
+    const card = root.querySelector<HTMLElement>('.ev-rover-card')!;
+    expect(document.activeElement?.tagName).toBe('H2');
+    expect(document.activeElement?.textContent).toBe('Sample Museum');
+    expect(card.scrollTop).toBe(0);
+    // Without fromTop (a short card), the main button still gets focus.
+    card.querySelector<HTMLButtonElement>('[data-rover-choice="back"]')!.click();
+    expect(await picked).toBe('back');
+    void shell.choose(document.createElement('p'), [{ id: 'ok', label: 'OK', primary: true }], 'Short');
+    expect((document.activeElement as HTMLElement | null)?.dataset.roverChoice).toBe('ok');
+    shell.destroy();
   });
 
   it('starts a drive and, with no WebGL, shows a friendly card, cleans up and returns to the title', async () => {
