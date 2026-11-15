@@ -261,7 +261,7 @@ ul.clean li { margin: 4px 0; }
 .science .kicker { color: var(--cyan); }
 .science .src { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .stars { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
-.stars.compact { gap: 2px; margin: 0; }
+.stars.compact { gap: 2px; margin: 0; flex-wrap: nowrap; }
 .star { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 13px; color: var(--muted); opacity: 0.35; filter: grayscale(1); }
 .star.on { opacity: 1; filter: none; color: var(--amber); }
 .stars:not(.compact) .star { border: 3px solid #000; background: var(--panel-2); padding: 6px 10px; }

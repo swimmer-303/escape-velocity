@@ -65,7 +65,8 @@ describe('certificate drawing', () => {
     expect(all).toContain('3 of 3');
     expect(all).toContain('JUNIOR ASTRONAUT');
     expect(all).toContain('November 14, 2026');
-    expect(all).toContain('Escape Velocity · Team Sendy1');
+    expect(all).toContain('Escape Velocity · made by Team Escape Velocity');
+    expect(all.join(' ')).not.toMatch(/Sendy1/); // the old team name
     expect(all.join(' ')).toMatch(/Solar panel row x2, Battery bank, Fission reactor/);
     expect(all.join(' ')).toMatch(/ran a base on Mars\./);
     // The name is big and bold, centred in its column.
