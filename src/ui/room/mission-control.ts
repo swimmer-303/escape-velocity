@@ -461,15 +461,16 @@ export class MissionControl {
         'button',
         {
           class: 'btn small icon-only',
-          'aria-label': a.muted ? 'Sound is off. Turn sound on' : 'Sound is on. Turn sound off',
-          'aria-pressed': String(!a.muted),
+          // The master mute, like the game's own speaker button.
+          'aria-label': a.masterMuted ? 'Sound is off. Turn sound on' : 'Sound is on. Turn sound off',
+          'aria-pressed': String(!a.masterMuted),
           onclick: () => {
-            a.setMuted(!a.muted);
-            if (!a.muted && this.role === 'student') a.stopMusic();
+            a.setMuted(!a.masterMuted);
+            if (!a.masterMuted && this.role === 'student') a.stopMusic();
             this.renderHudOnly();
           },
         },
-        icon(a.muted ? 'mute' : 'sound', 24),
+        icon(a.masterMuted ? 'mute' : 'sound', 24),
       ),
       this.code ? h('button', { class: 'btn small', onclick: () => this.openOverlay('menu') }, 'Menu') : null,
     ].filter((x): x is HTMLElement => !!x);

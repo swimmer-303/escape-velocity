@@ -211,7 +211,7 @@ export function statusButton(hud: HTMLElement): HTMLButtonElement | null {
 
 const panels = new Set<HTMLElement>();
 
-/** "Reading and display" settings, for the pause menu and the title screen. Redraws itself in place. */
+/** The "Text and voice" section of the Settings dialog (settings.ts). Redraws itself in place. */
 export function accessPanel(): HTMLElement {
   const panel = h('section', { class: 'access-panel', 'aria-labelledby': 'access-h' });
   for (const p of panels) if (!p.isConnected) panels.delete(p);
@@ -259,7 +259,7 @@ export function accessPanel(): HTMLElement {
 
   const render = (focusKey?: string) => {
     panel.replaceChildren(
-      h('h3', { id: 'access-h' }, speech ? 'Reading and display' : 'Display'),
+      h('h3', { id: 'access-h' }, accessButtonText()),
       h(
         'div',
         { class: 'toggle-row' },
@@ -292,7 +292,7 @@ export function accessPanel(): HTMLElement {
   return panel;
 }
 
-/** Words for the title screen's settings button. */
+/** The name of the text and voice settings ("Text size and contrast" when this browser cannot read aloud). */
 export function accessButtonText(): string {
   return speechSupported() ? 'Text and voice' : 'Text size and contrast';
 }

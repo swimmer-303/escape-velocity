@@ -1,6 +1,8 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // Music: AI-generated chiptune tracks (Higgsfield, ElevenLabs Music; credited in ASSETS.md and Credits).
 // Sound effects: tiny procedural square-wave blips made with the Web Audio API.
+// Settings (src/ui/settings.ts): a master mute (the HUD speaker button), and Music and Sound effects, each with its own
+// on/off and volume. Every music track goes through playMusic, so Music off silences all of them.
 
 type Track = 'title' | 'mission' | 'launch';
 const SRC: Record<Track, string> = {
@@ -33,8 +35,30 @@ export type Sfx =
 /** One note: frequency (Hz), length (s), wave, and whether the next note starts with it (a chord) instead of after it. */
 type Note = [number, number, OscillatorType?, boolean?];
 
+/** Music and sound effects, each on or off with a volume from 0 to 100 (percent, the Settings sliders). */
+export interface SoundMix {
+  music: boolean;
+  musicVolume: number;
+  sfx: boolean;
+  sfxVolume: number;
+}
+
+/**
+ * The slider position that plays music and effects exactly as loud as the game did before it had sliders, so
+ * nobody's game gets louder or quieter by itself. 100 is a bit louder than that.
+ */
+export const NORMAL_VOLUME = 60;
+export const SOUND_DEFAULTS: SoundMix = { music: true, musicVolume: NORMAL_VOLUME, sfx: true, sfxVolume: NORMAL_VOLUME };
+
+/** A stored volume, made safe: a whole number from 0 to 100 (anything else gives the normal volume). */
+export function cleanVolume(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : NORMAL_VOLUME;
+}
+
 export class GameAudio {
-  muted = false;
+  /** The master mute (the HUD speaker button): silences music and effects alike. */
+  masterMuted = false;
+  private mix: SoundMix = { ...SOUND_DEFAULTS };
   private ctx?: AudioContext;
   private music?: HTMLAudioElement;
   private current?: Track;
@@ -42,8 +66,14 @@ export class GameAudio {
   /** Music plays quieter while the read-aloud voice speaks. */
   private ducked = false;
 
-  constructor(muted: boolean) {
-    this.muted = muted;
+  constructor(muted: boolean, mix: Partial<SoundMix> = {}) {
+    this.masterMuted = muted;
+    this.mix = {
+      music: typeof mix.music === 'boolean' ? mix.music : true,
+      musicVolume: cleanVolume(mix.musicVolume ?? NORMAL_VOLUME),
+      sfx: typeof mix.sfx === 'boolean' ? mix.sfx : true,
+      sfxVolume: cleanVolume(mix.sfxVolume ?? NORMAL_VOLUME),
+    };
     const unlock = () => {
       this.unlockNow();
       window.removeEventListener('pointerdown', unlock);
@@ -53,7 +83,20 @@ export class GameAudio {
     window.addEventListener('keydown', unlock);
   }
 
-  /** True once the player has pressed something (browsers allow sound from then on) and sound is on. */
+  /**
+   * True when sound effects can't be heard: the master mute, Sound effects off, or its volume at 0. The meta
+   * features' own sounds (the rover's motor hum, the rocket's engine rumble) check this too.
+   */
+  get muted(): boolean {
+    return this.masterMuted || !this.mix.sfx || this.mix.sfxVolume <= 0;
+  }
+
+  /** True when music may play: the master mute is off and Music is on. */
+  get musicOn(): boolean {
+    return !this.masterMuted && this.mix.music;
+  }
+
+  /** True once the player has pressed something (browsers allow sound from then on) and effects can be heard. */
   get ready(): boolean {
     return this.unlocked && !this.muted;
   }
@@ -62,12 +105,43 @@ export class GameAudio {
   unlockNow() {
     if (this.unlocked) return;
     this.unlocked = true;
-    if (this.current && !this.muted) this.playMusic(this.current, true);
+    if (this.current && this.musicOn) this.playMusic(this.current, true);
   }
 
+  /** The master mute (the HUD speaker button). */
   setMuted(m: boolean) {
-    this.muted = m;
-    if (m) this.music?.pause();
+    this.masterMuted = m;
+    this.syncMusic();
+  }
+
+  /** Music on or off: off pauses whatever track is playing (title, mission, launch jingle, a mini-game's music). */
+  setMusic(on: boolean) {
+    this.mix.music = on;
+    this.syncMusic();
+  }
+
+  /** Music volume, 0-100: the playing track changes right away. */
+  setMusicVolume(v: number) {
+    this.mix.musicVolume = cleanVolume(v);
+    if (this.music && this.current) this.music.volume = this.volumeFor(this.current);
+  }
+
+  setSfx(on: boolean) {
+    this.mix.sfx = on;
+  }
+
+  /** Sound effects volume, 0-100. */
+  setSfxVolume(v: number) {
+    this.mix.sfxVolume = cleanVolume(v);
+  }
+
+  /** The current mix (a copy). */
+  get levels(): SoundMix {
+    return { ...this.mix };
+  }
+
+  private syncMusic() {
+    if (!this.musicOn) this.music?.pause();
     else if (this.current) this.playMusic(this.current, true);
   }
 
@@ -78,7 +152,8 @@ export class GameAudio {
   }
 
   private volumeFor(track: Track) {
-    return (track === 'launch' ? 0.6 : 0.35) * (this.ducked ? 0.3 : 1);
+    const base = (track === 'launch' ? 0.6 : 0.35) * (this.mix.musicVolume / NORMAL_VOLUME);
+    return Math.min(1, base) * (this.ducked ? 0.3 : 1);
   }
 
   /** Stop the music (Mission Control student screens stay quiet: the projector plays it). */
@@ -90,7 +165,7 @@ export class GameAudio {
   playMusic(track: Track, force = false) {
     if (this.current === track && !force && this.music && !this.music.paused) return;
     this.current = track;
-    if (!this.unlocked || this.muted) return;
+    if (!this.unlocked || !this.musicOn) return;
     if (!this.music || !this.music.src.endsWith(SRC[track])) {
       this.music?.pause();
       this.music = new window.Audio(SRC[track]);
@@ -131,14 +206,14 @@ export class GameAudio {
         whoosh: [[180, 0.12, 'sawtooth'], [320, 0.1, 'sawtooth'], [520, 0.14, 'triangle']],
       };
       let t = ctx.currentTime;
-      const vol = name === 'tick' ? 0.025 : name === 'slam' ? 0.08 : 0.06;
+      const vol = (name === 'tick' ? 0.025 : name === 'slam' ? 0.08 : 0.06) * (this.mix.sfxVolume / NORMAL_VOLUME);
       for (const [freq, dur, type, chord] of notes[name]) {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
         o.type = type ?? 'square';
         o.frequency.value = freq * pitch;
         g.gain.setValueAtTime(vol, t);
-        g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+        g.gain.exponentialRampToValueAtTime(Math.min(0.0008, vol * 0.05), t + dur);
         o.connect(g).connect(ctx.destination);
         o.start(t);
         o.stop(t + dur);
