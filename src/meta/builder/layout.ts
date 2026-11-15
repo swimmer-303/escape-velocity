@@ -51,7 +51,8 @@ export function cellsOf(p: Pick<Placed, 'part' | 'x' | 'z' | 'rot'>): Array<[num
   return out;
 }
 
-export type Fit = { ok: true } | { ok: false; why: 'bounds' | 'overlap' | 'max' | 'blast' | 'locked'; reason: string };
+export type Misfit = { ok: false; why: 'bounds' | 'overlap' | 'max' | 'blast' | 'locked'; reason: string };
+export type Fit = { ok: true } | Misfit;
 
 /** Parts that may sit right next to the launch pad. */
 const BLAST_OK = new Set<PartId>(['path']);
@@ -172,7 +173,7 @@ export class Editor {
     this.future = [];
   }
 
-  place(part: PartId, x: number, z: number, rot: Rot, unlocked?: ReadonlySet<PartId>, style?: number): Placed | Fit {
+  place(part: PartId, x: number, z: number, rot: Rot, unlocked?: ReadonlySet<PartId>, style?: number): Placed | Misfit {
     const fit = canPlace(this.layout, part, x, z, rot, undefined, unlocked);
     if (!fit.ok) return fit;
     this.commit();
