@@ -24,6 +24,7 @@ import {
   type Site,
 } from './constants';
 import { buildPlan } from './plan';
+import { labSolarCells } from './lab';
 import { defaultNextProject, maxLevel, nextCost, upgradesFor, type BaseState, type UpgradeId, remainingBuildCost } from './upgrades';
 import {
   MODULE_IDS,
@@ -68,12 +69,14 @@ function cloneBase(b: BaseState): BaseState {
 export function createMission(config: MissionConfig): MissionState {
   const t = tuningFor(config.difficulty, config.site, landingOf(config));
   const spec = expeditionSpec(config);
+  // Space Lab: the crew-size dial. Everyone else flies the expedition's own crew.
+  const crew = config.lab ? config.lab.crew : spec.crew;
   return {
     config,
     sol: 1,
-    crew: spec.crew,
-    air: t.startAirDays * spec.crew,
-    food: t.startFoodDays * spec.crew,
+    crew,
+    air: t.startAirDays * crew,
+    food: t.startFoodDays * crew,
     dose: 0,
     doseBudget: t.doseBudget,
     fuel: Math.min(99, config.prefillPct),
@@ -155,9 +158,15 @@ export function shelterBlock(s: MissionState): readonly number[] {
   return has(s, 'berm') ? [0, SHELTER_BLOCK[2], SHELTER_BLOCK[2]] : SHELTER_BLOCK;
 }
 
-/** Solar cells on a clear sol, from the starting array plus panels built. */
-export function solarCells(s: MissionState) {
+/** Solar cells on a clear sol under real skies, from the starting array plus panels built. */
+export function realSolarCells(s: MissionState) {
   return tuningFor(s.config.difficulty, s.config.site, landingOf(s.config)).baseCells + s.base.levels.panel;
+}
+
+/** Solar cells on a clear sol. A Space Lab mission changes the sunlight (Mars' orbit, dust in the air). */
+export function solarCells(s: MissionState) {
+  const real = realSolarCells(s);
+  return s.config.lab ? labSolarCells(real, s.config.lab) : real;
 }
 
 /** Most cells each module can take today. */
@@ -187,6 +196,10 @@ export function getBriefing(state: MissionState): Briefing {
   const night = isNight(state);
   let cells = night ? 0 : solar;
   if (night) notes.push(`Lunar night, panels dark: -${solar}`);
+  if (state.config.lab && !night && solar !== realSolarCells(state)) {
+    const d = solar - realSolarCells(state);
+    notes.push(`Space Lab sunlight: ${d > 0 ? '+' : ''}${d}`);
+  }
   if (p.weather !== 'clear') {
     const lost = Math.round(solar * DUST_LOSS[p.weather]);
     cells -= lost;

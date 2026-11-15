@@ -5,6 +5,7 @@
 
 import { DUST_STORM_LENGTH, MOON_TUNING, expeditionFor, landingOf, tuningFor } from './constants';
 import { makeRng, randInt, shuffle, type Rng } from './rng';
+import { applyLabPlan, dealLabStorms, stormDealFor } from './lab';
 import type { MissionConfig, SolPlan, SpaceWeatherEvent, Severity } from './types';
 
 const SEVERITY_RANK: Record<Severity, number> = { minor: 0, moderate: 1, major: 2 };
@@ -74,6 +75,7 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
 
   // --- Radiation storms from real DONKI events -------------------------------
   const stormSols: number[] = [];
+  let drawSols = stormSols;
   if (config.scenario === 'may2024') {
     // Replay History: put each real event on the sol matching its real date.
     for (const e of config.eventPool) {
@@ -86,27 +88,28 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
   } else {
     const used = new Set(config.usedEventIds ?? []);
     const fresh = config.eventPool.filter((e) => !used.has(e.id));
-    const storms = chooseStorms(rng, fresh.length >= t.stormCount ? fresh : config.eventPool, t.stormCount, t.maxMajor);
-    // Spread them over sols 3..W-3, at least 3 sols apart.
-    const first = 3;
-    const last = Math.min(W - 4, 15);
-    const span = last - first;
-    const step = storms.length > 1 ? span / storms.length : span;
-    storms.forEach((e, i) => {
-      const lo = Math.round(first + i * step);
-      const hi = Math.max(lo, Math.round(first + (i + 1) * step) - 2);
-      let sol = randInt(rng, lo, hi);
-      while (at(sol).storm && sol < last) sol++;
-      at(sol).storm = { event: e, fast: isFast(e) };
-      stormSols.push(sol);
-    });
+    const pool = fresh.length >= t.stormCount ? fresh : config.eventPool;
+    const storms = chooseStorms(rng, pool, t.stormCount, t.maxMajor);
+    placeStorms(plan, rng, storms, W, stormSols);
+    if (config.lab && config.lab.sun !== 'average') {
+      // Space Lab: a quieter or busier Sun. Deal again from the same real pool, on the lab's own random stream, so
+      // the rest of the plan (dust storms, cold snaps, blackout, false alarms) stays exactly the same: a fair test.
+      drawSols = [...stormSols];
+      for (const sol of stormSols) delete at(sol).storm;
+      stormSols.length = 0;
+      const labRng = makeRng(`${config.seed}|lab-sun|${config.expedition}`);
+      placeStorms(plan, labRng, dealLabStorms(labRng, pool, stormDealFor(t, config.lab.sun)), W, stormSols);
+    }
   }
 
   // Earth's outlook: "the Sun is active" before real storms, plus some false alarms.
+  // (A Space Lab Sun moved the storms: the false alarms are still drawn as for the real storms, so the rest of the
+  // plan is unchanged. Without the lab, drawSols is stormSols and this is simply `soon || rng() < 0.15`.)
   for (const p of plan) {
     // Earth sees active sunspot regions days ahead, but can't say exactly when (or if) they'll erupt.
-    const soon = stormSols.some((s) => s >= p.sol && s <= p.sol + 3);
-    p.outlookActive = soon || rng() < 0.15;
+    const near = (sols: number[]) => sols.some((s) => s >= p.sol && s <= p.sol + 3);
+    const falseAlarm = !near(drawSols) && rng() < 0.15;
+    p.outlookActive = near(stormSols) || falseAlarm;
   }
 
   if (config.site === 'moon') return moonPlan(plan, rng, W, MOON_TUNING[config.difficulty].nightLength, spec.resupplySol);
@@ -150,7 +153,27 @@ export function buildPlan(config: MissionConfig): SolPlan[] {
   // --- Cargo resupply -----------------------------------------------------------
   at(Math.min(spec.resupplySol, W)).resupply = true;
 
+  // Space Lab: Mars' place in its orbit changes how big the dust storms get (same days, see lab.ts).
+  if (config.lab) applyLabPlan(plan, config.lab);
+
   return plan;
+}
+
+/** Spread storms over sols 3..W-3, about 3 sols apart. Records each storm's sol in `stormSols`. */
+function placeStorms(plan: SolPlan[], rng: Rng, storms: SpaceWeatherEvent[], W: number, stormSols: number[]): void {
+  const at = (sol: number) => plan[sol - 1];
+  const first = 3;
+  const last = Math.min(W - 4, 15);
+  const span = last - first;
+  const step = storms.length > 1 ? span / storms.length : span;
+  storms.forEach((e, i) => {
+    const lo = Math.round(first + i * step);
+    const hi = Math.max(lo, Math.round(first + (i + 1) * step) - 2);
+    let sol = randInt(rng, lo, hi);
+    while (at(sol).storm && sol < last) sol++;
+    at(sol).storm = { event: e, fast: isFast(e) };
+    stormSols.push(sol);
+  });
 }
 
 /**
