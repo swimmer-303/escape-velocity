@@ -260,7 +260,7 @@ export function openLab(): void {
     todayBtn.disabled = !mars || l.delayMin === null;
     for (const k of ['orbit', 'dust', 'delay'] as const) {
       offNotes[k].hidden = mars;
-      root.querySelector(`[data-dial="${k}"]`)?.classList.toggle('is-off', !mars);
+      dials.querySelector(`[data-dial="${k}"]`)?.classList.toggle('is-off', !mars);
     }
     const n = changedDials(l).length;
     summary.textContent = n ? `${summaryLine(l)} ${n === 1 ? 'You changed 1 thing: a fair test.' : `You changed ${n} things.`}` : summaryLine(l);
@@ -500,12 +500,11 @@ export function openLab(): void {
     ctx.startQuick?.(quickStartFor(l));
   };
 
-  const root = h(
-    'div',
-    { class: 'lab-screen' },
+  // Children of the dialog itself, so the Back / Run row stays pinned to its bottom (.modal > .actions.sticky).
+  const root = [
     h('div', { class: 'kicker' }, 'Space Lab'),
     h('h2', null, 'What if...?'),
-    h('p', null, 'Change the world around your base, then run a mission and see what happens. This is a what-if lab built on the game\'s own model with real NASA numbers. It is not a real NASA simulation.'),
+    h('p', { class: 'lab-intro' }, 'Change the world around your base, then run a mission and see what happens. This is a what-if lab built on the game\'s own model with real NASA numbers. It is not a real NASA simulation.'),
     h('p', { class: 'lab-rule' }, REWARD_RULE),
     summary,
     h(
@@ -524,21 +523,40 @@ export function openLab(): void {
       h('button', { type: 'button', class: 'btn', onclick: () => ctx.showTitle() }, 'Back'),
       h('button', { type: 'button', class: 'btn primary', 'data-autofocus': true, disabled: !ctx.startQuick, onclick: run }, 'Run the experiment', h('span', { class: 'arrow' })),
     ),
-  );
-  ctx.modal(root, { label: LAB_LABEL, wide: true, onClose: () => ctx.showTitle() });
+  ];
+  ctx.modal(root, { label: LAB_LABEL, wide: true, onClose: () => ctx.showTitle() }).classList.add('lab-screen');
   update();
 }
 
 // ------------------------------------------------------------------ peek at the 3D base
+let peekStop: (() => void) | null = null;
 function peekOff(): void {
+  peekStop?.();
+  peekStop = null;
   document.documentElement.classList.remove('ev-lab-peek');
   document.querySelectorAll('.lab-peek-back').forEach((e) => e.remove());
 }
 function peekOn(): void {
+  peekOff();
   document.documentElement.classList.add('ev-lab-peek');
   const back = h('button', { type: 'button', class: 'btn primary lab-peek-back', onclick: () => peekOff() }, 'Back to the Space Lab');
   document.body.append(back);
   back.focus();
+  // Escape comes back to the lab (instead of closing it unseen), and anything else that changes the dialog ends the peek.
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    peekOff();
+  };
+  window.addEventListener('keydown', onKey, true);
+  const root = document.getElementById('modal-root');
+  const watch = root && typeof MutationObserver === 'function' ? new MutationObserver(() => peekOff()) : null;
+  if (root) watch?.observe(root, { childList: true });
+  peekStop = () => {
+    window.removeEventListener('keydown', onKey, true);
+    watch?.disconnect();
+  };
 }
 
 // ------------------------------------------------------------------ notebook
@@ -629,7 +647,7 @@ export function settingsSection(): HTMLElement {
   const s: LabSave = loadSave();
   return h(
     'section',
-    { class: 'lab-settings-section', 'aria-labelledby': 'lab-settings-h' },
+    { class: 'settings-sec lab-settings-section', 'aria-labelledby': 'lab-settings-h' },
     h('h3', { id: 'lab-settings-h' }, LAB_LABEL),
     h('p', null, 'Change the Sun, the dust, Mars\' orbit and more, and see what happens to your base. Lab missions never change your normal game.'),
     h('p', { class: 'lab-summary' }, h('b', null, 'Now: '), summaryLine(s.settings)),
