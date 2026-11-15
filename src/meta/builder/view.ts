@@ -8,13 +8,14 @@
 import { h, clear, append, prefersReducedMotion, type Child } from '../../ui/dom';
 import { decorateDialog } from '../../ui/access';
 import { reader } from '../../ui/voice';
+import { MOON_TUNING } from '../../sim/constants';
 import { emitGame, metaContext } from '../hooks';
 import { toast } from '../toast';
 import { CATEGORIES, FLAG_DESIGNS, PARTS, PART_IDS, BEDS_PER_HABITAT, SHELTER_SEATS, type Category, type PartId } from './parts';
 import { Editor, GRID, SITE_IDS, SITE_NAMES, SITE_SHORT, canPlace, emptyLayout, footprint, partAt, type Fit, type Layout, type Rot, type SiteId } from './layout';
 import { readout, type Readout, type StressResult } from './stress';
 import { cellsForNeeds } from './engineering';
-import { CHALLENGES, challengeById, isOpen, scoreChallenge, starTotals, unlockedBy, unlockedParts, xpPerStar, type Challenge } from './challenges';
+import { LUNAR_NIGHT_DAYS, CHALLENGES, challengeById, isOpen, scoreChallenge, starTotals, unlockedBy, unlockedParts, xpPerStar, type Challenge } from './challenges';
 import { decodeLayout, encodeLayout, shareLink } from './share';
 import { deleteSlot, loadCurrent, readSave, recordStars, saveCurrent, saveSlot, starsNow } from './store';
 import { arrowIcon, dayIcon, lockIcon, partIcon, starRow, type DayIcon } from './icons';
@@ -75,17 +76,23 @@ export class BuilderView {
   private selected: number | null = null;
   private cursor = { x: Math.floor(GRID / 2) - 1, z: Math.floor(GRID / 2) - 1 };
   private hover: { x: number; z: number } | null = null;
+  /** The square a part was just placed on: no ghost there until the pointer or cursor moves on. */
+  private rest: { x: number; z: number } | null = null;
   private challenge: Challenge | null = null;
   private stars: Record<string, number>;
   private unlocked: Set<PartId>;
   private flagStyle = 0;
   private cat: Category = 'power';
   private testing = false;
+  /** Narrow screens: the readout's details are folded away until asked for. */
+  private roOpen = false;
   private skipTest: (() => void) | null = null;
   private scene: BuilderScene | null = null;
   private r: Readout;
   private saveTimer = 0;
   private inertEls: Array<{ el: HTMLElement; had: boolean }> = [];
+  /** The game's own 3D stage, hidden behind us (so it renders at its tiny minimum size), and its old display. */
+  private gameStage: { el: HTMLElement; display: string } | null = null;
   private returnFocus: HTMLElement | null;
   private reduced: boolean;
   private closed = false;
@@ -173,6 +180,12 @@ export class BuilderView {
       this.inertEls.push({ el, had: el.hasAttribute('inert') });
       el.setAttribute('inert', '');
     }
+    // Our layer covers everything: hide the game's stage so its renderer shrinks to almost nothing (Chromebooks).
+    const gs = document.getElementById('stage');
+    if (gs) {
+      this.gameStage = { el: gs, display: gs.style.display };
+      gs.style.display = 'none';
+    }
     this.el.addEventListener('keydown', this.onKey);
     this.flat.addEventListener('click', this.onFlatClick);
     this.flat.addEventListener('mousemove', this.onFlatMove);
@@ -234,10 +247,11 @@ export class BuilderView {
 
   private paintGhost() {
     const at = this.hover ?? this.cursor;
-    const g = this.ghostAt(at);
+    const resting = !!this.rest && this.rest.x === at.x && this.rest.z === at.z;
+    const g = resting ? null : this.ghostAt(at);
     if (this.scene) {
       if (g) this.scene.setGhost({ part: g.part, x: g.x, z: g.z, rot: g.rot, style: g.style, ok: g.fit.ok });
-      else this.scene.setCursor(this.testing ? null : at);
+      else this.scene.setCursor(this.testing || resting ? null : at);
       const sel = this.selected !== null ? this.layout.parts.find((p) => p.uid === this.selected) ?? null : null;
       this.scene.setSelected(sel);
     }
@@ -295,6 +309,7 @@ export class BuilderView {
   onCell(c: { x: number; z: number } | null, kind: 'tap' | 'hover') {
     if (this.testing || this.closed) return;
     if (kind === 'hover') {
+      if (c && this.rest && (c.x !== this.rest.x || c.z !== this.rest.z)) this.rest = null;
       this.hover = c;
       this.paintGhost();
       return;
@@ -315,6 +330,7 @@ export class BuilderView {
       const res = this.editor.place(g.part, g.x, g.z, g.rot, this.unlocked, this.flagStyle);
       if ('uid' in res) {
         sfx('place');
+        this.rest = { ...c };
         this.changed(res.uid);
         this.say(`${PARTS[g.part].name} placed.`);
       } else {
@@ -391,6 +407,7 @@ export class BuilderView {
     const rot = this.mode.kind === 'place' && this.mode.part === part ? this.mode.rot : 0;
     this.mode = { kind: 'place', part, rot };
     this.selected = null;
+    this.rest = null;
     this.renderPalette();
     this.renderTools();
     this.paintGhost();
@@ -622,8 +639,28 @@ export class BuilderView {
               })();
     const verdict = r.verdict;
     clear(this.readoutBox);
+    this.readoutBox.classList.toggle('open', this.roOpen);
     append(this.readoutBox, [
-      h('div', { class: 'evb-ro-head' }, h('b', null, 'Engineering readout'), h('span', null, SITE_NAMES[b.site])),
+      h(
+        'div',
+        { class: 'evb-ro-head' },
+        h('b', null, 'Engineering readout'),
+        h('span', null, SITE_NAMES[b.site]),
+        h(
+          'button',
+          {
+            class: 'btn small evb-ro-toggle',
+            type: 'button',
+            'aria-expanded': this.roOpen ? 'true' : 'false',
+            onclick: () => {
+              this.roOpen = !this.roOpen;
+              this.renderReadout();
+              this.readoutBox.querySelector<HTMLElement>('.evb-ro-toggle')?.focus();
+            },
+          },
+          this.roOpen ? 'Less' : 'More',
+        ),
+      ),
       h('div', { class: 'evb-ro-label' }, `Power on a sunny ${day}: making `, h('b', null, String(s.cells)), ' cells'),
       bar,
       h(
@@ -634,7 +671,7 @@ export class BuilderView {
         h('span', { class: 'k fuel' }, `Fuel ${s.use.fuel}`),
         s.spare ? h('span', { class: 'k spare' }, `Spare ${s.spare}`) : null,
       ),
-      hard && hp
+      hard && hp && b.crew > 0
         ? h(
             'div',
             { class: `evb-hard${hp.heatShort > 0 || hp.airMade + 1e-9 < hp.airNeed || hp.foodMade + 1e-9 < hp.foodNeed ? ' bad' : ''}` },
@@ -807,7 +844,8 @@ export class BuilderView {
     sfx('click');
     const wasChallenge = !!this.challenge;
     this.challenge = null;
-    if (wasChallenge) this.editor.load(loadCurrent() ?? emptyLayout(this.layout.site));
+    // A fresh undo history: Undo never brings back a Blueprint's base.
+    if (wasChallenge) this.editor = new Editor(loadCurrent() ?? emptyLayout(this.layout.site));
     this.mode = { kind: 'browse' };
     this.selected = null;
     this.hidePanel();
@@ -819,7 +857,8 @@ export class BuilderView {
     sfx('click');
     if (!this.challenge) saveCurrent(this.layout);
     this.challenge = c;
-    this.editor.load(emptyLayout(c.site));
+    // A fresh pad and undo history at the Blueprint's site.
+    this.editor = new Editor(emptyLayout(c.site));
     this.mode = { kind: 'browse' };
     this.selected = null;
     this.goalBox.dataset.id = '';
@@ -953,10 +992,12 @@ export class BuilderView {
       h('li', { class: 'evb-chip' }, dayIconFor(s.day), h('span', null, `${moon ? 'Turn' : 'Sol'} ${s.day.sol}`), h('small', null, s.day.label)),
     );
     const meters = h('div', { class: 'evb-meters' });
+    const line = h('p', { class: 'evb-tl-line' });
     clear(this.timeline);
     this.timeline.append(
       h('div', { class: 'evb-tl-head' }, h('b', null, 'Stress test'), h('span', null, 'A simplified test using the game\'s numbers'), h('button', { class: 'btn small', type: 'button', onclick: () => this.skipTest?.() }, 'Skip')),
       h('ol', { class: 'evb-chips' }, ...chips),
+      line,
       meters,
     );
     this.timeline.hidden = false;
@@ -998,7 +1039,7 @@ export class BuilderView {
         meter('Radiation', `${fmt(s.dose)} of ${res.doseBudget} mSv`, Math.min(1, s.dose / res.doseBudget), 'dose'),
         meter('Rocket', `${Math.round(s.fuel)}%`, s.fuel / 100, 'fuel'),
       );
-      this.hint.textContent = dayLine(s, moon);
+      line.textContent = dayLine(s, moon);
       this.say(dayLine(s, moon));
       await wait(step);
     }
@@ -1078,7 +1119,7 @@ export class BuilderView {
             ev.link ? h('a', { href: ev.link, target: '_blank', rel: 'noopener' }, 'See the record') : null,
           )
         : null,
-      h('p', { class: 'evb-fine' }, moon ? 'The game squeezes the Moon\'s 14.8-day night into 4 turns, and radiation numbers are scaled game values.' : 'Dust, cold and radiation sizes are the game\'s scaled values; the storm itself is a real NASA record.'),
+      h('p', { class: 'evb-fine' }, moon ? `The game squeezes the Moon's ${LUNAR_NIGHT_DAYS}-day night into ${MOON_TUNING.cadet.nightLength} turns, and radiation numbers are scaled game values.` : 'Dust, cold and radiation sizes are the game\'s scaled values; the storm itself is a real NASA record.'),
       bp,
       h(
         'div',
@@ -1124,6 +1165,7 @@ export class BuilderView {
       const dx = k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : 0;
       const dz = k === 'ArrowUp' ? -1 : k === 'ArrowDown' ? 1 : 0;
       this.hover = null;
+      this.rest = null;
       this.cursor = { x: Math.max(0, Math.min(GRID - 1, this.cursor.x + dx)), z: Math.max(0, Math.min(GRID - 1, this.cursor.z + dz)) };
       this.paintGhost();
       const p = partAt(this.layout, this.cursor.x, this.cursor.z);
@@ -1171,6 +1213,8 @@ export class BuilderView {
     this.el.remove();
     for (const { el, had } of this.inertEls) if (!had) el.removeAttribute('inert');
     this.inertEls = [];
+    if (this.gameStage) this.gameStage.el.style.display = this.gameStage.display;
+    this.gameStage = null;
     if (open === this) open = null;
     sfx('click');
     // Back on the title screen: redraw it so the Outpost Architect tile shows the new status.

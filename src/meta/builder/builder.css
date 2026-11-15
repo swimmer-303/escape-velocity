@@ -146,7 +146,9 @@
 .evb-meter.dose .fill { background: #c48800; }
 .evb-meter.fuel .fill { background: #1ca89e; }
 .evb-meter.bad .fill { background: var(--red, #ff5a4f); }
-.ev-builder.testing .evb-palette, .ev-builder.testing .evb-hint { opacity: 0.45; pointer-events: none; }
+.ev-builder.testing .evb-palette { opacity: 0.45; pointer-events: none; }
+.ev-builder.testing .evb-hint { display: none; }
+.evb-tl-line { margin: 0 0 6px; font-size: 14px; min-height: 1.3em; }
 html.reduce-motion .evb-meter .fill, .ev-builder.calm .evb-meter .fill { transition: none; }
 
 /* ---------- cards (start, results, save and share) ---------- */
@@ -200,23 +202,29 @@ html.reduce-motion .evb-meter .fill, .ev-builder.calm .evb-meter .fill { transit
 .evb-msg { color: var(--cyan, #5ef2e6); min-height: 1.2em; }
 
 /* ---------- narrow screens (phones, small tablets) ---------- */
+.evb-ro-toggle { display: none; }
 @media (max-width: 860px) {
+  .evb-top { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; touch-action: pan-x; padding-bottom: 4px; }
+  .evb-top > *, .evb-title, .evb-sites, .evb-top-actions { flex: none; flex-wrap: nowrap; }
+  .ev-builder .evb-top .btn.small { font-size: 12px; padding: 4px 7px; min-height: 34px; }
   .evb-palette { top: auto; bottom: 62px; left: 8px; right: 8px; width: auto; height: 118px; }
   .evb-parts { flex-direction: row; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; }
   .evb-part { flex: 0 0 168px; }
   .evb-part-text small { display: none; }
-  .evb-readout { top: auto; bottom: 186px; right: 8px; width: min(300px, calc(100% - 16px)); max-height: 34%; }
-  .evb-goal { left: 8px; top: 96px; width: min(340px, calc(100% - 16px)); max-height: 30%; }
-  .ev-builder.has-goal .evb-readout { max-height: 22%; }
-  .evb-hint { bottom: 186px; max-width: calc(100% - 16px); }
+  .evb-readout { top: auto; bottom: 186px; left: 8px; right: 8px; width: auto; max-height: 40%; }
+  .evb-ro-toggle { display: inline-flex; margin-left: auto; min-height: 30px !important; padding: 2px 8px !important; }
+  .evb-ro-head span { display: none; }
+  .evb-readout:not(.open) .evb-row, .evb-readout:not(.open) .evb-legend, .evb-readout:not(.open) .evb-hard, .evb-readout:not(.open) .evb-fine { display: none; }
+  .evb-verdict { margin: 4px 0; }
+  .evb-goal { left: 8px; right: 8px; top: 52px; width: auto; max-height: 24%; }
+  .evb-hint { top: 52px; bottom: auto; max-width: calc(100% - 16px); }
   .ev-builder.has-goal .evb-hint { display: none; }
-  .evb-flat { width: min(92vw, 52vh); top: 40%; }
+  .evb-flat { width: min(92vw, 40vh); top: 38%; }
   .evb-chips { grid-template-columns: repeat(4, 1fr); }
   .evb-meters { grid-template-columns: repeat(2, 1fr); }
   .evb-timeline { bottom: 62px; }
 }
 @media (max-width: 520px) {
-  .evb-readout .evb-fine, .evb-readout .evb-legend { display: none; }
   .evb-title > b { font-size: 14px; }
 }
 

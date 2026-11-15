@@ -47,6 +47,7 @@ describe('Outpost Architect in the real game', () => {
     const layer = await waitFor(() => document.querySelector<HTMLElement>('.ev-builder[role="dialog"]'));
     expect(layer.getAttribute('aria-label')).toBe('Outpost Architect');
     expect(document.getElementById('app')!.hasAttribute('inert')).toBe(true);
+    expect(document.getElementById('stage')!.style.display).toBe('none');
     // The start card: Free build, and 12 Blueprints (the first three open).
     const start = await waitFor(() => layer.querySelector('.evb-start'));
     expect(start.querySelectorAll('.evb-bp')).toHaveLength(12);
@@ -106,6 +107,7 @@ describe('Outpost Architect in the real game', () => {
     key(layer, 'Escape');
     await waitFor(() => !document.querySelector('.ev-builder'));
     expect(document.getElementById('app')!.hasAttribute('inert')).toBe(false);
+    expect(document.getElementById('stage')!.style.display).toBe('');
     const again = await waitFor(() => document.querySelector<HTMLButtonElement>('[data-tile="builder"]'));
     expect(again.textContent).toMatch(/1 of 12 blueprints/);
   });

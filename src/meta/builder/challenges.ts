@@ -3,7 +3,7 @@
 // unlocking new parts or decor. Star 1 is the goal; stars 2 and 3 are harder extras (and need star 1).
 // All checks run on the readout and stress test (./stress.ts), which use the game's own numbers.
 
-import { MOON_BATTERY } from '../../sim/constants';
+import { MOON_BATTERY, REAL } from '../../sim/constants';
 import { PARTS, STARTER_PARTS, type PartId } from './parts';
 import { countOf, workingParts, type Layout, type SiteId } from './layout';
 import type { Readout } from './stress';
@@ -34,6 +34,8 @@ export interface Challenge {
 }
 
 const EPS = 1e-9;
+/** A lunar night is about half a synodic month (NASA Moon Fact Sheet, REAL.moonSynodicDays): 14.8 days. */
+export const LUNAR_NIGHT_DAYS = (REAL.moonSynodicDays / 2).toFixed(1);
 const sols = (site: SiteId) => (site === 'moon' ? 'turns' : 'sols');
 
 const crewAtLeast = (n: number): Check => ({ text: `Beds for at least ${n} crew`, test: ({ r }) => r.counts.crew >= n });
@@ -140,7 +142,7 @@ export const CHALLENGES: Challenge[] = [
     id: 'lunar-night',
     title: 'Survive the Lunar Night',
     site: 'moon',
-    goal: 'A lunar night lasts about 14.8 Earth days, and the solar panels make nothing. Get 4 crew through it.',
+    goal: `A lunar night lasts about ${LUNAR_NIGHT_DAYS} Earth days, and the solar panels make nothing. Get 4 crew through it.`,
     needs: [crewAtLeast(4), passes],
     star2: starsAtLeast(2),
     star3: starsAtLeast(3),

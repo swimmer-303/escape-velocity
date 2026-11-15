@@ -92,7 +92,8 @@ export class BuilderScene {
   private dust: Particles;
   private site: SiteId = 'gale';
   private padY = 0;
-  private clock = new THREE.Clock();
+  private last = -1;
+  private time = 0;
   private raf = 0;
   private dirty = true;
   private disposed = false;
@@ -469,7 +470,9 @@ export class BuilderScene {
       this.sun.intensity = (1 - k.night) * 2.4;
       this.ambient.intensity = 0.35 + (1 - k.night) * 0.4;
       this.ambient.color.set(k.night > 0.5 ? '#3a4766' : '#c9ccd6');
+      this.ambient.groundColor.set('#26262a');
     } else {
+      this.ambient.groundColor.set('#5a3a2a');
       const zen = new THREE.Color(this.site === 'arcadia' ? '#a88a6c' : '#b98a5d').lerp(new THREE.Color('#0b0a18'), k.night);
       const hor = new THREE.Color(this.site === 'arcadia' ? '#e2c7a6' : '#e9bd8c').lerp(new THREE.Color('#1d1836'), k.night);
       (u.uZenith.value as THREE.Color).copy(zen).lerp(new THREE.Color('#b0703a'), dust * 0.5);
@@ -560,8 +563,11 @@ export class BuilderScene {
   private loop = () => {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.loop);
-    const dt = Math.min(0.1, this.clock.getDelta());
-    const time = this.clock.elapsedTime;
+    const now = performance.now();
+    const dt = this.last < 0 ? 0 : Math.min(0.1, (now - this.last) / 1000);
+    this.last = now;
+    this.time += dt;
+    const time = this.time;
     if (this.controls.update()) this.dirty = true;
     // Parts dropping in.
     for (const v of this.parts.values()) {

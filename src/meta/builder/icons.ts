@@ -32,8 +32,7 @@ export function tileIcon(): SVGSVGElement {
 
 /** A pixel star, filled or hollow. */
 export function starIcon(filled: boolean, size = 18): SVGSVGElement {
-  const c = filled ? '#ffd84a' : 'none';
-  const o = filled ? '#8a6a10' : '#c2b59b';
+  const c = filled ? '#ffd84a' : '#4a3f7a';
   const shape = [
     [4, 0, 1, 2],
     [3, 2, 3, 1],
@@ -45,7 +44,7 @@ export function starIcon(filled: boolean, size = 18): SVGSVGElement {
     [1, 7, 2, 1],
     [6, 7, 2, 1],
   ];
-  const fill = shape.map(([x, y, w, h]) => r(x, y, w, h, filled ? c : o)).join('');
+  const fill = shape.map(([x, y, w, h]) => r(x, y, w, h, c)).join('');
   return svg(9, 8, fill, size, `evb-star${filled ? ' on' : ''}`);
 }
 

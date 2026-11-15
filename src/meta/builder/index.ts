@@ -5,7 +5,7 @@
 // parts and decor. Talks to the game only through ../hooks:
 // - a lobby tile on the title screen (order 36);
 // - XP for new Blueprint stars (emitGame('xp'));
-// - a shared link (?base=<code>) opens the builder with that base, once the game has started.
+// - a shared link (?base=<code>) opens the builder with that base, once the game has started (?builder opens it).
 import './builder.css';
 import { addTitleExtra, whenMetaReady, metaContext } from '../hooks';
 import { titleTile } from '../tile';
@@ -47,10 +47,20 @@ addTitleExtra({
   },
 });
 
-/** Open a shared base from the page address (?base=<code>), then tidy the address so a reload doesn't reopen it. */
+/** Open a shared base from the page address (?base=<code>), then tidy the address so a reload doesn't reopen it. ?builder opens the start card. */
 export function openFromLink(search: string = location.search): boolean {
   const code = codeFromSearch(search);
-  if (!code) return false;
+  if (!code) {
+    // ?builder opens Outpost Architect's start card (a handy link for a class or a demo).
+    let wanted = false;
+    try {
+      wanted = new URLSearchParams(search).has('builder');
+    } catch {
+      wanted = false;
+    }
+    if (wanted) openBuilder({ start: true });
+    return wanted;
+  }
   try {
     const url = new URL(location.href);
     url.searchParams.delete('base');
