@@ -4,6 +4,14 @@
 
 export interface SoundOwner {
   muted?: boolean;
+  /** The Settings dialog's sound mix: effects follow its volume slider (60 = as loud as before the slider existed). */
+  levels?: { sfxVolume: number };
+}
+
+/** How loud effects play compared with the game's original level (1 at the default slider position, 60). */
+function effectsScale(owner: SoundOwner | null): number {
+  const v = owner?.levels?.sfxVolume;
+  return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 60 : 1;
 }
 
 export class RoverSound {
@@ -57,7 +65,7 @@ export class RoverSound {
     if (!ctx || !this.humGain || !this.humOsc) return;
     const muted = !!this.owner?.muted;
     const l = muted ? 0 : Math.max(0, Math.min(1, level));
-    this.humGain.gain.setTargetAtTime(l * 0.05, ctx.currentTime, 0.08);
+    this.humGain.gain.setTargetAtTime(l * 0.05 * effectsScale(this.owner), ctx.currentTime, 0.08);
     this.humOsc.frequency.setTargetAtTime(50 + l * (boost ? 130 : 80), ctx.currentTime, 0.1);
   }
 
@@ -66,7 +74,7 @@ export class RoverSound {
     const ctx = progress !== null ? this.ready() : this.ctx;
     if (!ctx || !this.scanGain || !this.scanOsc) return;
     const on = progress !== null && !this.owner?.muted;
-    this.scanGain.gain.setTargetAtTime(on ? 0.025 : 0, ctx.currentTime, 0.03);
+    this.scanGain.gain.setTargetAtTime(on ? 0.025 * effectsScale(this.owner) : 0, ctx.currentTime, 0.03);
     if (on) this.scanOsc.frequency.setTargetAtTime(300 + progress! * 900, ctx.currentTime, 0.03);
   }
 

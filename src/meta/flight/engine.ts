@@ -14,6 +14,8 @@ import type { FlightInput } from './physics';
 export interface FlightSound {
   sfx(name: Sfx): void;
   muted?: boolean;
+  /** The Settings dialog's sound mix: the rumble follows the effects slider (60 = as loud as before it existed). */
+  levels?: { sfxVolume: number };
 }
 
 export const ABORT = Symbol('flight-abort');
@@ -118,7 +120,9 @@ class Rumble {
   private failed = false;
   private level = 0;
 
-  set(level: number) {
+  /** `level` 0-1 follows the throttle; `scale` is the effects volume (1 at the default slider position). */
+  set(throttle: number, scale = 1) {
+    const level = Math.max(0, Math.min(1, throttle)) * Math.max(0, Math.min(2, scale));
     if (this.failed) return;
     if (level <= 0 && !this.ctx) return;
     if (this.ctx && Math.abs(level - this.level) < 0.01) return;
@@ -153,7 +157,7 @@ class Rumble {
         this.gain = gain;
         this.src = src;
       }
-      this.gain!.gain.setTargetAtTime(Math.max(0, Math.min(1, level)) * 0.07, this.ctx.currentTime, 0.05);
+      this.gain!.gain.setTargetAtTime(level * 0.07, this.ctx.currentTime, 0.05);
     } catch {
       this.failed = true;
     }
@@ -595,7 +599,8 @@ export class FlightShell {
 
   /** Engine rumble volume, 0..1 (silent when the game's sound is off). */
   engine(level: number) {
-    this.rumble.set(this.audio && !this.audio.muted && !this.paused ? level : 0);
+    const vol = this.audio?.levels?.sfxVolume;
+    this.rumble.set(this.audio && !this.audio.muted && !this.paused ? level : 0, typeof vol === 'number' && Number.isFinite(vol) ? vol / 60 : 1);
   }
 }
 
