@@ -206,7 +206,7 @@ function scatterRocks(height: (x: number, z: number) => number, f: RockField) {
     const a = r() * Math.PI * 2;
     const d = f.rMin + Math.sqrt(r()) * (f.rMax - f.rMin);
     if (Math.abs(d - ROVER_LOOP) < 0.9) continue;
-    spots.push([Math.cos(a) * d, Math.sin(a) * d, f.sizeMin + (f.sizeMax - f.sizeMin) * r() ** 3]);
+    spots.push([Math.cos(a) * d, Math.sin(a) * d, f.sizeMin + (f.sizeMax - f.sizeMin) * r() ** 2.2]);
   }
   const tones = f.tones.map((t) => new THREE.Color(t));
   const out: THREE.InstancedMesh[] = [];
@@ -615,20 +615,22 @@ export class Diorama {
     const geo = groundGeometry(GROUND_RADIUS, 72, 1.8, marsHeight, (x, z, y) => {
       const rr = Math.hypot(x, z);
       const slope = slopeAt(marsHeight, x, z);
-      const c = flat.clone().lerp(flat2, fbm(x * 0.09, z * 0.09));
+      const c = flat.clone().lerp(flat2, smooth(fbm(x * 0.09, z * 0.09), 0.25, 0.75));
       c.lerp(high, smooth(y, 2, 9) * 0.45);
+      // Lighter drifts of dust and darker gravelly patches, then darker rock on the slopes.
+      c.multiplyScalar(0.76 + 0.46 * smooth(fbm(x * 0.21 + 3.1, z * 0.21 - 7.7), 0.28, 0.72));
       c.lerp(rock, smooth(slope, 0.12, 0.5) * 0.85);
       c.lerp(sand, smooth(fbm(x * 0.045 + 9, z * 0.045 - 3), 0.58, 0.72) * (1 - smooth(slope, 0.05, 0.25)) * smooth(rr, 18, 30) * 0.8);
       if (y > 2.5) c.multiplyScalar(1 + 0.07 * Math.sin(y * 2.3));
-      c.lerp(pad, (1 - smooth(rr, 8, 12)) * 0.5);
-      return c.multiplyScalar(0.94 + r() * 0.12);
+      c.lerp(pad, (1 - smooth(rr, 8, 12)) * 0.3);
+      return c.multiplyScalar(0.9 + r() * 0.2);
     });
     const ground = new THREE.Mesh(geo, mat('#ffffff', { vertexColors: true }));
     ground.receiveShadow = true;
     g.add(ground);
     const tones = ['#6e3418', '#5a2a14', '#7f3f1f', '#4f2617'];
     g.add(
-      ...scatterRocks(marsHeight, { seed: 71, count: 150, rMin: 11, rMax: 30, sizeMin: 0.35, sizeMax: 1.9, tones, shadows: true }),
+      ...scatterRocks(marsHeight, { seed: 71, count: 130, rMin: 11, rMax: 30, sizeMin: 0.4, sizeMax: 2.4, tones, shadows: true }),
       ...scatterRocks(marsHeight, { seed: 72, count: 70, rMin: 30, rMax: 62, sizeMin: 1.2, sizeMax: 3.6, tones, shadows: false }),
       ...scatterRocks(marsHeight, { seed: 73, count: 180, rMin: 10.8, rMax: 24, sizeMin: 0.1, sizeMax: 0.32, tones, shadows: false }),
       roverTracks(marsHeight, '#4a2010', 0.42),
