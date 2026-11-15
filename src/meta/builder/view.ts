@@ -1142,21 +1142,33 @@ export class BuilderView {
         { class: 'evb-bp-result' },
         h('b', null, `Blueprint: ${ch.title}`),
         starRow(score.stars, 22),
-        h('span', { class: 'sr-only' }, `${score.stars} of 3 stars.`),
+        h('p', { class: 'evb-bp-why' }, `${score.stars} of 3 Blueprint stars, from the goal list. These are the stars that count.`),
         rec.added ? h('p', { class: 'evb-xp' }, h('b', null, `+${xp} XP`), ` for ${rec.added} new ${rec.added === 1 ? 'star' : 'stars'}!`) : score.stars ? h('p', null, `Your best: ${Math.max(before, score.stars)} stars.`) : h('p', null, 'No stars yet. Check the goal list and try again!'),
         ch.unlocks.length && score.stars >= 1 ? h('p', { class: 'evb-unlock' }, `Unlocked: ${ch.unlocks.map((p) => PARTS[p].name).join(', ')}.`) : null,
       );
       this.renderGoal();
     }
     const starsLabel = ['Pass', 'Steady', 'Storm-proof'];
+    // In a Blueprint, its goal list gives the stars. The stress test's three results are shown as checks (not stars),
+    // so the card never shows two different star counts at once.
+    const inBlueprint = !!bp;
+    const checks = [res.pass, res.steady, res.stormProof];
     lines.push(
       h('div', { class: 'kicker' }, 'Stress test: a simplified test using the game\'s numbers'),
       h('h2', null, res.pass ? (res.stars === 3 ? 'Perfect run!' : 'Passed!') : 'Not yet'),
+      inBlueprint ? h('p', { class: 'evb-test-head' }, `Stress test checks: ${checks.filter(Boolean).length} of 3`) : null,
       h(
         'ul',
-        { class: 'evb-test-stars' },
-        ...[res.pass, res.steady, res.stormProof].map((ok, i) =>
-          h('li', { class: ok ? 'ok' : '' }, starRow(ok ? 1 : 0, 16).firstElementChild as Element, h('b', null, starsLabel[i]), h('span', { class: 'sr-only' }, ok ? ' earned' : ' not yet'), h('small', null, STAR_TEXT[i])),
+        { class: `evb-test-stars${inBlueprint ? ' as-checks' : ''}` },
+        ...checks.map((ok, i) =>
+          h(
+            'li',
+            { class: ok ? 'ok' : '' },
+            inBlueprint ? h('span', { class: 'evb-tick', 'aria-hidden': 'true' }, ok ? '+' : '-') : (starRow(ok ? 1 : 0, 16).firstElementChild as Element),
+            h('b', null, starsLabel[i]),
+            h('span', { class: 'sr-only' }, inBlueprint ? (ok ? ' passed' : ' not yet') : ok ? ' earned' : ' not yet'),
+            h('small', null, STAR_TEXT[i]),
+          ),
         ),
       ),
       h('ul', { class: 'evb-notes' }, ...res.notes.map((n) => h('li', null, n))),

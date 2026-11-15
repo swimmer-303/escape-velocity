@@ -181,6 +181,10 @@ html.reduce-motion .evb-meter .fill, .ev-builder.calm .evb-meter .fill { transit
 .evb-test-stars li { display: grid; grid-template-columns: 22px auto 1fr; align-items: center; gap: 6px; color: var(--muted, #c2b59b); font-size: 13px; }
 .evb-test-stars li b { color: var(--ink, #f4ead8); font-family: var(--font-px, monospace); font-weight: 400; font-size: 13px; }
 .evb-test-stars li.ok b { color: #ffd84a; }
+.evb-test-stars.as-checks li.ok b { color: #c9ffbf; }
+.evb-test-stars.as-checks li.ok .evb-tick { color: var(--green, #7ddc5a); }
+.evb-test-head { margin: 0 0 2px !important; font-size: 13px; color: var(--muted, #c2b59b); }
+.evb-bp-why { margin: 0 !important; font-size: 13px; color: #ffe9b0; }
 .evb-notes { margin: 0 0 8px; padding-left: 20px; }
 .evb-notes li { margin-bottom: 3px; }
 .evb-stats { font-size: 14px; }

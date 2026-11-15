@@ -101,6 +101,11 @@ describe('Outpost Architect in the real game', () => {
     expect(readSave().stars['first-light']).toBe(3);
     expect(xp.reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
     expect(result.textContent).toMatch(/Unlocked: Light post/);
+    // One star count only: the Blueprint's stars; the stress test's results are checks, not stars.
+    expect(result.querySelector('.evb-test-stars.as-checks')).not.toBeNull();
+    expect(result.querySelectorAll('.evb-test-stars svg').length).toBe(0);
+    expect(result.textContent).toMatch(/Stress test checks: \d of 3/);
+    expect(result.querySelector('.evb-bp-result')!.textContent).toMatch(/3 of 3 Blueprint stars/);
 
     // Close (Escape twice: the card, then the builder) and land back on the title with the tile's new status.
     key(layer, 'Escape');
