@@ -174,7 +174,7 @@ export class ThreeStage implements Stage {
     skyMesh.renderOrder = -2;
     this.scene.add(skyMesh, this.marsMoons.group);
     // Haze that thickens with distance (squared exponential: near things stay crisp, far ridges fade in layers).
-    this.scene.fog = new THREE.FogExp2('#e8bf8e', 0.0078);
+    this.scene.fog = new THREE.FogExp2('#e8bf8e', 0.0058);
 
     this.diorama = new Diorama();
     this.scene.add(this.diorama.group);
@@ -305,12 +305,13 @@ export class ThreeStage implements Stage {
 
     const fog = this.scene.fog as THREE.FogExp2;
     fog.color.copy(hor);
-    fog.density = 0.0078 + dust * 0.026;
+    // Clear days: thin haze, so the crater rim and Mount Sharp stay crisp in the lobby view; dust thickens it fast.
+    fog.density = 0.0058 + dust * 0.028;
 
     const L = this.diorama;
     L.sunLight.position.copy(sunDir).multiplyScalar(60);
     L.shadeFrom(sunDir);
-    L.sunLight.intensity = day ? (0.35 + elev * 2.3) * (1 - dust * 0.75) * Math.min(1, elev * 12 + 0.25) : 0;
+    L.sunLight.intensity = day ? (0.42 + elev * 2.5) * (1 - dust * 0.75) * Math.min(1, elev * 12 + 0.25) : 0;
     L.sunLight.color.copy(MARS.key).lerp(MARS.keyDusk, dusk);
     L.ambient.color.copy(MARS.skyDay).lerp(MARS.skyNight, night).lerp(MARS.skyStorm, dust * 0.6 * dim);
     L.ambient.groundColor.copy(MARS.groundDay).lerp(MARS.groundNight, night);
