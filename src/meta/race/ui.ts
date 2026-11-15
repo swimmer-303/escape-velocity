@@ -8,7 +8,7 @@ import { trophy, statusIcon } from './art';
 import { callsignText, type Callsign } from './callsign';
 import { portrait } from './portrait';
 import { LEAGUES, leagueAt } from './rivals';
-import { ordinal } from './score';
+import { ordinal, tiedWith, type Versus } from './score';
 import { progressLine, type LeagueOutcome, type RaceSave } from './store';
 import type { GhostRun } from './code';
 import type { Race, Result } from './race';
@@ -287,7 +287,8 @@ export interface PodiumOpts {
   xp: number;
   outcome: LeagueOutcome;
   save: RaceSave;
-  beatFriend: boolean | null;
+  /** How you did against your friend's run ('tie' when every tie-break is equal too), or null with no friend. */
+  friend: Versus | null;
   onRaceAgain(): void;
   onShare(): void;
   onClose(): void;
@@ -311,6 +312,8 @@ export function raceTip(results: Result[], site: 'mars' | 'moon'): string {
   const me = results.find((r) => r.racer.kind === 'you')!;
   const turn = site === 'moon' ? 'day' : 'sol';
   const winner = results.find((r) => r.place === 1 && r.racer.kind !== 'you');
+  if (me.launched && winner && winner.place === me.place)
+    return `A perfect tie: you both launched on ${turn} ${me.sols} with the same radiation and the same air and food left! Race again to break the tie.`;
   if (!me.launched) {
     if (me.loseReason === 'dose') return 'Tip: when a storm warning comes, power the storm shelter. Radiation adds up!';
     if (me.loseReason === 'air' || me.loseReason === 'food') return 'Tip: keep about two days of air and food in store, and keep the heaters on so the batteries stay warm.';
@@ -328,7 +331,8 @@ export function raceTip(results: Result[], site: 'mars' | 'moon'): string {
 export function podiumContent(o: PodiumOpts): Child {
   const me = o.results.find((r) => r.racer.kind === 'you')!;
   const lgNow = leagueAt(o.save.league);
-  const head = me.place === 1 ? 'You won the race!' : `You finished ${ordinal(me.place)}!`;
+  const tied = tiedWith(o.results, me).length > 0;
+  const head = tied ? `It's a tie for ${ordinal(me.place)}!` : me.place === 1 ? 'You won the race!' : `You finished ${ordinal(me.place)}!`;
   const top = o.results.slice(0, 3);
   const turn = o.race.site === 'moon' ? 'day' : 'sol';
   const rest = o.results.slice(3);
@@ -343,8 +347,9 @@ export function podiumContent(o: PodiumOpts): Child {
           rest.map((r) => h('li', null, portrait(r.racer.face, { size: 24, ghost: r.racer.kind === 'ghost' }), h('b', null, r.racer.kind === 'you' ? 'You' : r.racer.name), r.launched ? ` launched on ${turn} ${r.sols}` : ` went home early (rocket ${Math.floor(r.fuel)}% full)`)),
         )
       : null,
-    o.beatFriend === true ? h('div', { class: 'card good' }, h('b', null, 'You beat your friend! '), 'Send them a link back and see if they can beat you.') : null,
-    o.beatFriend === false ? h('div', { class: 'card' }, h('b', null, 'Your friend is ahead this time. '), 'Same base, same storms: try a new plan!') : null,
+    o.friend === 'ahead' ? h('div', { class: 'card good' }, h('b', null, 'You beat your friend! '), 'Send them a link back and see if they can beat you.') : null,
+    o.friend === 'tie' ? h('div', { class: 'card good' }, h('b', null, 'You tied with your friend! '), 'Same base, same storms, same result. Send them a link back and see who breaks the tie.') : null,
+    o.friend === 'behind' ? h('div', { class: 'card' }, h('b', null, 'Your friend is ahead this time. '), 'Same base, same storms: try a new plan!') : null,
     h(
       'div',
       { class: 'rp-rewards' },

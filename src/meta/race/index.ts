@@ -25,7 +25,7 @@ import { StandingsHud } from './hud';
 import { portrait } from './portrait';
 import { createRace, finishRace, isRaceMission, liveRows, newsBetween, syncRivals, type Race } from './race';
 import { leagueAt } from './rivals';
-import { ordinal, xpForPlace } from './score';
+import { ordinal, tiedWith, versus, xpForPlace, type Versus } from './score';
 import { applyPlace, loadSave, progressLine, writeSave, type RaceSave } from './store';
 import { announce, challengeIntroContent, flash, lobbyContent, overlay, podiumContent, sharePanel, type Overlay } from './ui';
 
@@ -225,7 +225,9 @@ function onMissionEnd(p: GameEventMap['mission-end']): void {
   const results = finishRace(r, m);
   const me = results.find((x) => x.racer.kind === 'you')!;
   const ghost = results.find((x) => x.racer.kind === 'ghost');
-  const beatFriend = ghost ? me.place < ghost.place : null;
+  // A true tie with your friend (same sols, radiation, and air and food) is a tie, not a win or a loss.
+  const friend: Versus | null = ghost ? versus(me, ghost) : null;
+  const beatFriend = friend === 'ahead';
   const applied = applyPlace(data(), me.place);
   const next = applied.save;
   let xp = xpForPlace(me.place, r.league);
@@ -245,11 +247,11 @@ function onMissionEnd(p: GameEventMap['mission-end']): void {
   podiumTimer = setTimeout(() => {
     podiumTimer = null;
     if (endScreen && !endScreen.isConnected) return;
-    showPodium(r, results, xp, applied.outcome, beatFriend);
+    showPodium(r, results, xp, applied.outcome, friend);
   }, PODIUM_DELAY_MS);
 }
 
-function showPodium(r: Race, results: ReturnType<typeof finishRace>, xp: number, outcome: ReturnType<typeof applyPlace>['outcome'], beatFriend: boolean | null): void {
+function showPodium(r: Race, results: ReturnType<typeof finishRace>, xp: number, outcome: ReturnType<typeof applyPlace>['outcome'], friend: Versus | null): void {
   document.querySelectorAll('.race-overlay').forEach((e) => e.remove());
   const ctx = metaContext();
   const me = results.find((x) => x.racer.kind === 'you')!;
@@ -262,7 +264,7 @@ function showPodium(r: Race, results: ReturnType<typeof finishRace>, xp: number,
       xp,
       outcome,
       save: data(),
-      beatFriend,
+      friend,
       onRaceAgain: () => {
         ov.close();
         openLobby();
@@ -282,7 +284,7 @@ function showPodium(r: Race, results: ReturnType<typeof finishRace>, xp: number,
     () => {},
   );
   ov.el.classList.add('race-podium');
-  announce(`Race over. You finished ${ordinal(me.place)}.`);
+  announce(tiedWith(results, me).length ? `Race over. It's a tie for ${ordinal(me.place)}.` : `Race over. You finished ${ordinal(me.place)}.`);
 }
 
 // ------------------------------------------------------------------ wiring

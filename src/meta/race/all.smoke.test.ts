@@ -79,7 +79,7 @@ describe('Rival Race with every feature on', () => {
     expect(internals.mission.config.seed).toBe(activeRace()!.seed);
     expect(sawStandings).toBe(true);
     const podium = await waitFor(() => document.querySelector<HTMLElement>('.race-overlay.race-podium'), 4000);
-    expect(podium.textContent).toMatch(/You (won the race|finished)/);
+    expect(podium.textContent).toMatch(/You (won the race|finished)|It's a tie for/);
     expect(loadSave().races).toBe(1);
     expect(errors.mock.calls.filter((c) => String(c[0]).startsWith('[meta]'))).toEqual([]);
   }, 120000);
