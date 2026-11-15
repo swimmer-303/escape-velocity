@@ -277,6 +277,8 @@ export class App {
     const prev = this.modalRoot.querySelector<HTMLElement>('.modal');
     const sameDialog = prev?.getAttribute('aria-label') === opts.label;
     const keepScroll = sameDialog ? { box: prev!.scrollTop, root: this.modalRoot.scrollTop } : null;
+    const active = document.activeElement;
+    const hadFocus = sameDialog && active instanceof HTMLElement && prev!.contains(active) ? active : null;
     clear(this.modalRoot);
     this.modalRoot.classList.toggle('lobby-root', !!opts.lobby);
     document.documentElement.classList.toggle('ev-lobby', !!opts.lobby);
@@ -291,6 +293,9 @@ export class App {
       decorateDialog(box);
       box.scrollTop = keepScroll.box;
       this.modalRoot.scrollTop = keepScroll.root;
+      // The old copy had the keyboard focus (PLAY, a crate, a Workshop button): put it back on the same control,
+      // or on the dialog's main button, so a redraw never drops a keyboard player back to the page.
+      if (hadFocus) (sameControl(box, hadFocus) ?? box.querySelector<HTMLElement>('[data-autofocus], button.primary'))?.focus({ preventScroll: true });
       return box;
     }
     const focusable = box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>('button.primary, button.go, button');
@@ -936,7 +941,7 @@ export class App {
         ),
         h('div', { class: 'actions end' }, h('button', { class: 'btn primary', onclick: back }, 'Got it')),
       ],
-      { label: 'How to play' },
+      { label: 'How to play', onClose: back },
     );
   }
 
@@ -2088,6 +2093,13 @@ export class App {
       { label: 'Campaign complete' },
     );
   }
+}
+
+/** The control in a redrawn dialog that matches one from the old copy (same kind, same label or text, still usable). */
+function sameControl(box: HTMLElement, old: HTMLElement): HTMLElement | null {
+  const key = (el: Element) => `${el.tagName}|${el.getAttribute('aria-label') ?? ''}|${(el.textContent ?? '').trim()}`;
+  const want = key(old);
+  return [...box.querySelectorAll<HTMLElement>('button, a[href], input, select, [tabindex]')].find((el) => key(el) === want && !el.hasAttribute('disabled')) ?? null;
 }
 
 function starRow(stars: StarId[], compact = false): HTMLElement {

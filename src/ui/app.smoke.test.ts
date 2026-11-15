@@ -273,6 +273,15 @@ describe('UI smoke test', () => {
 });
 
 describe('title screen data refresh', () => {
+  it('keeps keyboard focus on PLAY when the lobby redraws with the NASA data', async () => {
+    vi.stubGlobal('fetch', () => new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('slow and offline')), 40)));
+    new App(new CssStage());
+    const play = await waitFor(() => document.querySelector<HTMLElement>('.play-big'));
+    expect(document.activeElement).toBe(play);
+    await waitFor(() => document.querySelector('.play-big') !== play); // the redraw
+    expect((document.activeElement as HTMLElement | null)?.classList.contains('play-big')).toBe(true);
+  });
+
   it('does not wipe out the chooser when NASA data arrives late', async () => {
     // Every data request fails a moment later, after the player has already opened the chooser.
     vi.stubGlobal('fetch', () => new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('slow and offline')), 40)));
