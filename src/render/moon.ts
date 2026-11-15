@@ -116,3 +116,8 @@ export function buildEarth(): THREE.Mesh {
   earth.receiveShadow = false;
   return earth;
 }
+
+/** The made-up craters (centers, radii and depths in diorama units), for things that sit inside them (Rover Expeditions). */
+export function moonCraters(): Array<{ x: number; z: number; r: number; depth: number }> {
+  return CRATERS.map((c) => ({ ...c }));
+}

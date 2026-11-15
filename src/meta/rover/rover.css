@@ -1,0 +1,193 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* Rover Expeditions: the start card, the Sample Museum, the drive's full-screen layer, HUD and results card. */
+/* Colors come from the game's tokens in src/ui/style.css. Every animation is gated on motion being allowed. */
+
+/* ---------- start card ---------- */
+.ev-rover-start h2, .ev-rover-museum h2 { margin: 2px 0 6px; }
+.ev-rover-sites { display: grid; gap: 8px; margin: 10px 0; }
+.ev-rover-site {
+  display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; cursor: pointer;
+  background: var(--panel-2); border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--shadow);
+}
+.ev-rover-site:has(input:checked) { border-color: var(--green); background: var(--panel-3); }
+.ev-rover-site:has(input:focus-visible) { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.ev-rover-site input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--green); flex: none; }
+.ev-rover-site-text { display: flex; flex-direction: column; gap: 2px; }
+.ev-rover-site-text b { font-family: var(--font-px); font-size: 14px; color: var(--ink); }
+.ev-rover-site-text small { font-size: 13px; }
+.ev-rover-site-text small.left { color: var(--green); }
+.ev-rover-site-text small.done { color: var(--muted); }
+.ev-rover-help { margin: 8px 0; padding: 8px 10px; background: var(--panel); border: 2px solid var(--line); }
+.ev-rover-keys { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; }
+.ev-rover-keys li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ev-rover-keys kbd, .ev-rover-key {
+  font-family: var(--font-px); font-size: 11px; padding: 1px 5px; border: 2px solid currentColor; background: var(--panel-3); color: var(--ink);
+}
+.ev-rover-touch, .ev-rover-tradeoff { margin: 6px 0 0; font-size: 14px; }
+.ev-rover-science { margin: 8px 0; }
+.ev-rover-science summary { cursor: pointer; font-weight: 700; color: var(--cyan); }
+.ev-rover-science summary:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.ev-rover-notes ul { margin: 6px 0; padding-left: 18px; font-size: 14px; }
+.ev-rover-notes li { margin: 3px 0; }
+
+/* ---------- rarity: word + pips + color ---------- */
+.ev-rarity { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-px); font-size: 11px; text-transform: uppercase; }
+.ev-rarity .pips { display: inline-flex; gap: 2px; }
+.ev-rarity .pips i { width: 6px; height: 6px; border: 1px solid currentColor; display: inline-block; }
+.ev-rarity .pips i.on { background: currentColor; }
+.ev-rarity.common { color: var(--ink); }
+.ev-rarity.uncommon { color: var(--green); }
+.ev-rarity.rare { color: var(--cyan); }
+.ev-rarity.legendary { color: #ffd84a; }
+
+/* ---------- Sample Museum ---------- */
+.ev-museum-count { color: var(--muted); }
+.ev-museum-site h3 { font-family: var(--font-px); font-size: 14px; margin: 12px 0 6px; color: var(--amber); }
+.ev-museum-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.ev-museum-item {
+  display: grid; grid-template-columns: 44px 1fr; gap: 4px 8px; padding: 8px; background: var(--panel-2);
+  border: 3px solid var(--line); opacity: 0.85;
+}
+.ev-museum-item.found { opacity: 1; border-color: var(--muted); }
+.ev-museum-item.found.legendary { border-color: #ffd84a; }
+.ev-museum-item.found.rare { border-color: var(--cyan); }
+.ev-museum-icon svg { width: 40px; height: 40px; image-rendering: pixelated; }
+.ev-museum-text { display: flex; flex-direction: column; gap: 2px; }
+.ev-museum-text small { color: var(--muted); font-size: 12px; }
+.ev-museum-fact { grid-column: 1 / -1; margin: 2px 0 0; font-size: 13px; line-height: 1.35; }
+
+/* ---------- the drive layer ---------- */
+.ev-rover-host { position: fixed; inset: 0; z-index: 80; }
+.ev-rover {
+  position: fixed; inset: 0; z-index: 60; overflow: hidden; background: #000; color: var(--ink, #f4ead8);
+  font-family: var(--font-body, system-ui, sans-serif);
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.ev-rover:focus { outline: none; }
+.ev-rover:focus-visible { outline: 3px solid var(--cyan, #5ef2e6); outline-offset: -3px; }
+.ev-rover-view { position: absolute; inset: 0; }
+.ev-rover-canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; image-rendering: pixelated; }
+.ev-rover::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+.ev-rover.calm::after, html.reduce-motion .ev-rover::after { display: none; }
+
+.ev-rover-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 0; pointer-events: none;
+}
+.ev-rover-top > * { pointer-events: auto; }
+.ev-rover-buttons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ev-rover-buttons .btn { background: var(--panel-3, #2e2654); }
+.ev-rover-lights.on { background: #6b5a1a; border-color: #ffd84a; }
+.ev-rover-hud { display: flex; flex-wrap: wrap; gap: 6px; max-width: min(620px, calc(100% - 220px)); }
+.ev-rgauge {
+  background: rgba(21, 18, 43, 0.9); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line, #4a3f7a);
+  padding: 4px 8px 5px; line-height: 1.2; min-width: 96px;
+}
+.ev-rgauge .lbl { display: block; font-family: var(--font-px, monospace); font-size: 11px; color: var(--muted, #c2b59b); text-transform: uppercase; }
+.ev-rgauge .val { font-family: var(--font-px, monospace); font-size: 12px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.ev-rgauge .val b { font-weight: 400; font-size: 18px; color: var(--ink); }
+.ev-rgauge.battery { min-width: 170px; }
+.ev-rgauge .bar { position: relative; display: block; height: 14px; margin: 3px 0; background: #0b0a18; border: 2px solid #000; overflow: hidden; }
+.ev-rgauge .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: var(--green, #7ddc5a); }
+.ev-rgauge[data-state="warn"] .fill { background: var(--amber, #ffb627); }
+.ev-rgauge[data-state="danger"] .fill { background: repeating-linear-gradient(45deg, var(--red, #ff5a4f) 0 4px, #8a1f18 4px 8px); }
+.ev-rgauge[data-state="ok"] .state { color: var(--green); }
+.ev-rgauge[data-state="warn"] .state { color: var(--amber); }
+.ev-rgauge[data-state="danger"] .state { color: var(--red); }
+.ev-rgauge .icons { display: inline-flex; gap: 1px; }
+.ev-rgauge .icons svg { width: 18px; height: 18px; }
+.ev-rarrow { display: inline-block; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 12px solid var(--cyan); }
+
+.ev-rover-compass-box {
+  position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); top: calc(76px + env(safe-area-inset-top, 0px));
+  display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none;
+}
+.ev-rover-compass { width: 300px; height: 32px; border: 3px solid #000; image-rendering: pixelated; }
+.ev-rover-compass-text { font-family: var(--font-px); font-size: 12px; padding: 1px 6px; background: rgba(21, 18, 43, 0.85); color: var(--ink); }
+.ev-rover-map {
+  position: absolute; z-index: 3; right: 10px; top: calc(76px + env(safe-area-inset-top, 0px)); width: 120px; height: 120px;
+  border: 3px solid #000; border-radius: 50%; background: rgba(21, 18, 43, 0.7); pointer-events: none;
+}
+.ev-rover-warn {
+  position: absolute; z-index: 3; left: 50%; top: calc(132px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
+  font-family: var(--font-px); font-size: clamp(18px, 3vw, 30px); color: #fff; background: #8a1f18; border: 3px solid #000;
+  padding: 4px 12px; box-shadow: 4px 4px 0 #000; pointer-events: none;
+}
+.ev-rover-prompt {
+  position: absolute; z-index: 3; left: 50%; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  min-width: 240px; padding: 6px 10px; text-align: center; font-family: var(--font-px); font-size: 14px;
+  background: rgba(21, 18, 43, 0.92); border: 3px solid var(--cyan); pointer-events: none;
+}
+.ev-rover-prompt .bar { display: block; height: 10px; margin-top: 4px; background: #0b0a18; border: 2px solid #000; }
+.ev-rover-prompt .bar .fill { display: block; height: 100%; width: 0; background: var(--cyan); }
+
+.ev-rover-caption {
+  position: absolute; left: 50%; top: 38%; z-index: 2; transform: translateX(-50%); width: min(92vw, 900px);
+  text-align: center; pointer-events: none; opacity: 0;
+  font-family: var(--font-px, monospace); font-size: clamp(18px, 3.4vw, 40px); line-height: 1.15; color: #fff;
+  text-shadow: 3px 3px 0 #000, 0 0 14px rgba(0,0,0,0.6);
+}
+.ev-rover-caption.show { opacity: 1; }
+.ev-rover-caption.big { color: var(--amber, #ffb627); }
+.ev-rover-caption.gold { color: #ffd84a; font-size: clamp(22px, 4.4vw, 52px); }
+.ev-rover-caption.good { color: var(--green, #7ddc5a); }
+.ev-rover-caption.warn { color: var(--amber, #ffb627); }
+.ev-rover-caption.bad { color: #ff8a80; }
+
+/* Touch / mouse controls. */
+.ev-rover-controls {
+  position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 0 14px calc(14px + env(safe-area-inset-bottom, 0px)); pointer-events: none;
+}
+.ev-rover-controls > * { pointer-events: auto; }
+.ev-rover-joy {
+  position: relative; width: 120px; height: 120px; border-radius: 50%; touch-action: none;
+  background: rgba(21, 18, 43, 0.55); border: 3px solid rgba(244, 234, 216, 0.6); display: grid; place-items: center;
+}
+.ev-rover-knob { width: 48px; height: 48px; border-radius: 50%; background: var(--panel-3); border: 3px solid var(--ink); box-shadow: 2px 2px 0 #000; }
+.ev-rover-holds { display: flex; gap: 12px; align-items: flex-end; }
+.ev-rover-hold { touch-action: none; font-family: var(--font-px); }
+.ev-rover-hold.scan { width: 92px; height: 92px; border-radius: 50%; background: #0f5c58; border-color: var(--cyan); font-size: 16px; }
+.ev-rover-hold.boost { width: 70px; height: 70px; border-radius: 50%; background: #6b3a12; border-color: var(--amber); font-size: 13px; }
+.ev-rover-hold.pressed { filter: brightness(1.4); transform: translate(2px, 2px); }
+.ev-rover.has-panel .ev-rover-controls, .ev-rover.has-panel .ev-rover-prompt, .ev-rover.has-panel .ev-rover-warn { display: none; }
+
+/* ---------- cards in the drive layer (results, museum) ---------- */
+.ev-rover-panel { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; padding: 12px; background: rgba(5, 4, 12, 0.6); }
+.ev-rover-card {
+  width: min(600px, 100%); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 14px 16px;
+  background: var(--panel); border: 3px solid var(--line); box-shadow: 6px 6px 0 #000; user-select: text; -webkit-user-select: text;
+}
+.ev-rover-card .ev-rover-museum .ev-museum-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.ev-rover-haul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.ev-rover-haul li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--panel-2); border: 2px solid var(--line); }
+.ev-rover-haul li.legendary { border-color: #ffd84a; }
+.ev-rover-haul li.rare { border-color: var(--cyan); }
+.ev-rover-haul li > span:nth-child(2) { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.ev-rover-xp { font-family: var(--font-px); color: #ffd84a; }
+.ev-rover-new { font-family: var(--font-px); font-size: 11px; color: #15122b; background: var(--green); padding: 1px 4px; align-self: flex-start; }
+.ev-rover-stats { margin: 6px 0; padding-left: 18px; }
+.ev-rover-stats li.best { color: #ffd84a; font-weight: 700; }
+.ev-rover-lesson { padding: 6px 8px; border-left: 4px solid var(--amber); background: var(--panel-2); }
+.ev-rover-tow { color: #ffb3ad; }
+.ev-rover-tomorrow { color: var(--muted); }
+
+@media (max-width: 700px) {
+  .ev-rover-hud { max-width: calc(100% - 120px); }
+  .ev-rgauge { min-width: 0; padding: 3px 6px; }
+  .ev-rgauge.battery { min-width: 130px; }
+  .ev-rgauge.home { display: none; }
+  .ev-rover-compass { width: 220px; }
+  .ev-rover-compass-box { top: calc(110px + env(safe-area-inset-top, 0px)); }
+  .ev-rover-map { width: 88px; height: 88px; top: calc(110px + env(safe-area-inset-top, 0px)); }
+  .ev-rover-warn { top: calc(170px + env(safe-area-inset-top, 0px)); }
+  .ev-rover-joy { width: 104px; height: 104px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.reduce-motion) .ev-rover:not(.calm) .ev-rover-caption.show { animation: ev-rover-cap 0.35s steps(5) both; }
+  html:not(.reduce-motion) .ev-rover:not(.calm) .ev-rover-warn { animation: ev-rover-blink 0.9s steps(2) infinite; }
+}
+@keyframes ev-rover-cap { from { transform: translateX(-50%) scale(0.5); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+@keyframes ev-rover-blink { from { opacity: 1; } to { opacity: 0.55; } }
