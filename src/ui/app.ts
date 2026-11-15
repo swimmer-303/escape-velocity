@@ -39,7 +39,7 @@ import { renderCredits } from './credits';
 import { meetCrew, crewSays } from './crew';
 import { sunPanel } from './sunpanel';
 import { Coach, type CoachPhase } from './tutorial';
-import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange, planWarnings, adviceLines, todayBanner, earthCard } from './views';
+import { briefingArt, weatherLine, upcomingRegion, briefMini, eventCard, scienceCard, runBeats, compareCard, shortRange, planWarnings, adviceLines, todayBanner, earthCard, builtList } from './views';
 import { advise } from '../sim/advisor';
 import { ClassCodes, classCodeLine } from './classcode';
 import { campaignWithCode } from '../sim/classcode';
@@ -423,12 +423,15 @@ export class App {
 
   private onKey(e: KeyboardEvent) {
     if (e.key === 'Escape' && this.modalRoot.firstChild && this.phase === 'plan') this.closeModalAndPlan();
-    // In the lobby, Escape closes the open dialog (Storm Cards, Settings, Credits...) like its X button.
+    // Escape closes a dialog that has an X button (Storm Cards, Settings, Credits, the Menu, the certificate...) like the X.
+    // Planning has its own rule above; Mission Control and the teacher board handle their own keys.
     // Checked after every other handler: the mini-games and the builder use Escape themselves.
-    if (e.key === 'Escape' && this.phase === 'title' && !this.modalRoot.classList.contains('lobby-root')) {
+    const from = this.phase;
+    if (e.key === 'Escape' && from !== 'plan' && from !== 'room' && from !== 'dashboard' && !this.modalRoot.classList.contains('lobby-root')) {
       const before = this.modalRoot.firstElementChild;
+      if (!before) return;
       window.setTimeout(() => {
-        if (e.defaultPrevented || this.phase !== 'title' || this.modalRoot.classList.contains('lobby-root')) return;
+        if (e.defaultPrevented || this.phase !== from || this.modalRoot.classList.contains('lobby-root')) return;
         if (this.modalRoot.firstElementChild !== before) return;
         this.modalRoot.querySelector<HTMLButtonElement>(':scope > .modal > .close-x')?.click();
       }, 0);
@@ -619,7 +622,8 @@ export class App {
     const a = report.after;
     const b = report.before;
     const items: Array<{ cls: string; label: string; delta: number; unit: string; digits: number }> = [
-      { cls: 'fuel', label: 'Fuel', delta: a.fuel - b.fuel, unit: '%', digits: 0 },
+      // Whole percents, as the HUD and the headline show the tank (7% to 15% reads +8%, never a different number).
+      { cls: 'fuel', label: 'Fuel', delta: Math.floor(a.fuel) - Math.floor(b.fuel), unit: '%', digits: 0 },
       { cls: a.air >= b.air ? 'up' : 'down', label: 'Air', delta: a.air - b.air, unit: ' d', digits: 1 },
       { cls: a.food >= b.food ? 'up' : 'down', label: 'Food', delta: a.food - b.food, unit: ' d', digits: 1 },
       { cls: a.dose - b.dose > 0.05 ? 'down' : 'up', label: 'Dose', delta: a.dose - b.dose, unit: '', digits: 1 },
@@ -1949,7 +1953,7 @@ export class App {
               'div',
               { class: 'card good' },
               h('b', null, 'Your crew built: '),
-              m.builtThisExpedition.map((id, i) => [i ? ', ' : '', UPGRADES[id].name]),
+              builtList(m.builtThisExpedition),
               isCampaign && !last ? '. The next crew inherits all of it.' : '.',
             )
           : null,
@@ -2056,7 +2060,7 @@ export class App {
                 h('td', null, r.status === 'won' ? 'Launched home' : 'Came home early'),
                 h('td', null, String(r.sols)),
                 h('td', null, starRow(r.stars, true)),
-                h('td', null, r.built.length ? r.built.map((id) => UPGRADES[id].name).join(', ') : 'nothing'),
+                h('td', null, r.built.length ? builtList(r.built) : 'nothing'),
               ),
             ),
           ),

@@ -229,6 +229,39 @@ describe('UI smoke test', () => {
     expect(document.querySelector('.sol-chip')!.textContent).toMatch(/DAY 1/);
   }, 20000);
 
+  it('Escape closes the certificate and the menu like their X, and the debrief fuel matches the tank', async () => {
+    const app = new App(new CssStage());
+    const internals = app as unknown as AppInternals;
+    (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
+    // One sol, then check the debrief's fuel number against the whole percents the HUD and headline show.
+    await play(app, () => !!document.querySelector('.sol-tally'));
+    await sleep(800); // the numbers count up
+    const r = internals.mission.log[0];
+    const shown = document.querySelector('.sol-tally .fuel b')!.textContent;
+    expect(shown).toBe(`+${Math.floor(r.after.fuel) - Math.floor(r.before.fuel)}%`);
+    await play(app, () => !!button(/Get my certificate/) || !!button(/Play again/));
+    const esc = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    const cert = button(/Get my certificate/);
+    if (cert) {
+      cert.click();
+      expect(document.querySelector('[aria-label="Junior Astronaut certificate"]')).not.toBeNull();
+      esc();
+      await waitFor(() => !document.querySelector('[aria-label="Junior Astronaut certificate"]'));
+      expect(button(/Play again/)).not.toBeNull();
+    }
+    // The menu, from the end screen: Escape goes back to the end screen.
+    document.querySelector<HTMLButtonElement>('#hud button[aria-label="Menu"]')!.click();
+    expect(document.querySelector('#modal-root [aria-label="Menu"]')).not.toBeNull();
+    esc();
+    await waitFor(() => !document.querySelector('#modal-root [aria-label="Menu"]'));
+    expect(button(/Play again/)).not.toBeNull();
+    // A dialog without an X (the end screen itself) stays put.
+    esc();
+    await sleep(20);
+    expect(button(/Play again/)).not.toBeNull();
+  }, 30000);
+
   it('plays the May 2024 history scenario', async () => {
     const app = new App(new CssStage());
     (await waitFor(() => button(/May 2024 storms/))).click();
