@@ -84,3 +84,12 @@ describe('season storage safety', () => {
     }
   });
 });
+
+describe('first visit', () => {
+  it('saves the first callsign so it stays the same on the next visit', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    const first = loadState().card.callsign;
+    expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+    expect(loadState().card.callsign).toEqual(first);
+  });
+});
