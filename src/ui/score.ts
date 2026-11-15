@@ -67,7 +67,7 @@ export const GRADE_WORDS: Record<Grade, string> = {
  * Grade (from the stars on the end screen): S = all 3 stars with a very low dose, A = 2 or 3 stars with a launch,
  * B = launched, C = came home early.
  */
-export function scoreMission(m: MissionState, windowSol: number): MissionScore {
+export function scoreMission(m: MissionState, windowSol: number, turns = 'Sols'): MissionScore {
   const won = m.status === 'won';
   const stars = starsFor(m);
   const parts: ScorePart[] = [
@@ -75,7 +75,7 @@ export function scoreMission(m: MissionState, windowSol: number): MissionScore {
     { label: 'Rocket fuel', points: Math.round(Math.min(100, Math.max(0, m.fuel)) * 5) },
     { label: 'Crew safety', points: Math.round(Math.max(0, 1 - m.dose / Math.max(1e-6, m.doseBudget)) * 1000) },
     { label: 'Upgrades built', points: 250 * m.builtThisExpedition.length },
-    { label: 'Sols to spare', points: won ? Math.max(0, windowSol - m.log.length) * 100 : 0 },
+    { label: `${turns} to spare`, points: won ? Math.max(0, windowSol - m.log.length) * 100 : 0 },
   ];
   const score = parts.reduce((s, p) => s + p.points, 0);
   const grade: Grade = !won ? 'C' : stars.length === 3 && m.dose <= m.doseBudget * 0.4 ? 'S' : stars.length >= 2 ? 'A' : 'B';

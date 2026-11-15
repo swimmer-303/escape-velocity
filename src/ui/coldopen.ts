@@ -50,7 +50,8 @@ export function runColdOpen(d: ColdOpenDeps): void {
   const root = document.documentElement;
   root.classList.add('ev-cold');
   const black = h('div', { class: 'cold-black' });
-  const title = h('div', { class: 'cold-title', 'aria-hidden': 'true' }, h('span', { class: 'cold-kicker' }, 'A Mars outpost game'), h('b', null, 'Escape Velocity'));
+  // The team logo slams in at the end of the swoop.
+  const title = h('div', { class: 'cold-title', 'aria-hidden': 'true' }, h('img', { class: 'cold-logo', src: '/art/logo.png', alt: '', width: 413, height: 424 }));
   const prompt = h('button', { class: 'cold-prompt', type: 'button' }, 'Press any key or tap to start');
   const hint = h('div', { class: 'cold-hint' }, 'Loading the outpost...');
   const overlay = h(
@@ -71,6 +72,8 @@ export function runColdOpen(d: ColdOpenDeps): void {
 
   let finished = false;
   let slammed = false;
+  /** The music hit already played (only possible if the player had pressed something before). */
+  let hit = false;
   const timers: number[] = [];
   const later = (ms: number, fn: () => void) => timers.push(window.setTimeout(() => !finished && fn(), ms));
 
@@ -78,6 +81,10 @@ export function runColdOpen(d: ColdOpenDeps): void {
     if (slammed) return;
     slammed = true;
     overlay.classList.add('slammed');
+    if (d.audio.ready) {
+      d.audio.sfx('slam');
+      hit = true;
+    }
     hint.textContent = '';
     later(900, () => {
       overlay.classList.add('prompting');
@@ -94,7 +101,7 @@ export function runColdOpen(d: ColdOpenDeps): void {
     // The first press of the page: sound may start now. The music hit lands as the lobby appears.
     if (byPlayer) {
       d.audio.unlockNow();
-      d.audio.sfx('slam');
+      d.audio.sfx(hit ? 'whoosh' : 'slam');
     }
     d.stage.flyIn?.(0);
     app?.removeAttribute('inert');

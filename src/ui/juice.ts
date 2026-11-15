@@ -120,7 +120,7 @@ export function vignette(kind: 'storm' | 'shield', reduced: boolean) {
 /** Cells placed one after another climb the scale (a semitone each, up an octave), then it resets after a pause. */
 export class PlaceCombo {
   private step = 0;
-  private last = 0;
+  private last = -Infinity;
   /** The pitch for the next placement (1 = normal). */
   next(now = performance.now()): number {
     this.step = now - this.last < 1400 ? Math.min(12, this.step + 1) : 0;
@@ -129,7 +129,7 @@ export class PlaceCombo {
   }
   reset() {
     this.step = 0;
-    this.last = 0;
+    this.last = -Infinity;
   }
 }
 

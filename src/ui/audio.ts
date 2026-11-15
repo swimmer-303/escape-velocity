@@ -53,6 +53,11 @@ export class GameAudio {
     window.addEventListener('keydown', unlock);
   }
 
+  /** True once the player has pressed something (browsers allow sound from then on) and sound is on. */
+  get ready(): boolean {
+    return this.unlocked && !this.muted;
+  }
+
   /** The player pressed something: music may start now (the cold open calls this from its own key handler). */
   unlockNow() {
     if (this.unlocked) return;

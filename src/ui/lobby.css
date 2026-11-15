@@ -9,7 +9,14 @@
 }
 .modal.lobby { width: min(1060px, 100%); max-height: none; overflow: visible; background: transparent; border: 0; box-shadow: none; padding: 0; }
 .lobby-hero { min-height: clamp(320px, 56vh, 560px); display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 14px; padding: 6px 0 20px; }
-.title-screen.lobby h1 { font-size: clamp(40px, 9vw, 104px); margin: 6px 0 0; letter-spacing: 0.02em; text-shadow: 5px 5px 0 var(--rust), 0 0 28px rgba(0, 0, 0, 0.75); }
+/* The team logo (pixel art drawn in 10 px blocks): sized in steps that keep every block a whole number of pixels. */
+.title-screen.lobby h1.lobby-logo { margin: 4px 0 0; line-height: 0; text-shadow: none; }
+.logo-img, .cold-logo { display: block; width: 330px; height: auto; image-rendering: pixelated; }
+@media (min-height: 900px) { .logo-img, .cold-logo { width: 413px; } }
+@media (max-height: 700px) { .logo-img, .cold-logo { width: 248px; } }
+@media (min-width: 1400px) and (min-height: 1050px) { .logo-img, .cold-logo { width: 496px; } }
+@media (max-width: 560px) { .logo-img, .cold-logo { width: 289px; } }
+@media (max-width: 340px) { .logo-img, .cold-logo { width: 248px; } }
 .lobby-hero-text { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .title-screen.lobby .tagline { max-width: 640px; margin: 0; padding: 6px 12px; background: rgba(11, 10, 24, 0.72); border: 2px solid rgba(0, 0, 0, 0.5); font-size: 18px; }
 .title-screen.lobby .class-code-note, .title-screen.lobby .lobby-hero > .title-foot { background: rgba(11, 10, 24, 0.72); padding: 4px 10px; }
@@ -103,8 +110,6 @@ html.ev-cold #modal-root, html.ev-cold #hud, html.ev-cold .look-at { opacity: 0;
 .cold-bar.top { top: 0; }
 .cold-bar.bottom { bottom: 0; }
 .cold-title { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); opacity: 0; text-align: center; font-family: var(--font-px); white-space: nowrap; pointer-events: none; }
-.cold-title b { display: block; font-weight: 400; font-size: clamp(36px, 10vw, 124px); line-height: 1.05; color: var(--amber); text-shadow: 6px 6px 0 var(--rust), 0 0 34px rgba(0, 0, 0, 0.8); }
-.cold-kicker { display: block; font-size: clamp(12px, 1.8vw, 18px); color: var(--ink); letter-spacing: 0.24em; text-transform: uppercase; text-shadow: 2px 2px 0 #000; }
 .cold-open.slammed .cold-title { animation: coldSlam 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) forwards; }
 .cold-open.slammed::after { content: ''; position: absolute; inset: 0; background: #fff; opacity: 0; animation: coldHit 0.35s ease-out; pointer-events: none; }
 @keyframes coldSlam { 0% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }

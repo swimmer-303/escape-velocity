@@ -495,6 +495,8 @@ export class App {
 
   /** First visit: the full cold open. Later visits: a short camera dolly. Never with reduced motion. */
   private coldOpen() {
+    // Only the swappable stage can bring the 3D view (a bare simple stage, as in tests, never gets a cold open).
+    if (typeof (this.stage as Stage & { canFlyIn?(): boolean }).canFlyIn !== 'function') return;
     const full = loadLobby().intros === 0;
     if (full) countIntro();
     runColdOpen({
@@ -571,7 +573,7 @@ export class App {
     this.streak = perfect ? (report.sol === 1 ? 1 : this.streak + 1) : 0;
     this.lastPerfect = perfect;
     const xp = streakXp(this.streak);
-    if (xp && !this.demoActive && !this.shortDemo) emitGame('xp', { amount: xp, reason: `Perfect sol streak x${this.streak}` });
+    if (xp && !this.demoActive && !this.shortDemo) emitGame('xp', { amount: xp, reason: `Perfect ${siteText(next.config).turn} streak x${this.streak}` });
   }
 
   /** The debrief's "Perfect sol" banner and what the sol made, counting up. */
@@ -584,7 +586,7 @@ export class App {
         h(
           'div',
           { class: 'streak-banner', role: 'status' },
-          h('b', null, 'PERFECT SOL'),
+          h('b', null, `PERFECT ${siteText(this.mission?.config ?? this.site).TURN}`),
           n >= 2 ? h('span', { class: `streak-chip${n >= 5 ? ' blaze' : n >= 3 ? ' hot' : ''}` }, `x${n} STREAK`) : null,
           h(
             'span',
@@ -619,7 +621,7 @@ export class App {
   private scorePanel(m: MissionState, first: boolean): HTMLElement {
     const reduced = this.settings.reducedMotion;
     if (!this.endScore || this.endScore.mission !== m) {
-      const score = scoreMission(m, windowSol(m));
+      const score = scoreMission(m, windowSol(m), `${siteText(m.config).Turn}s`);
       const save = first && !this.demoActive && !this.shortDemo;
       const key = `${this.mode ?? 'quick'}-${siteOf(m.config)}`;
       const best = save ? recordBest(key, score.score) : { isNew: false, previous: null };
@@ -782,7 +784,7 @@ export class App {
           h(
             'p',
             { class: 'ai-disclosure' },
-            'AI disclosure: the illustrations, crew portraits and music in this game are AI-generated (Higgsfield), and the code was written with AI assistance (Claude Code). The logo is our team\'s own pixel art. The picture of the Sun is real NASA imagery, and all data comes from NASA. ',
+            'AI disclosure: the illustrations, crew portraits and music in this game are AI-generated (Higgsfield), the logo was made with Claude, and the code was written with AI assistance (Claude Code). The picture of the Sun is real NASA imagery, and all data comes from NASA. ',
             h('button', { class: 'linklike', onclick: () => this.showCredits() }, 'Details'),
           ),
         ),
@@ -1373,6 +1375,7 @@ export class App {
   private async landCrew() {
     if (this.landing) return;
     this.landing = true;
+    this.firstRun = false;
     const c = this.campaign!;
     this.audio.sfx('click');
     this.modalRoot.querySelectorAll('button').forEach((b) => b.setAttribute('disabled', ''));
