@@ -7,6 +7,12 @@
 @media (max-width: 720px) {
   #modal-root:has(> .hangar-modal) { place-items: end stretch; padding: 8px; background: linear-gradient(transparent 0 35%, #0b0a1880); }
   .modal.hangar-modal { width: 100%; max-height: 62vh; max-height: 62dvh; }
+  /* On a phone the 3D view sits under the top bar (style.css, max-width 900px), right where this sheet goes. While the
+     Hangar is open, the top bar steps aside so the view moves to the top, and the sheet stops just below it: you see
+     the suit or the paint change the moment you equip it. */
+  body:has(> #modal-root > .hangar-modal) #hud { display: none; }
+  body:has(> #modal-root > .hangar-modal) #app { align-content: start; }
+  .modal.hangar-modal { max-height: calc(100vh - max(220px, 40vh) - 16px); max-height: calc(100dvh - max(220px, 40vh) - 16px); }
 }
 
 .hangar h2 { margin-bottom: 4px; }
