@@ -51,7 +51,10 @@ import { dashboardParams, type DashboardLink } from '../class/protocol';
 import { dailyMissionConfig } from '../daily/replay';
 import { loadDaily, type DailySession } from './daily/net';
 import { dailyBadge, dailyEndPanel, dailyHudLabel, dailyIntroCard, dailyKicker, todaysBest } from './daily/screens';
-import { initAccess, decorateDialog, statusButton, accessPanel, accessButtonText, ACCESS_DEFAULTS, type AccessSettings } from './access';
+import { initAccess, decorateDialog, statusButton, ACCESS_DEFAULTS, type AccessSettings } from './access';
+import { settingsView, cleanGameSettings, focusKeyOf, type GameSettings } from './settings';
+import { SOUND_DEFAULTS } from './audio';
+import type { Detail } from '../render/stage';
 import { certForMission, certForCampaign, certificateView, type CertData } from './certificate';
 import { tripHomeLine } from './planner/tiein';
 // The Hook: the lobby, the cold open, and game feel (juice, perfect-sol streaks, the end-screen score).
@@ -67,12 +70,8 @@ import { crewPortrait } from './crew';
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room' | 'dashboard';
 type Mode = 'campaign' | 'quick' | 'history' | 'daily';
 
-interface Settings extends AccessSettings {
-  muted: boolean;
-  reducedMotion: boolean;
-  /** 3D outpost on (default) or the simple view for slow devices. */
-  view3d: boolean;
-}
+/** Everything in 'ev-settings': sound, motion and 3D (settings.ts), and text and voice (access.ts). */
+interface Settings extends AccessSettings, GameSettings {}
 
 const SETTINGS_KEY = 'ev-settings';
 const SAVE_KEY = 'ev-save-v1';
@@ -96,13 +95,17 @@ export function isShortDemoUrl(loc: { pathname: string; search: string }): boole
 }
 
 function loadSettings(): Settings {
-  const base: Settings = { muted: false, reducedMotion: prefersReducedMotion(), view3d: true, ...ACCESS_DEFAULTS };
+  const base: Settings = { muted: false, ...SOUND_DEFAULTS, reducedMotion: prefersReducedMotion(), view3d: true, detail: 'auto', ...ACCESS_DEFAULTS };
+  let s = base;
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { ...base, ...JSON.parse(raw) } : base;
+    if (raw) s = { ...base, ...JSON.parse(raw) };
   } catch {
-    return base;
+    /* damaged or blocked storage: the defaults */
   }
+  // Older saves have no Music or Effects settings: both on, as loud as always (their master mute is kept).
+  cleanGameSettings(s as Settings & Record<string, unknown>);
+  return s;
 }
 function saveSettings(s: Settings) {
   try {
@@ -195,7 +198,9 @@ export class App {
   constructor(stage: Stage, opts: { intro?: boolean } = {}) {
     this.stage = stage;
     this.stage.mount(this.stageEl);
-    this.audio = new GameAudio(this.settings.muted);
+    this.audio = new GameAudio(this.settings.muted, this.settings);
+    // 3D detail from Settings (the 3D view loads a moment later and picks it up; ?quality= in the address wins).
+    this.stage.setDetail?.(this.settings.detail);
     // Read aloud and display options (larger text, high contrast, dyslexia-friendly spacing): see access.ts.
     initAccess(this.settings, () => saveSettings(this.settings), { duck: (on) => this.audio.duck(on), reducedMotion: () => this.settings.reducedMotion });
     this.applyMotion();
@@ -813,7 +818,7 @@ export class App {
             h('button', { class: 'btn small', title: 'The game plays itself for about 30 seconds', onclick: () => void this.startDemo() }, 'Watch a demo'),
             h('button', { class: 'btn small', onclick: () => this.showTodaysBest(() => this.showTitle()) }, "Today's best"),
             h('a', { class: 'btn small', href: '/teacher/', target: '_blank', rel: 'noopener' }, 'For teachers'),
-            h('button', { class: 'btn small', onclick: () => this.showAccess() }, accessButtonText()),
+            h('button', { class: 'btn small', onclick: () => this.showSettings(() => this.resume()) }, 'Settings'),
             h('button', { class: 'btn small', onclick: () => this.showCredits() }, 'Credits and AI use'),
           ),
           sunPanel(this.feed),
@@ -991,52 +996,18 @@ export class App {
 
   showMenu() {
     if (this.phase === 'title') return;
-    const s = this.settings;
     this.modal(
       [
         h('div', { class: 'kicker' }, 'Paused'),
         h('h2', null, 'Mission menu'),
         h(
           'div',
-          { class: 'toggle-row' },
-          h('button', { class: 'btn small', 'aria-pressed': String(!s.muted), onclick: () => (this.toggleMute(), this.showMenu()) }, s.muted ? 'Sound: off' : 'Sound: on'),
-          h(
-            'button',
-            {
-              class: 'btn small',
-              'aria-pressed': String(s.reducedMotion),
-              onclick: () => {
-                s.reducedMotion = !s.reducedMotion;
-                saveSettings(s);
-                this.applyMotion();
-                this.showMenu();
-              },
-            },
-            s.reducedMotion ? 'Reduced motion: on' : 'Reduced motion: off',
-          ),
-          h(
-            'button',
-            {
-              class: 'btn small',
-              'aria-pressed': String(s.view3d),
-              title: 'Turn off on slow computers. The page reloads; your campaign is saved.',
-              onclick: () => {
-                s.view3d = !s.view3d;
-                saveSettings(s);
-                this.save();
-                location.reload();
-              },
-            },
-            s.view3d ? '3D view: on' : '3D view: off',
-          ),
-        ),
-        accessPanel(),
-        h(
-          'div',
           { class: 'actions' },
           h('button', { class: 'btn primary', onclick: () => this.resume() }, 'Resume'),
           // Not while a sol plays out: today's plan is already locked in.
           this.mission && this.phase !== 'running' ? h('button', { class: 'btn', onclick: () => this.showWorkshop(() => this.resume()) }, 'Workshop') : null,
+          // Sound, music, motion, 3D, text and voice (and the Space Lab): back to this menu when done.
+          h('button', { class: 'btn', onclick: () => this.showSettings(() => this.showMenu(), 'Back to menu') }, 'Settings'),
           this.mission && this.phase !== 'running'
             ? h(
                 'button',
@@ -1069,37 +1040,47 @@ export class App {
     );
   }
 
-  /** Text and voice settings, from the title screen (in a game they are in the menu). */
-  private showAccess() {
-    this.modal(
-      [
-        h('div', { class: 'kicker' }, 'Settings'),
-        h('h2', null, accessButtonText()),
-        accessPanel(),
-        // Sound and motion here too, so they can be set before a mission (the mission menu has them as well).
-        h(
-          'div',
-          { class: 'toggle-row', style: 'margin-top:12px' },
-          h('button', { class: 'btn small', 'aria-pressed': String(!this.settings.muted), onclick: () => (this.toggleMute(), this.showAccess()) }, this.settings.muted ? 'Sound: off' : 'Sound: on'),
-          h(
-            'button',
-            {
-              class: 'btn small',
-              'aria-pressed': String(this.settings.reducedMotion),
-              onclick: () => {
-                this.settings.reducedMotion = !this.settings.reducedMotion;
-                saveSettings(this.settings);
-                this.applyMotion();
-                this.showAccess();
-              },
-            },
-            this.settings.reducedMotion ? 'Reduced motion: on' : 'Reduced motion: off',
-          ),
-        ),
-        h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.resume() }, 'Done')),
-      ],
-      { label: 'Text and voice settings', onClose: () => this.resume() },
-    );
+  /**
+   * The Settings dialog (settings.ts): sound, display and motion, text and voice, then the features' own sections.
+   * From the title screen (Done goes back to it) and the mission Menu (back to the Menu).
+   */
+  private showSettings(back: () => void, doneText = 'Done') {
+    const s = this.settings;
+    const save = () => saveSettings(s);
+    const draw = () => {
+      // A redraw (a feature section changed something) keeps the scroll position and the focused control.
+      const focus = this.modalRoot.querySelector('.modal[aria-label="Settings"]')?.contains(document.activeElement) ? focusKeyOf(document.activeElement) : null;
+      const box = this.modal(
+        settingsView({
+          settings: s,
+          audio: this.audio,
+          save,
+          setMuted: (m) => {
+            this.audio.setMuted(m);
+            this.refreshHud();
+          },
+          setReducedMotion: () => this.applyMotion(),
+          toggleView3d: () => {
+            s.view3d = !s.view3d;
+            save();
+            this.save();
+            location.reload();
+          },
+          setDetail: (d: Detail) => this.stage.setDetail?.(d),
+          detailLive: () => {
+            const st = this.stage as Stage & { canSetDetail?: () => boolean };
+            return st.canSetDetail ? st.canSetDetail() : typeof st.setDetail === 'function';
+          },
+          rerender: () => draw(),
+          done: back,
+          doneText,
+        }),
+        { label: 'Settings', wide: true, onClose: back },
+      );
+      if (focus) box.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
+    };
+    this.audio.sfx('click');
+    draw();
   }
 
   /** The Junior Astronaut certificate (after a win, and at the campaign finale). Back returns to the end screen. */

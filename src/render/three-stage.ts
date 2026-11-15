@@ -12,7 +12,7 @@ import { POINT_SCALE } from './fx';
 import { makeWorldSky, MarsMoons, detectQuality, SLOW_FRAME, BUSY_MS, HEAVY_MS, WATCH_FROM, WATCH_TO, type Quality } from './atmosphere';
 import { moonSunDirection, EARTH_DIR } from './moon';
 import { CameraMove, framePose, overviewPose, isTap, OVERVIEW_TARGET, OVERVIEW_POSITION, OVERVIEW_MIN_DISTANCE, FOCUS_MIN_DISTANCE } from './focus';
-import type { Cosmetics, FocusKey, Stage, StageCue, StageScene } from './stage';
+import type { Cosmetics, Detail, FocusKey, Stage, StageCue, StageScene } from './stage';
 
 const TARGET_HEIGHT = 400;
 const _tag = new THREE.Vector3();
@@ -28,6 +28,15 @@ const _c = new THREE.Color();
 const _earthLight = new THREE.Vector3();
 const _toMoon = new THREE.Vector3();
 const col = (hex: string) => new THREE.Color(hex);
+/** `?quality=low` or `?quality=high` in the address (it wins over the Settings choice). */
+function forcedQuality(): Quality | null {
+  try {
+    const q = new URLSearchParams(location.search).get('quality');
+    return q === 'low' || q === 'high' ? q : null;
+  } catch {
+    return null;
+  }
+}
 const MARS = {
   zenDay: col('#b27c54'),
   horDay: col('#e8bf8e'),
@@ -488,6 +497,22 @@ export class ThreeStage implements Stage {
   /** 'high' or 'low' (see setQuality). */
   get qualityTier(): Quality {
     return this.quality;
+  }
+
+  /**
+   * The player's "3D detail" choice in Settings, applied right away. 'auto': the device guess and the slow-frame check
+   * decide (the check runs again). 'low' or 'high': that tier, and the slow-frame check stays out of it.
+   * `?quality=low|high` in the address wins over the setting.
+   */
+  setDetail(d: Detail) {
+    if (forcedQuality()) return;
+    if (d === 'auto') {
+      Object.assign(this.watch, { t: 0, n: 0, done: false });
+      this.setQuality(detectQuality());
+    } else {
+      this.watch.done = true;
+      this.setQuality(d);
+    }
   }
 
   setReducedMotion(on: boolean) {

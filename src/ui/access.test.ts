@@ -320,7 +320,7 @@ describe('read aloud in the game', () => {
 describe('display settings', () => {
   it('turn on root classes, save to ev-settings with the other settings, and come back after a reload', async () => {
     new App(new CssStage());
-    (await waitFor(() => button(/Text size and contrast|Text and voice/))).click();
+    (await waitFor(() => button(/^Settings$/))).click();
     const large = await waitFor(() => button(/Larger text: off/));
     large.click();
     const html = document.documentElement;
@@ -334,7 +334,7 @@ describe('display settings', () => {
     expect(html.classList.contains(ROOT_CLASS.dyslexia)).toBe(true);
 
     const saved = JSON.parse(localStorage.getItem('ev-settings')!);
-    expect(saved).toMatchObject({ largeText: true, highContrast: true, dyslexia: true, autoRead: false, muted: false, view3d: true });
+    expect(saved).toMatchObject({ largeText: true, highContrast: true, dyslexia: true, autoRead: false, muted: false, view3d: true, music: true, sfx: true });
 
     // Muting later keeps the display settings.
     button(/Done/)!.click();
@@ -350,7 +350,7 @@ describe('display settings', () => {
     expect(html.classList.contains(ROOT_CLASS.dyslexia)).toBe(true);
 
     // Turning one off takes its class away.
-    (await waitFor(() => button(/Text size and contrast|Text and voice/))).click();
+    (await waitFor(() => button(/^Settings$/))).click();
     button(/High contrast: on/)!.click();
     expect(html.classList.contains(ROOT_CLASS.highContrast)).toBe(false);
     expect(JSON.parse(localStorage.getItem('ev-settings')!).highContrast).toBe(false);
@@ -363,7 +363,7 @@ describe('display settings', () => {
     expect(document.documentElement.classList.contains(ROOT_CLASS.highContrast)).toBe(false);
   });
 
-  it('are in the pause menu too, with every control labelled', async () => {
+  it('are in Settings from the pause menu too, with every control labelled', async () => {
     installSpeech();
     localStorage.setItem('ev-tutorial-done', '1');
     new App(new CssStage());
@@ -372,7 +372,9 @@ describe('display settings', () => {
     (await waitFor(() => button(/Land the crew/))).click();
     await waitFor(() => button(/Plan the day/));
     button(/^Menu$/)!.click();
-    const menu = await waitFor(() => document.querySelector<HTMLElement>('.modal[aria-label="Menu"]'));
+    (await waitFor(() => button(/^Settings$/, document.querySelector('.modal[aria-label="Menu"]')!))).click();
+    const menu = await waitFor(() => document.querySelector<HTMLElement>('.modal[aria-label="Settings"]'));
+    expect(menu.querySelector('.access-panel h3')?.textContent).toBe('Text and voice');
     expect(button(/Larger text: off/, menu)).not.toBeNull();
     expect(button(/Auto read-aloud: off/, menu)).not.toBeNull();
     const select = menu.querySelector<HTMLSelectElement>('select')!;
@@ -401,7 +403,8 @@ describe('without a speech engine', () => {
     new App(new CssStage());
     await waitFor(() => button(/Quick mission/));
     expect(document.querySelector('.speak-btn, .read-bar')).toBeNull();
-    button(/Text size and contrast/)!.click();
+    button(/^Settings$/)!.click();
+    expect(document.querySelector('.access-panel h3')?.textContent).toBe('Text size and contrast');
     expect(button(/Larger text: off/)).not.toBeNull();
     expect(button(/Auto read-aloud/)).toBeNull();
     expect(document.querySelector('select')).toBeNull();

@@ -314,3 +314,15 @@ Not found: a citable figure for how much less energy per kg of O2 water electrol
 
 - **One mismatch, left visible:** for the 2026 Earth-to-Mars Type I opportunity our search finds a lower C3 (10.48 on Nov 12, 2026, right beside the 180° ridge) than the handbook's 11.11; at the handbook's own dates we agree (11.116). That test checks the published dates only.
 - **Fast returns are date-sensitive:** the 1998 handbook gives dates to the day only; for 154-180 day trips half a day moves v∞ by about 1%, which is why those tolerances are 2%.
+
+## 10. Sound on Mars (the Settings dialog's science line, added 2026-11-15)
+
+The Sound section of Settings (`src/ui/settings.ts`) says: "NASA's Perseverance rover has recorded real sounds on Mars with its microphones. Mars's air is thin, cold and mostly carbon dioxide, so sound travels slower there: about 240 meters per second, compared with about 340 on Earth." Checked on **2026-11-15**:
+
+| Claim | What the source says | Status | Source |
+|---|---|---|---|
+| Perseverance recorded real sounds on Mars with microphones | "The Perseverance rover carries two microphones, letting us directly record the sounds of Mars for the very first time." (One is on the mast, part of SuperCam; the other is on the rover's side.) | OK | https://science.nasa.gov/mission/mars-2020-perseverance/sounds-of-mars/ |
+| Speed of sound: about 240 m/s on Mars, about 340 m/s on Earth | NASA Science: "around 540 mph (~240 meters per second), compared to about 760 mph (~340 meters per second) on Earth." JPL: on Earth "767 mph (343 meters per second)"; on Mars "low-pitched sounds travel at about 537 mph (240 meters per second)" and "higher-pitched sounds move at 559 mph (250 meters per second)". | OK: say **about** 240, since high pitches go about 250 | same NASA page, and https://www.jpl.nasa.gov/news/what-sounds-captured-by-nasas-perseverance-rover-reveal-about-mars/ |
+| Thin, cold, mostly carbon dioxide air is why | JPL: "The variable sound speeds on the Red Planet are an effect of the thin, cold, carbon dioxide atmosphere." NASA Science: the atmosphere is "about 100 times less dense than on Earth" and "96 percent carbon dioxide". | OK | both pages above |
+
+The line links to the NASA Science page ("Hear them at NASA"), where the recordings can be played.

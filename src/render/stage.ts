@@ -62,6 +62,13 @@ export interface Cosmetics {
   lights: string;
 }
 
+/**
+ * The player's "3D detail" choice (Settings): 'auto' lets the 3D stage pick for the device (and drop to 'low' by
+ * itself if frames come in slow); 'low' (Faster) and 'high' (Sharper) pick a tier for good. `?quality=low|high` in
+ * the address wins over it.
+ */
+export type Detail = 'auto' | 'low' | 'high';
+
 export interface Stage {
   mount(el: HTMLElement): void;
   setScene(scene: StageScene): void;
@@ -85,6 +92,8 @@ export interface Stage {
    */
   flyIn?(seconds: number): void;
   setReducedMotion(on: boolean): void;
+  /** The 3D detail (see Detail). Only the 3D stage has it, and it changes right away. */
+  setDetail?(d: Detail): void;
   dispose(): void;
 }
 
@@ -190,6 +199,7 @@ export class SwappableStage implements Stage {
   private looks?: Cosmetics;
   private t = 0.25;
   private reduced = false;
+  private detail: Detail = 'auto';
   /** The game's pick handler; whichever stage is inside reports to it. */
   onPick?: (key: FocusKey | null) => void;
 
@@ -216,6 +226,7 @@ export class SwappableStage implements Stage {
     this.inner = next;
     this.listen(next);
     next.setReducedMotion(this.reduced);
+    next.setDetail?.(this.detail);
     if (this.last) next.setScene(this.last);
     next.setTimeOfDay(this.t);
     if (this.looks) next.setCosmetics?.(this.looks);
@@ -259,6 +270,15 @@ export class SwappableStage implements Stage {
   setReducedMotion(on: boolean) {
     this.reduced = on;
     this.inner.setReducedMotion(on);
+  }
+  /** Kept for a stage swapped in later (the 3D view loads after the title screen). */
+  setDetail(d: Detail) {
+    this.detail = d;
+    this.inner.setDetail?.(d);
+  }
+  /** True when the stage inside can change its 3D detail right away (the 3D view is showing). */
+  canSetDetail(): boolean {
+    return typeof this.inner.setDetail === 'function';
   }
   dispose() {
     this.inner.dispose();
