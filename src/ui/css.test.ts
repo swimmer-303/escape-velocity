@@ -39,4 +39,9 @@ describe('style.css', () => {
       expect(outside, `invalid grid-template-columns: ${value}`).not.toMatch(/\d(\.\d+)?fr\b/);
     }
   });
+
+  it('hides the stage\'s "Look at" menu while any dialog is open (it sat beside them, under the backdrop)', () => {
+    const css = readFileSync(fileURLToPath(new URL('./style.css', import.meta.url)), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(css).toMatch(/body:has\(> #modal-root > \.modal\) \.look-at \{ visibility: hidden; \}/);
+  });
 });

@@ -647,7 +647,27 @@ export class ThreeStage implements Stage {
     this.tagX = x;
     this.tagY = y;
     this.tag.style.visibility = onScreen ? '' : 'hidden';
-    this.tag.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+    this.tag.style.transform = `translate(${x}px, ${this.clearOfLookMenu(x, y)}px) translate(-50%, -100%)`;
+  }
+
+  /**
+   * Where the caption's bottom edge goes so it never sits under the "Look at" menu (on a phone the menu covers the
+   * top of the view, right where a tall module's caption lands): just below the menu if they would overlap.
+   */
+  private clearOfLookMenu(x: number, y: number): number {
+    const host = this.renderer.domElement.parentElement;
+    if (!host || this.lookWrap.hidden || !this.lookWrap.isConnected) return y;
+    const view = host.getBoundingClientRect();
+    const menu = this.lookWrap.getBoundingClientRect();
+    if (!menu.width || !menu.height) return y;
+    const w = this.tag.offsetWidth;
+    const h = this.tag.offsetHeight;
+    const left = menu.left - view.left;
+    const right = menu.right - view.left;
+    const top = menu.top - view.top;
+    const bottom = menu.bottom - view.top;
+    const overlaps = x - w / 2 < right && x + w / 2 > left && y - h < bottom && y > top;
+    return overlaps ? Math.round(bottom + 6 + h) : y;
   }
 
   private pickAt(clientX: number, clientY: number): FocusKey | null {

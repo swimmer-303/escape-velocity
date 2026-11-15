@@ -945,6 +945,9 @@ html.ev-dyslexia :is(.px, .btn, .kicker, h1, h2, h3, .meter-head, .meter-value, 
   font-family: var(--font-px); font-size: 12px; color: var(--muted); text-transform: uppercase; }
 #app > .look-at { grid-row: 2; grid-column: 1; justify-self: end; align-self: start; position: relative; z-index: 6; margin: 8px; }
 .look-at[hidden], #app > .look-at[hidden] { display: none; }
+/* Any dialog on screen (a briefing, the Menu, Season, Race, Credits...): the menu only sat beside it, under the dimmed
+   backdrop, doing nothing. The lobby itself hides it too (lobby.css), and so does the Hangar (hangar.css). */
+body:has(> #modal-root > .modal) .look-at { visibility: hidden; }
 .look-at select { font-family: var(--font-body); font-size: 15px; text-transform: none; color: var(--ink); background: var(--panel-2); border: 2px solid var(--line);
   padding: 4px 6px; min-height: 36px; max-width: 46vw; cursor: pointer; }
 .look-at select:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
