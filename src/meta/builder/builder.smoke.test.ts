@@ -12,7 +12,7 @@ import '../index';
 import { encodeLayout } from './share';
 import { autoLayout } from './fixtures.test-util';
 import { currentBuilder, openFromLink } from './index';
-import { readSave } from './store';
+import { readSave, saveCurrent } from './store';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function waitFor<T>(fn: () => T | null | undefined, ms = 4000): Promise<T> {
@@ -115,8 +115,11 @@ describe('Outpost Architect in the real game', () => {
   it('opens a shared ?base= link with that base, and ignores a broken one', async () => {
     new App(new CssStage());
     await waitFor(() => document.querySelector('[data-tile="builder"]'));
+    // The player already has a base of their own: opening a friend's link keeps it safe in a slot.
+    saveCurrent(autoLayout('gale', { habitat: 1, solar: 3 }));
     const code = encodeLayout(autoLayout('moon', { habitat: 2, solar: 6, battery: 2 }));
     expect(openFromLink(`?base=${code}`)).toBe(true);
+    expect(readSave().slots.find((x) => x?.name === 'My last base')).toBeTruthy();
     const layer = await waitFor(() => document.querySelector<HTMLElement>('.ev-builder'));
     expect(layer.querySelector('.evb-site.on')!.textContent).toBe('Moon');
     expect(layer.querySelectorAll('.evb-cell[style]').length).toBe(2 * 4 + 6 * 2 + 2);

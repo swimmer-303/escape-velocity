@@ -53,7 +53,10 @@ export function openBuilder(opts: OpenOptions = {}): BuilderView {
 function webglOk(): boolean {
   try {
     const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+    const gl = (c.getContext('webgl2') || c.getContext('webgl')) as WebGLRenderingContext | null;
+    // Give the test context straight back: browsers allow only a few at once.
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return !!gl;
   } catch {
     return false;
   }
@@ -119,7 +122,14 @@ export class BuilderView {
     this.returnFocus = opts.returnFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     this.stars = starsNow();
     this.unlocked = unlockedParts(this.stars);
-    this.editor = new Editor(opts.layout ?? loadCurrent() ?? emptyLayout('gale'));
+    const mine = loadCurrent();
+    // Opening a friend's base: keep the player's own base safe in an empty slot first.
+    if (opts.layout && mine && mine.parts.length && encodeLayout(mine) !== encodeLayout(opts.layout)) {
+      const slots = readSave().slots;
+      const free = slots.findIndex((x) => !x);
+      if (free >= 0 && !slots.some((x) => x?.code === encodeLayout(mine))) saveSlot(free, 'My last base', mine);
+    }
+    this.editor = new Editor(opts.layout ?? mine ?? emptyLayout('gale'));
     this.r = readout(this.editor.layout);
 
     this.stage = h('div', {

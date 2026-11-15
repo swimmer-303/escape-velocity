@@ -70,7 +70,7 @@ export const PARTS: Record<PartId, PartDef> = {
   path: { id: 'path', name: 'Path', blurb: 'Decor: a walkway for the crew.', w: 1, d: 1, cat: 'decor', color: '#a89070' },
   lamp: { id: 'lamp', name: 'Light post', blurb: 'Decor: a little light for the night.', w: 1, d: 1, cat: 'decor', color: '#ffb627' },
   antenna: { id: 'antenna', name: 'Antenna', blurb: 'Decor: a tall radio mast.', w: 1, d: 1, cat: 'decor', color: '#9aa0b5' },
-  flag: { id: 'flag', name: 'Base flag', blurb: 'Decor: your own flag. Tap it again to change the design.', w: 1, d: 1, cat: 'decor', color: '#ff6bd6' },
+  flag: { id: 'flag', name: 'Base flag', blurb: 'Decor: your own flag. Pick it, then press Flag design to change it.', w: 1, d: 1, cat: 'decor', color: '#ff6bd6' },
   statue: { id: 'statue', name: 'Astronaut statue', blurb: 'Decor: a statue to honor your crews.', w: 1, d: 1, cat: 'decor', color: '#ffd84a' },
   planter: { id: 'planter', name: 'Planter', blurb: 'Decor: a little box of plants.', w: 1, d: 1, cat: 'decor', color: '#3f8f3a' },
 };
