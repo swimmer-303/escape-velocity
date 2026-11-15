@@ -176,6 +176,11 @@ describe('Space Lab in the game', () => {
     button(/^Lab Notebook$/)!.click();
     const nb = await waitFor(() => document.querySelector<HTMLElement>('#modal-root [aria-label="Lab Notebook"]'));
     expect(nb.querySelectorAll('.lab-entry').length).toBe(1);
+    // During a mission the Settings section does not start the lab (it would leave the mission).
+    (internals as unknown as { mission: MissionState }).mission = { ...internals.mission, status: 'playing' };
+    const busy = renderSettingsSections(() => {}).find((s) => s.querySelector('#lab-settings-h'))!;
+    expect([...busy.querySelectorAll('button')].find((b) => /Open the Space Lab/.test(b.textContent ?? ''))!.disabled).toBe(true);
+    expect(busy.textContent).toMatch(/Finish or leave this mission first/);
     expect(errors.mock.calls.filter((c) => String(c[0]).startsWith('[meta]'))).toEqual([]);
   }, 30000);
 

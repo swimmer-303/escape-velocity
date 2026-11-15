@@ -250,6 +250,7 @@ export class App {
       showTitle: () => this.showTitle(),
       reducedMotion: () => this.settings.reducedMotion,
       startQuick: (opts) => this.startQuick(opts),
+      missionActive: () => !!this.mission && this.mission.status === 'playing' && !this.demoActive,
     });
     // The planning panel must fit under the HUD, which wraps to two rows on narrower screens (style.css reads --hud-h).
     if (typeof ResizeObserver === 'function') {

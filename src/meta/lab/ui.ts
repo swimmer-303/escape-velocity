@@ -236,11 +236,6 @@ export function openLab(): void {
     delay: h('p', { class: 'lab-readout', id: 'lab-ro-delay', 'aria-live': 'polite' }),
     crew: h('p', { class: 'lab-readout', id: 'lab-ro-crew', 'aria-live': 'polite' }),
   };
-  const offNotes = {
-    orbit: h('p', { class: 'lab-off' }, 'The Moon goes around the Sun with Earth, so its distance from the Sun hardly changes.'),
-    dust: h('p', { class: 'lab-off' }, 'The Moon has no air, so there is no dust in its sky.'),
-    delay: h('p', { class: 'lab-off' }, `The slider is off on the Moon: it is so close that a message takes only about ${'1.3'} seconds.`),
-  };
   const none = () => h('span');
   const summary = h('p', { class: 'lab-summary', 'aria-live': 'polite' });
   const seedText = h('span', { class: 'lab-seed' });
@@ -258,10 +253,8 @@ export function openLab(): void {
     dust.disable(!mars);
     delay.disable(!mars);
     todayBtn.disabled = !mars || l.delayMin === null;
-    for (const k of ['orbit', 'dust', 'delay'] as const) {
-      offNotes[k].hidden = mars;
-      dials.querySelector(`[data-dial="${k}"]`)?.classList.toggle('is-off', !mars);
-    }
+    // On the Moon the Mars-only dials go gray; their readouts say why ("Off on the Moon: ...").
+    for (const k of ['orbit', 'dust', 'delay'] as const) dials.querySelector(`[data-dial="${k}"]`)?.classList.toggle('is-off', !mars);
     const n = changedDials(l).length;
     summary.textContent = n ? `${summaryLine(l)} ${n === 1 ? 'You changed 1 thing: a fair test.' : `You changed ${n} things.`}` : summaryLine(l);
     seedText.textContent = `Storm set: ${l.seed}`;
@@ -356,7 +349,7 @@ export function openLab(): void {
       marsOnly: true,
       what: 'Mars\' path around the Sun is an oval, so sometimes it is closer to the Sun and gets more sunlight.',
       control: orbit.el,
-      off: offNotes.orbit,
+      off: none(),
       readout: readouts.orbit,
       facts: [
         `Closest: 206.65 million km. Farthest: 249.26 million km. Sunlight spreads out with distance squared: (249.26 / 206.65) x (249.26 / 206.65) = 1.45, so about ${PERI_APH_PCT}% more sunlight at the closest point. Today Mars is about ${Math.round(marsToday)} million km from the Sun (our estimate). Near the closest point is also dust storm season: "Southern spring and summer have long been recognized as the dustiest part of the Martian year" (JPL). `,
@@ -371,7 +364,7 @@ export function openLab(): void {
       marsOnly: true,
       what: 'Fine red dust floats in Mars\' sky. Scientists call how thick it is "tau": a bigger tau lets less sunlight through.',
       control: dust.el,
-      off: offNotes.dust,
+      off: none(),
       readout: readouts.dust,
       facts: [
         `Tau: clear ${DUST_TAU.clear}, hazy ${DUST_TAU.hazy}, dusty ${DUST_TAU.dusty}, dust storm ${DUST_TAU.storm} (game approximations), planet-wide storm ${DUST_TAU.global} (measured over the Opportunity rover in June 2018, JPL). On its darkest day Opportunity made about 22 watt-hours, compared with about 700 on a normal day (The Planetary Society). The power curve between those points is a game approximation. `,
@@ -386,7 +379,7 @@ export function openLab(): void {
       marsOnly: true,
       what: 'Radio messages travel at the speed of light, but Mars is so far away they still take minutes to arrive.',
       control: h('div', null, delay.el, h('div', { class: 'lab-row' }, todayBtn)),
-      off: offNotes.delay,
+      off: none(),
       readout: readouts.delay,
       facts: [
         `One way, a message takes about ${LAB_DELAY.min} minutes when Mars is closest to Earth and about ${LAB_DELAY.max} minutes when it is farthest. Today it is about ${Math.round(todayMin)} minutes (our estimate from the planets' orbits). Earth also needs time to spot a storm and send the warning (about 10 minutes, a game value). `,
@@ -645,6 +638,8 @@ export function resultCard(e: NotebookEntry, xpLeftToday: number): HTMLElement {
 // ------------------------------------------------------------------ Settings dialog section
 export function settingsSection(): HTMLElement {
   const s: LabSave = loadSave();
+  // From the mission menu: the lab starts its own mission, so it waits until this one is finished or left.
+  const busy = !!metaContext()?.missionActive?.();
   return h(
     'section',
     { class: 'settings-sec lab-settings-section', 'aria-labelledby': 'lab-settings-h' },
@@ -656,6 +651,7 @@ export function settingsSection(): HTMLElement {
       {
         type: 'button',
         class: 'btn cyan',
+        disabled: busy,
         onclick: () => {
           metaContext()?.audio.sfx('click');
           openLab();
@@ -663,6 +659,7 @@ export function settingsSection(): HTMLElement {
       },
       'Open the Space Lab',
     ),
+    busy ? h('p', { class: 'lab-small' }, 'Finish or leave this mission first: the Space Lab runs its own missions.') : null,
   );
 }
 

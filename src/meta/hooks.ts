@@ -78,6 +78,8 @@ export interface MetaContext {
   reducedMotion(): boolean;
   /** Start a quick mission on a given seed (Rival Race); goes straight to the crew intro. Missing in older test contexts. */
   startQuick?(opts: QuickStart): void;
+  /** True while a mission is being played (e.g. Settings opened from the mission menu). Missing in older test contexts. */
+  missionActive?(): boolean;
 }
 
 /** A quick mission everyone can replay exactly: the same seed, world, difficulty, storm pool and light time. */
