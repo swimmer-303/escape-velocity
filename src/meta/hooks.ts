@@ -159,6 +159,36 @@ export function renderTitleExtras(): HTMLElement[] {
   return out;
 }
 
+// ------------------------------------------------------------------ settings dialog
+/**
+ * A section a feature adds to the Settings dialog (e.g. the Space Lab), drawn after the game's own sections, in
+ * `order` (lowest first). `rerender` redraws the whole Settings dialog (call it after a change the section shows).
+ */
+export interface SettingsSection {
+  id: string;
+  order: number;
+  render(rerender: () => void): HTMLElement | null;
+}
+const settingsSections: SettingsSection[] = [];
+export function addSettingsSection(section: SettingsSection): void {
+  const i = settingsSections.findIndex((s) => s.id === section.id);
+  if (i >= 0) settingsSections.splice(i, 1);
+  settingsSections.push(section);
+  settingsSections.sort((a, b) => a.order - b.order);
+}
+export function renderSettingsSections(rerender: () => void): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  for (const s of settingsSections) {
+    try {
+      const el = s.render(rerender);
+      if (el) out.push(el);
+    } catch (err) {
+      console.error(`[meta] settings section ${s.id} failed`, err);
+    }
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ levels and rewards
 /** Something a level unlocks (a Hangar item, a card pack...), shown on the level-up screen. */
 export interface LevelReward {
