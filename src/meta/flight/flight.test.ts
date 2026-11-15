@@ -266,6 +266,22 @@ describe('Flight school', () => {
     expect(title.textContent).toContain('Title screen');
     stop();
   });
+
+  it('counts a new medal in the heading as soon as the practice flight ends', async () => {
+    const title = document.getElementById('modal-root')!;
+    const el = renderTitleExtras().find((e) => e.classList.contains('ev-flight-school'))!;
+    title.append(el);
+    expect(el.querySelector('.ev-fs-head')!.textContent).toContain('0 of 4 medals');
+    el.querySelector<HTMLButtonElement>('[data-flight-school="launch-mars"]')!.click();
+    btn(/Start launch/)!.click();
+    await flush();
+    await until(() => !!btn(/^Done/), 3000);
+    btn(/^Done/)!.click();
+    await flush();
+    await flush();
+    expect(el.querySelector('[data-flight-school="launch-mars"]')!.getAttribute('aria-label')).toContain('Best medal');
+    expect(el.querySelector('.ev-fs-head')!.textContent).toContain('1 of 4 medals');
+  });
 });
 
 describe('drawing', () => {
