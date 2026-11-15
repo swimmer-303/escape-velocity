@@ -34,8 +34,15 @@ export function detectQuality(): Quality {
   return 'high';
 }
 
-/** Frames slower than this (seconds, the median of a short sample) switch the stage to the 'low' tier. */
+/**
+ * The slow-device check (see ThreeStage): frames further apart than SLOW_FRAME (seconds, the median of a short
+ * sample) while our own work per frame is over BUSY_MS, or our work alone over HEAVY_MS, switch to the 'low' tier.
+ * Looking at our own work too means a fast computer whose browser holds it to 30 frames a second (battery saver)
+ * is not mistaken for a slow one.
+ */
 export const SLOW_FRAME = 1 / 40;
+export const BUSY_MS = 6;
+export const HEAVY_MS = 12;
 /** When the slow-device check samples frames: seconds after the 3D view starts (past the shader compiles and loading). */
 export const WATCH_FROM = 3;
 export const WATCH_TO = 6;

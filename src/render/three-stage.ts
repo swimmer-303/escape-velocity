@@ -9,7 +9,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Diorama, FOCUS_LABELS, LAUNCH_TIMELINE } from './diorama';
 import { SNAP, makePostMaterial } from './retro';
 import { POINT_SCALE } from './fx';
-import { makeWorldSky, MarsMoons, detectQuality, SLOW_FRAME, WATCH_FROM, WATCH_TO, type Quality } from './atmosphere';
+import { makeWorldSky, MarsMoons, detectQuality, SLOW_FRAME, BUSY_MS, HEAVY_MS, WATCH_FROM, WATCH_TO, type Quality } from './atmosphere';
 import { moonSunDirection, EARTH_DIR } from './moon';
 import { CameraMove, framePose, overviewPose, isTap, OVERVIEW_TARGET, OVERVIEW_POSITION, OVERVIEW_MIN_DISTANCE, FOCUS_MIN_DISTANCE } from './focus';
 import type { Cosmetics, FocusKey, Stage, StageCue, StageScene } from './stage';
@@ -85,7 +85,7 @@ export class ThreeStage implements Stage {
   private marsMoons = new MarsMoons();
   private quality: Quality = 'high';
   /** Frame times for the slow-device check (see loop). */
-  private watch = { t: 0, n: 0, done: false, dt: new Float32Array(WATCH_MAX) };
+  private watch = { t: 0, n: 0, done: false, dt: new Float32Array(WATCH_MAX), work: new Float32Array(WATCH_MAX), last: 0 };
   /** The gentle up-and-down "breathing" of the idle camera, applied this frame (taken off again before the next). */
   private breath = 0;
   /** How much breathing (0..1): eases in whenever the camera comes to rest, so it never jumps. */
@@ -494,6 +494,7 @@ export class ThreeStage implements Stage {
 
   private loop = () => {
     this.raf = requestAnimationFrame(this.loop);
+    const work0 = performance.now();
     const dt = Math.min(0.1, this.clock.getDelta());
     const time = this.clock.elapsedTime;
     this.watchFrame(dt);
@@ -540,12 +541,13 @@ export class ThreeStage implements Stage {
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.postScene, this.postCam);
+    this.watch.last = performance.now() - work0;
   };
 
   /**
-   * The slow-device check: a few seconds in (past shader compiles and loading), sample frame times for a few
-   * seconds; if the median frame is slower than SLOW_FRAME, drop to the 'low' tier for good. Only ever goes down,
-   * and only once.
+   * The slow-device check: a few seconds in (past shader compiles and loading), sample frame times and how long our
+   * own work takes each frame, for a few seconds; if frames are slow because of us (see SLOW_FRAME, BUSY_MS and
+   * HEAVY_MS), drop to the 'low' tier for good. Only ever goes down, and only once.
    */
   private watchFrame(dt: number) {
     const w = this.watch;
@@ -553,13 +555,16 @@ export class ThreeStage implements Stage {
     w.t += dt;
     if (w.t < WATCH_FROM) return;
     if (w.t < WATCH_TO && w.n < WATCH_MAX) {
+      w.work[w.n] = w.last;
       w.dt[w.n++] = dt;
       return;
     }
     w.done = true;
-    // Too few frames in three seconds is itself a sign of a slow device.
-    const sample = w.dt.subarray(0, w.n).sort();
-    if (w.n < 40 || sample[w.n >> 1] > SLOW_FRAME) this.setQuality('low');
+    const mid = w.n >> 1;
+    const gap = w.dt.subarray(0, w.n).sort()[mid];
+    const work = w.work.subarray(0, w.n).sort()[mid];
+    // Very few frames in three seconds is itself a sign of a slow device.
+    if (w.n < 20 || (gap > SLOW_FRAME && work > BUSY_MS) || work > HEAVY_MS) this.setQuality('low');
   }
 
   private stepLaunch(dt: number) {
