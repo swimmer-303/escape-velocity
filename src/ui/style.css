@@ -757,6 +757,51 @@ table.daily-table tr.gap td { color: var(--muted); padding: 2px 8px; border-bott
   font: 16px var(--font-body); background: var(--bg); color: var(--ink); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line);
 }
 
+/* The Settings dialog (src/ui/settings.ts): Sound and Display side by side on wide screens, one column on phones,
+   then Text and voice (the access panel above), then features' own sections, with Done pinned to the bottom. */
+.settings-intro { color: var(--muted); }
+.settings-grid { display: grid; gap: 14px; align-items: start; }
+@media (min-width: 900px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
+.settings-sec { min-width: 0; padding: 10px 12px 12px; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); }
+.settings-sec h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.mix-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 10px 0; border-top: 2px dashed #ffffff1c; }
+.settings-sec h3 + .mix-row { border-top: 0; padding-top: 2px; }
+.settings-sec .switch { min-width: 214px; min-height: 48px; justify-content: flex-start; }
+@media (max-width: 520px) { .settings-sec .switch { width: 100%; } }
+.switch-dot { flex: none; width: 14px; height: 14px; border: 2px solid #000; background: var(--line); }
+.switch.on .switch-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.set-hint { flex: 1 1 180px; margin: 0; font-size: 14px; color: var(--muted); }
+.vol { flex: 1 1 200px; min-width: 0; }
+.vol label { display: block; font-family: var(--font-px); font-size: 12px; text-transform: uppercase; color: var(--muted); }
+.vol-track { display: flex; align-items: center; gap: 10px; }
+.vol-value { min-width: 4.5ch; text-align: right; font-family: var(--font-px); font-size: 14px; color: var(--amber); }
+.vol.off :is(label, .vol-value) { opacity: 0.55; }
+/* Big, chunky sliders: a 44 px tall touch area, a pixel track filled up to the value, and a square amber knob. */
+.vol-range { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 44px; margin: 0; background: transparent; cursor: pointer; }
+.vol-range::-webkit-slider-runnable-track {
+  height: 20px; border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line);
+  background: linear-gradient(90deg, var(--cyan) var(--fill, 60%), var(--bg) var(--fill, 60%));
+}
+.vol-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 26px; height: 34px; margin-top: -10px;
+  background: var(--amber); border: 3px solid #000; box-shadow: inset -3px -3px 0 #0006, 3px 3px 0 var(--shadow);
+}
+.vol-range::-moz-range-track { height: 14px; background: var(--bg); border: 3px solid #000; }
+.vol-range::-moz-range-progress { height: 14px; background: var(--cyan); }
+.vol-range::-moz-range-thumb { width: 20px; height: 28px; border-radius: 0; background: var(--amber); border: 3px solid #000; }
+.vol-range:disabled { cursor: not-allowed; opacity: 0.45; filter: grayscale(0.7); }
+.settings-fact { margin: 8px 0 0; padding: 8px 10px; font-size: 15px; background: var(--bg); border-left: 4px solid var(--cyan); }
+.settings-fact b { color: var(--cyan); }
+.detail-pick { padding-top: 10px; border-top: 2px dashed #ffffff1c; }
+.detail-label { display: block; margin-bottom: 6px; font-family: var(--font-px); font-size: 13px; text-transform: uppercase; color: var(--muted); }
+.segmented { display: flex; }
+.segmented .btn { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 8px; box-shadow: none; }
+.segmented .btn + .btn { border-left: 0; }
+.segmented .btn.on { background: #1f6f6a; box-shadow: inset 0 0 0 3px var(--cyan); }
+.detail-pick .set-hint { margin-top: 6px; }
+.settings-features:empty { display: none; }
+.settings-features > * { margin-top: 14px; }
+
 /* Larger text: about 1.25x everywhere text lives. (Each :is() list takes its most specific member, so the
    small-button rule outranks the plain .btn rule, and Mission Control's tiny buttons outrank both.) */
 :root { --ts: 1; }
@@ -765,6 +810,9 @@ html.ev-large-text body { font-size: calc(17px * var(--ts)); }
 html.ev-large-text :is(.sol-chip small, .card .tag, .mc-tag, .mc-pingpad .btn.small, .mc-assign .btn.small) { font-size: calc(11px * var(--ts)); }
 html.ev-large-text :is(.mini-bars, .data-badge, .slot-label, table.log th, .coach-head, .sun-credit) { font-size: calc(12px * var(--ts)); }
 html.ev-large-text :is(.meter-head, .meter-sub, .btn.small, .tray-label, .module-head, .split-note, .run-hint, .kicker, .science .src, .star, .upgrade-head .cost, .badge span, .crew-fact, .crew-note, .sun-title, .mchart-table summary, .voice-pick label) { font-size: calc(13px * var(--ts)); }
+html.ev-large-text :is(.vol label) { font-size: calc(12px * var(--ts)); }
+html.ev-large-text :is(.set-hint, .vol-value) { font-size: calc(14px * var(--ts)); }
+html.ev-large-text .settings-fact { font-size: calc(15px * var(--ts)); }
 html.ev-large-text .brief-mini .line.advice ul { font-size: calc(13px * var(--ts)); }
 html.ev-large-text :is(.sol-chip, .tray-hint, .module-desc, .effect, .brief-mini, .crate span, .title-foot, .crew-role, .sun-body, .mchart-legend) { font-size: calc(14px * var(--ts)); }
 html.ev-large-text :is(.meter-value, .tray-empty, .run-log, table.log, .crew-name, .cc-msg, .mchart-readout) { font-size: calc(15px * var(--ts)); }
@@ -815,7 +863,7 @@ html.ev-contrast .btn.primary { background: var(--rust); }
 html.ev-contrast .btn.go { background: #1d6b38; }
 html.ev-contrast .btn.cyan, html.ev-contrast .speak-btn.on { background: #17524e; }
 html.ev-contrast .btn[disabled] { opacity: 0.8; filter: none; border-style: dashed; }
-html.ev-contrast :is(.card, .module, .crate, .science, .badge, .today, .access-panel, .mc-station) { border-color: var(--line); }
+html.ev-contrast :is(.card, .module, .crate, .science, .badge, .today, .access-panel, .settings-sec, .mc-station) { border-color: var(--line); }
 html.ev-contrast :is(.bar, .slot-box, .pip) { border-color: var(--line); }
 html.ev-contrast .slot-box:not(.filled) { border-color: var(--muted); }
 html.ev-contrast .pip.used { background: #6b5fa0; }
