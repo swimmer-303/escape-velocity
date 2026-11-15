@@ -26,6 +26,8 @@
   font-family: var(--font-px); font-size: 11px; padding: 1px 5px; border: 2px solid currentColor; background: var(--panel-3); color: var(--ink);
 }
 .ev-rover-touch, .ev-rover-tradeoff { margin: 6px 0 0; font-size: 14px; }
+/* Start driving stays on screen on short phones: the buttons stick to the bottom of the card while it scrolls. */
+.ev-rover-start > .actions { position: sticky; bottom: 0; z-index: 1; margin-top: 10px; padding: 8px 0; background: var(--panel); box-shadow: 0 -6px 8px -4px var(--panel); }
 .ev-rover-science { margin: 8px 0; }
 .ev-rover-science summary { cursor: pointer; font-weight: 700; color: var(--cyan); }
 .ev-rover-science summary:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
@@ -178,15 +180,23 @@
 .ev-rover-tow { color: #ffb3ad; }
 .ev-rover-tomorrow { color: var(--muted); }
 
+/* Phones: the gauges in one column on the left, small buttons in a row on the right (Read to me shows just its icon,
+   no key hints), and the compass and minimap below both, so nothing covers them. */
 @media (max-width: 700px) {
-  .ev-rover-hud { max-width: calc(100% - 120px); }
+  .ev-rover-top { padding-left: 8px; padding-right: 8px; }
+  .ev-rover-hud { flex-direction: column; flex-wrap: nowrap; max-width: 150px; flex: none; }
   .ev-rgauge { min-width: 0; padding: 3px 6px; }
   .ev-rgauge.battery { min-width: 130px; }
   .ev-rgauge.home { display: none; }
-  .ev-rover-compass { width: 220px; }
-  .ev-rover-compass-box { top: calc(110px + env(safe-area-inset-top, 0px)); }
-  .ev-rover-map { width: 88px; height: 88px; top: calc(110px + env(safe-area-inset-top, 0px)); }
-  .ev-rover-warn { top: calc(170px + env(safe-area-inset-top, 0px)); }
+  .ev-rover-buttons { gap: 4px; flex: 1 1 auto; min-width: 0; }
+  .ev-rover-buttons .btn.small { font-size: 11px; padding: 4px 6px; min-height: 36px; gap: 4px; }
+  .ev-rover-buttons .ev-rover-key { display: none; }
+  .ev-rover-buttons .speak-btn > span:last-child { display: none; }
+  .ev-rover-compass { width: min(190px, calc(100vw - 206px)); }
+  .ev-rover-compass-text { max-width: calc(100vw - 206px); font-size: 11px; text-align: center; }
+  .ev-rover-compass-box { top: calc(140px + env(safe-area-inset-top, 0px)); }
+  .ev-rover-map { width: 84px; height: 84px; top: calc(96px + env(safe-area-inset-top, 0px)); }
+  .ev-rover-warn { top: calc(200px + env(safe-area-inset-top, 0px)); }
   .ev-rover-joy { width: 104px; height: 104px; }
 }
 

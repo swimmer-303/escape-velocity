@@ -129,6 +129,14 @@ export function openStart(ctx: MetaContext, pick?: RoverSite): HTMLElement {
       h('p', null, 'Drive out, scan science targets, and bring your samples home to the charging pad before the battery runs out.'),
       progressLine(store),
       choices,
+      // The buttons come before the long "How to drive" list, so Start driving is on screen on a phone.
+      h(
+        'div',
+        { class: 'actions' },
+        start,
+        h('button', { class: 'btn', type: 'button', 'data-rover': 'museum', onclick: () => (ctx.audio.sfx('click'), openMuseum(ctx, () => openStart(ctx, site))) }, 'Sample Museum'),
+        h('button', { class: 'btn small', type: 'button', 'data-rover': 'close', onclick: back }, 'Close'),
+      ),
       h(
         'div',
         { class: 'ev-rover-help' },
@@ -147,13 +155,6 @@ export function openStart(ctx: MetaContext, pick?: RoverSite): HTMLElement {
         h('p', { class: 'ev-rover-tradeoff' }, h('b', null, 'The catch: '), 'your battery drains as you drive. Speed, hills, boost and lights use more. Get back to the pad to bank your samples.'),
       ),
       h('details', { class: 'ev-rover-science' }, h('summary', null, 'Science notes: what is real here?'), notes),
-      h(
-        'div',
-        { class: 'actions' },
-        start,
-        h('button', { class: 'btn', type: 'button', 'data-rover': 'museum', onclick: () => (ctx.audio.sfx('click'), openMuseum(ctx, () => openStart(ctx, site))) }, 'Sample Museum'),
-        h('button', { class: 'btn small', type: 'button', 'data-rover': 'close', onclick: back }, 'Close'),
-      ),
     ),
     { label: START_LABEL, onClose: back },
   );

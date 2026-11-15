@@ -164,7 +164,8 @@ export class RoverHud {
     const g = this.compass.getContext?.('2d');
     const near = nearestOpen(v);
     const t = near ? v.targets[near.index] : null;
-    const text = t ? `${sampleKind(t.kind)?.name ?? 'Target'}: ${Math.round(near!.dist)} m` : v.aboard.length ? 'All targets aboard. Head home!' : 'No targets left today';
+    // A no-break space keeps "156 m" together when the caption wraps on a phone.
+    const text = t ? `${sampleKind(t.kind)?.name ?? 'Target'}: ${Math.round(near!.dist)}\u00a0m` : v.aboard.length ? 'All targets aboard. Head home!' : 'No targets left today';
     if (this.compassText.textContent !== text) this.compassText.textContent = text;
     if (!g) return;
     const W = this.compass.width;

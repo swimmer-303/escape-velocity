@@ -53,6 +53,10 @@ describe('Rover Expeditions in the real game', () => {
     expect(card.textContent).toMatch(/hold near a target to scan/);
     expect(card.textContent).toMatch(/battery drains/);
     expect(card.querySelector('[data-rover="start"]')).not.toBeNull();
+    // Start driving comes before the long "How to drive" list, so it is on screen on a phone.
+    const startBtn = card.querySelector('[data-rover="start"]')!;
+    const help = card.querySelector('.ev-rover-help')!;
+    expect(startBtn.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.activeElement?.getAttribute('data-rover')).toBe('start');
     expect(card.querySelector('.ev-rover-science')!.textContent).toMatch(/shrunk 100 times/);
 
