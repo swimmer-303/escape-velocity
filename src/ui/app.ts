@@ -494,6 +494,7 @@ export class App {
   private playNow() {
     markOpened('play');
     this.firstRun = !Coach.seen();
+    this.quickStart = null;
     this.launchQuick();
   }
 
@@ -671,6 +672,7 @@ export class App {
       sub: moon ? 'A quick mission at a Mars base' : 'A quick mission with a two-week night',
       go: () => {
         this.site = moon ? 'mars' : 'moon';
+        this.quickStart = null;
         this.launchQuick();
       },
     };
