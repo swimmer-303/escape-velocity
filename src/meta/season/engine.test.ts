@@ -16,6 +16,8 @@ import {
   claimableTiers,
   currentTier,
   eventView,
+  firstGift,
+  giftGreeting,
   giftReady,
   giftStrip,
   hangarUnlocks,
@@ -196,6 +198,16 @@ describe('Sun events', () => {
 });
 
 describe('welcome-back gifts', () => {
+  it('says "Welcome, astronaut!" for the very first gift, and "Welcome back!" after that', () => {
+    expect(firstGift()).toBe(true);
+    expect(giftGreeting(firstGift(), 10).title).toBe('Welcome, astronaut!');
+    expect(JSON.stringify(giftGreeting(true, 10))).not.toMatch(/welcome back/i);
+    openGift();
+    expect(firstGift()).toBe(false);
+    expect(giftGreeting(firstGift(), 10).title).toBe('Welcome back!');
+    expect(giftGreeting(false, 25).body).toContain('+25 Season XP');
+  });
+
   it('one gift a day, missing days never reset the strip, and day 7 loops back', () => {
     expect(giftReady()).toEqual({ day: 1, xp: GIFTS[0] });
     expect(openGift()).toBe(GIFTS[0]);

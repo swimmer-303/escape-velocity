@@ -13,7 +13,7 @@
 
 import { addTitleExtra, onGame, whenMetaReady } from '../hooks';
 import { addUnlockSource } from '../hangar/items';
-import { hangarUnlocks, isOver, onCampaignComplete, onLevelUp, onMissionEnd, onSol, onXp, sunEvent, weeklyView, giftReady } from './engine';
+import { hangarUnlocks, isOver, onCampaignComplete, onLevelUp, onMissionEnd, onSol, onXp, sunEvent, weeklyView, giftReady, firstGift } from './engine';
 import { watchFeed } from './live';
 import { addTodayItem } from './today';
 import { cardStrip, seasonTile } from './ui';
@@ -33,17 +33,28 @@ addUnlockSource(hangarUnlocks);
 // LIVE event, or confirm there is none).
 let strip: HTMLElement | null = null;
 let tile: HTMLElement | null = null;
+
+/**
+ * Redraw a title extra IN PLACE: keep the element on the page (and the listeners the lobby put on it, like the one
+ * that remembers the tile was opened and clears its NEW badge) and swap in the new look. The lobby's own NEW badge
+ * stays unless the fresh tile has a badge of its own (the lobby never puts NEW over a tile's badge).
+ */
+export function refreshInPlace(old: HTMLElement, next: HTMLElement): HTMLElement {
+  if (old.tagName !== next.tagName) {
+    old.replaceWith(next);
+    return next;
+  }
+  const lobbyNew = old.querySelector(':scope > .lobby-new');
+  for (const a of [...old.attributes]) if (!next.hasAttribute(a.name)) old.removeAttribute(a.name);
+  for (const a of [...next.attributes]) old.setAttribute(a.name, a.value);
+  old.replaceChildren(...next.childNodes);
+  if (lobbyNew && !old.querySelector(':scope > .title-tile-badge')) old.append(lobbyNew);
+  return old;
+}
+
 function redraw() {
-  if (strip?.isConnected) {
-    const next = cardStrip();
-    strip.replaceWith(next);
-    strip = next;
-  }
-  if (tile?.isConnected) {
-    const next = seasonTile();
-    tile.replaceWith(next);
-    tile = next;
-  }
+  if (strip?.isConnected) strip = refreshInPlace(strip, cardStrip());
+  if (tile?.isConnected) tile = refreshInPlace(tile, seasonTile());
 }
 
 addTitleExtra({
@@ -95,6 +106,6 @@ addTodayItem({
 addTodayItem({
   id: 'gift',
   order: 30,
-  text: () => (giftReady() ? "Today's welcome-back gift is waiting below." : null),
+  text: () => (giftReady() ? (firstGift() ? 'Your first daily gift is waiting below.' : "Today's welcome-back gift is waiting below.") : null),
   tag: () => 'GIFT',
 });
