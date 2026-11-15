@@ -51,6 +51,22 @@ export function banterFor(seed: string, sol: number, rows: Array<Placed<Row>>, n
 }
 
 /** What happened to a rival crew that went home early: dramatic, but friendly and honest about why. */
+/**
+ * The short podium line for a crew that went home before launching, with the reason, so a nearly full (or full)
+ * rocket makes sense: "ran low on air before launch, so they went home safe (rocket 100% full)".
+ */
+export function homeShort(reason: string | undefined, fuelPct: number): string {
+  const why =
+    reason === 'dose'
+      ? 'took too much radiation before launch'
+      : reason === 'air'
+        ? 'ran low on air before launch'
+        : reason === 'food'
+          ? 'ran low on food before launch'
+          : 'missed the launch window';
+  return `${why}, so they went home safe (rocket ${Math.floor(fuelPct)}% full)`;
+}
+
 export function homeStory(name: string, reason: string, storm: 'solar' | 'dust' | null): string {
   const after = storm === 'solar' ? ' after a solar storm' : storm === 'dust' ? ' after a dust storm' : '';
   switch (reason) {

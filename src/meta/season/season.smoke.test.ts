@@ -6,7 +6,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App } from '../../ui/app';
 import { CssStage } from '../../render/stage';
 import '../index';
-import { resetSeasonEngine, seasonState } from './engine';
+import { claimAll, openGift, resetSeasonEngine, seasonState } from './engine';
+import { refreshInPlace } from './index';
+import { decorateLobby, loadLobby } from '../../ui/lobby';
 import { setFeedForTests } from './live';
 import { openSeason, seasonTile, setQuietToasts, SEASON_LABEL, CARD_LABEL } from './ui';
 import { liveFeed, snapshotWith } from './fixtures';
@@ -99,6 +101,42 @@ describe('Season 1 on the title screen', () => {
     expect(document.querySelector('#modal-root [aria-label="Escape Velocity title screen"]')).not.toBeNull();
     expect(strip()!.textContent).toContain(fresh);
     expect(fetchSpy.mock.calls.length).toBe(callsByGame);
+  });
+
+  it('redraws the Season tile in place, so opening it after a redraw still clears its lobby NEW badge', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline in tests')));
+    new App(new CssStage());
+    await sleep(50);
+    // Nothing to claim and no gift: the tile has no badge of its own, so the lobby gives it NEW.
+    openGift();
+    claimAll();
+    const root = document.createElement('div');
+    const first = seasonTile();
+    root.append(first);
+    document.body.append(root);
+    decorateLobby(root, true);
+    expect(first.querySelector('.lobby-new')).not.toBeNull();
+    // The feed arrives and the tile is redrawn: same element, same listeners, NEW kept.
+    const after = refreshInPlace(first, seasonTile());
+    expect(after).toBe(first);
+    expect(after.getAttribute('data-tile')).toBe('season');
+    expect(after.querySelector('.lobby-new')).not.toBeNull();
+    after.click();
+    expect(loadLobby().opened).toContain('season');
+    expect(after.querySelector('.lobby-new')).toBeNull();
+    // Next time the title is drawn, no NEW.
+    const root2 = document.createElement('div');
+    root2.append(seasonTile());
+    decorateLobby(root2, true);
+    expect(root2.querySelector('.lobby-new')).toBeNull();
+    // A fresh tile with its own badge (LIVE, a gift) never shows the lobby NEW over it.
+    const own = document.createElement('button');
+    own.append(Object.assign(document.createElement('span'), { className: 'title-tile-badge', textContent: 'LIVE' }));
+    const withNew = document.createElement('button');
+    withNew.append(Object.assign(document.createElement('span'), { className: 'title-tile-badge lobby-new', textContent: 'NEW' }));
+    refreshInPlace(withNew, own);
+    expect(withNew.querySelectorAll('.title-tile-badge')).toHaveLength(1);
+    expect(withNew.textContent).toBe('LIVE');
   });
 
   it('after January 31, 2027 says "Season 1 complete" and still lets players claim and look', async () => {

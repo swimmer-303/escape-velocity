@@ -144,6 +144,7 @@ export function liveRows(race: Race, player: MissionState): Array<Placed<Row>> {
       sols: k,
       dose: done ? g.dose : 0,
       life: done ? g.life : 0,
+      partial: !done,
       loseReason: done ? g.loseReason : undefined,
     };
   });
@@ -200,10 +201,9 @@ export function newsBetween(before: Array<Placed<Row>>, after: Array<Placed<Row>
     }
     // Passing only counts while you are both still racing (your own launch ends the race for you: the podium says the rest).
     if (meA.status !== 'playing' || a.status !== 'playing') continue;
-    // A tie on fuel is not a pass: someone has to be strictly ahead.
-    const gap = Math.floor(meA.fuel) - Math.floor(a.fuel);
-    if (b.place < meB.place && a.place > meA.place && gap > 0) news.push({ kind: 'overtake', racer: a.racer });
-    else if (b.place > meB.place && a.place < meA.place && gap < 0) news.push({ kind: 'passed', racer: a.racer });
+    // Live places are distinct (same fuel goes to less radiation, then more air and food), so a pass is a swap of places.
+    if (b.place < meB.place && a.place > meA.place) news.push({ kind: 'overtake', racer: a.racer });
+    else if (b.place > meB.place && a.place < meA.place) news.push({ kind: 'passed', racer: a.racer });
   }
   return news;
 }

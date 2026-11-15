@@ -11,6 +11,7 @@ import {
   devilPush,
   dustDevils,
   homeAlert,
+  HOME_ALERT_TEXT,
   newRover,
   onPad,
   returnCost,
@@ -155,6 +156,18 @@ describe('battery', () => {
     expect(homeAlert(cost, cost)).toBe('now');
     // The warning comes with enough charge left to make it home.
     expect(cost * 1.2 + 4).toBeGreaterThan(cost);
+  });
+
+  it('words the warnings by what is measured (the battery the drive home needs), never "half gone"', () => {
+    // Close to the pad, the early warning can come with most of the battery left: the words must still be true.
+    const near = returnCost(1200, 0, GRAVITY.gale);
+    const battery = near * 1.7 + 12;
+    expect(homeAlert(battery, near)).toBe('soon');
+    for (const t of Object.values(HOME_ALERT_TEXT)) {
+      expect(t).not.toMatch(/half|%|percent/i);
+      expect(t).toMatch(/home|back/i);
+    }
+    expect(HOME_ALERT_TEXT.now).toMatch(/rest of your battery to get back/);
   });
 });
 

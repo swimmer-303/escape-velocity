@@ -5,10 +5,11 @@
 
 import { h, clear, append, type Child } from '../../ui/dom';
 import { trophy, statusIcon } from './art';
+import { homeShort } from './banter';
 import { callsignText, type Callsign } from './callsign';
 import { portrait } from './portrait';
 import { LEAGUES, leagueAt } from './rivals';
-import { ordinal } from './score';
+import { ordinal, tiedWith, type Versus } from './score';
 import { progressLine, type LeagueOutcome, type RaceSave } from './store';
 import type { GhostRun } from './code';
 import type { Race, Result } from './race';
@@ -111,7 +112,7 @@ export function lobbyContent(o: LobbyOpts): Child {
       null,
       'Race three rival commanders on the ',
       h('b', null, 'same base with the same real storms'),
-      '. First crew to fill the rocket and launch with everyone safe wins! Ties go to fewer sols, then less radiation, then more air and food left.',
+      `. First crew to fill the rocket and launch with everyone safe wins! Ties go to fewer ${o.race.site === 'moon' ? 'days' : 'sols'}, then less radiation, then more air and food left.`,
     ),
     h('p', { class: 'title-foot' }, "Races use the real NASA DONKI storm records stored in the game (the last month, plus May 2024), so every racer, and every friend you challenge, meets the same storms."),
     lg.difficulty === 'commander' ? h('div', { class: 'card danger' }, h('b', null, `${lg.name} races are on Commander difficulty: `), 'more and bigger storms. Watch your radiation!') : null,
@@ -287,7 +288,8 @@ export interface PodiumOpts {
   xp: number;
   outcome: LeagueOutcome;
   save: RaceSave;
-  beatFriend: boolean | null;
+  /** How you did against your friend's run ('tie' when every tie-break is equal too), or null with no friend. */
+  friend: Versus | null;
   onRaceAgain(): void;
   onShare(): void;
   onClose(): void;
@@ -311,6 +313,8 @@ export function raceTip(results: Result[], site: 'mars' | 'moon'): string {
   const me = results.find((r) => r.racer.kind === 'you')!;
   const turn = site === 'moon' ? 'day' : 'sol';
   const winner = results.find((r) => r.place === 1 && r.racer.kind !== 'you');
+  if (me.launched && winner && winner.place === me.place)
+    return `A perfect tie: you both launched on ${turn} ${me.sols} with the same radiation and the same air and food left! Race again to break the tie.`;
   if (!me.launched) {
     if (me.loseReason === 'dose') return 'Tip: when a storm warning comes, power the storm shelter. Radiation adds up!';
     if (me.loseReason === 'air' || me.loseReason === 'food') return 'Tip: keep about two days of air and food in store, and keep the heaters on so the batteries stay warm.';
@@ -328,7 +332,8 @@ export function raceTip(results: Result[], site: 'mars' | 'moon'): string {
 export function podiumContent(o: PodiumOpts): Child {
   const me = o.results.find((r) => r.racer.kind === 'you')!;
   const lgNow = leagueAt(o.save.league);
-  const head = me.place === 1 ? 'You won the race!' : `You finished ${ordinal(me.place)}!`;
+  const tied = tiedWith(o.results, me).length > 0;
+  const head = tied ? `It's a tie for ${ordinal(me.place)}!` : me.place === 1 ? 'You won the race!' : `You finished ${ordinal(me.place)}!`;
   const top = o.results.slice(0, 3);
   const turn = o.race.site === 'moon' ? 'day' : 'sol';
   const rest = o.results.slice(3);
@@ -340,11 +345,12 @@ export function podiumContent(o: PodiumOpts): Child {
       ? h(
           'ol',
           { class: 'rp-rest', start: '4' },
-          rest.map((r) => h('li', null, portrait(r.racer.face, { size: 24, ghost: r.racer.kind === 'ghost' }), h('b', null, r.racer.kind === 'you' ? 'You' : r.racer.name), r.launched ? ` launched on ${turn} ${r.sols}` : ` went home early (rocket ${Math.floor(r.fuel)}% full)`)),
+          rest.map((r) => h('li', null, portrait(r.racer.face, { size: 24, ghost: r.racer.kind === 'ghost' }), h('b', null, r.racer.kind === 'you' ? 'You' : r.racer.name), r.launched ? ` launched on ${turn} ${r.sols}` : ` ${homeShort(r.loseReason, r.fuel)}`)),
         )
       : null,
-    o.beatFriend === true ? h('div', { class: 'card good' }, h('b', null, 'You beat your friend! '), 'Send them a link back and see if they can beat you.') : null,
-    o.beatFriend === false ? h('div', { class: 'card' }, h('b', null, 'Your friend is ahead this time. '), 'Same base, same storms: try a new plan!') : null,
+    o.friend === 'ahead' ? h('div', { class: 'card good' }, h('b', null, 'You beat your friend! '), 'Send them a link back and see if they can beat you.') : null,
+    o.friend === 'tie' ? h('div', { class: 'card good' }, h('b', null, 'You tied with your friend! '), 'Same base, same storms, same result. Send them a link back and see who breaks the tie.') : null,
+    o.friend === 'behind' ? h('div', { class: 'card' }, h('b', null, 'Your friend is ahead this time. '), 'Same base, same storms: try a new plan!') : null,
     h(
       'div',
       { class: 'rp-rewards' },
@@ -356,7 +362,7 @@ export function podiumContent(o: PodiumOpts): Child {
       ? h('div', { class: 'card good rp-promo' }, trophy(lgNow.color, 40), h('div', null, h('b', null, `Promoted to ${lgNow.name} League!`), h('p', null, 'Your new rivals are smarter and faster. Good luck, commander!')))
       : h('div', { class: 'rp-league' }, leagueBadge(o.save.league, 28), progressBar(o.save)),
     h('p', { class: 'rp-tip' }, raceTip(o.results, o.race.site)),
-    h('p', { class: 'rp-rule' }, 'First to launch with the crew safe wins. Ties: fewer sols, then less radiation, then more air and food left.'),
+    h('p', { class: 'rp-rule' }, `First to launch with the crew safe wins. Ties: fewer ${turn}s, then less radiation, then more air and food left.`),
     h(
       'div',
       { class: 'actions' },

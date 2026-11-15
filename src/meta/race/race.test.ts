@@ -12,9 +12,9 @@ import { ADJECTIVES, SPACE_NOUNS, callsignText, isCallsign, parseCallsignSlug, r
 import { challengeUrl, decodeRun, encodeRun, ghostFromMission, poolFingerprint, raceParam, type GhostRun } from './code';
 import { createRace, finishRace, isRaceMission, liveRows, newsBetween, racePool, syncRivals, type Race } from './race';
 import { LEAGUES, pickRivals } from './rivals';
-import { compareFinish, rankFinishes, rankLive, xpForPlace, type Finish } from './score';
+import { compareFinish, compareLive, rankFinishes, rankLive, tiedWith, versus, xpForPlace, type Finish } from './score';
 import { STORAGE_KEY, applyPlace, freshSave, loadSave, progressLine, sanitize, writeSave } from './store';
-import { banterFor, homeStory } from './banter';
+import { banterFor, homeShort, homeStory } from './banter';
 
 const POOL = racePool();
 const YOU = { adj: 'Brave', noun: 'Comet', num: 42 };
@@ -162,6 +162,40 @@ describe('scoring', () => {
     const after = rankLive([row('you', 45), row(rival, 40)]);
     expect(newsBetween(before, after)).toEqual([{ kind: 'overtake', racer: race.racers[1] }]);
     expect(newsBetween(after, before)).toEqual([{ kind: 'passed', racer: race.racers[1] }]);
+  });
+
+  it('breaks live ties on fuel by less radiation, then more air and food, so places are always distinct', () => {
+    const e = (id: string, o: object) => ({ id, status: 'playing' as const, fuel: 50, sols: 5, dose: 5, life: 4, ...o });
+    expect(compareLive(e('a', { dose: 4 }), e('b', {}))).toBeLessThan(0);
+    expect(compareLive(e('a', { life: 5 }), e('b', {}))).toBeLessThan(0);
+    // A friend's recorded run has no dose or air and food mid-race: those tie-breaks are skipped (input order).
+    expect(compareLive(e('a', { dose: 4 }), e('b', { dose: 0, life: 0, partial: true }))).toBe(0);
+    const live = rankLive([e('you', { dose: 6 }), e('a', { dose: 4 }), e('b', { dose: 6, life: 9 })]);
+    expect(live.map((x) => [x.id, x.place])).toEqual([
+      ['a', 1],
+      ['b', 2],
+      ['you', 3],
+    ]);
+  });
+
+  it('reports an overtake when you move from 2nd to 1st on the same fuel (won on a tie-break)', () => {
+    const race = createRace({ league: 0, you: YOU, seed: 'rnews', lightTimeMin: 12.5, eventPool: POOL });
+    const rival = race.racers[1];
+    const row = (id: string, fuel: number, dose: number) => ({ id, racer: race.racers.find((r) => r.id === id)!, status: 'playing' as const, fuel, sols: 3, dose, life: 4 });
+    const before = rankLive([row('you', 20, 2), row(rival.id, 30, 2)]);
+    const after = rankLive([row('you', 40, 2), row(rival.id, 40.5, 3)]);
+    expect(before.find((r) => r.id === 'you')!.place).toBe(2);
+    expect(after.find((r) => r.id === 'you')!.place).toBe(1);
+    expect(newsBetween(before, after)).toEqual([{ kind: 'overtake', racer: rival }]);
+  });
+
+  it('calls a true tie a tie: never a win and a loss at once', () => {
+    const r = rankFinishes([f('you', {}), f('ghost', {}), f('c', { sols: 12 })]);
+    const me = r.find((x) => x.id === 'you')!;
+    expect(versus(me, r.find((x) => x.id === 'ghost')!)).toBe('tie');
+    expect(versus(me, r.find((x) => x.id === 'c')!)).toBe('ahead');
+    expect(tiedWith(r, me).map((x) => x.id)).toEqual(['ghost']);
+    expect(tiedWith(r, r.find((x) => x.id === 'c')!)).toEqual([]);
   });
 
   it('has friendly banter only', () => {
@@ -384,5 +418,68 @@ describe('podium tip', () => {
     expect(raceTip(res({ launched: false, fuel: 60, loseReason: 'dose' }, {}), 'mars')).toMatch(/storm shelter/);
     expect(raceTip(res({ launched: false, fuel: 60, loseReason: 'window' }, {}), 'mars')).toMatch(/FUEL/);
     expect(raceTip(res({ sols: 8 }, { sols: 9 }), 'mars')).toMatch(/Great flying/);
+    expect(raceTip(res({}, {}), 'mars')).toMatch(/perfect tie/);
+  });
+});
+
+describe('race wording', () => {
+  it('says why a crew with a full rocket went home (it did not launch)', () => {
+    expect(homeShort('air', 100)).toBe('ran low on air before launch, so they went home safe (rocket 100% full)');
+    expect(homeShort('dose', 97.6)).toMatch(/radiation before launch.*rocket 97% full/);
+    expect(homeShort('window', 60)).toMatch(/^missed the launch window/);
+    expect(homeShort(undefined, 60)).toMatch(/^missed the launch window/);
+  });
+
+  it('uses days, not sols, for the Moon rules (lobby and podium)', async () => {
+    const { lobbyContent, podiumContent } = await import('./ui');
+    const text = (c: unknown) => {
+      const el = document.createElement('div');
+      el.append(...([c].flat(3) as unknown[]).filter((x): x is Node => x instanceof Node));
+      return el.textContent ?? '';
+    };
+    for (const site of ['moon', 'mars'] as const) {
+      const race = createRace({ league: 0, you: YOU, seed: 'rword', site, lightTimeMin: 12.5, eventPool: POOL });
+      const noop = () => {};
+      const lobby = text(lobbyContent({ save: freshSave(), callsign: YOU, fromCard: false, race, canStart: true, onSite: noop, onStart: noop, onBack: noop, onShare: noop, onNewCallsign: noop }));
+      const results = rankFinishes(race.racers.map((r, i) => ({ id: r.id, racer: r, launched: i < 3, sols: 5 + i, dose: 10, life: 4, fuel: i < 3 ? 100 : 100, loseReason: i < 3 ? undefined : ('air' as const) })));
+      const podium = text(podiumContent({ race, results, xp: 150, outcome: { points: 3, good: true, promoted: false, trophy: true, league: 0 }, save: freshSave(), friend: null, onRaceAgain: noop, onShare: noop, onClose: noop }));
+      const unit = site === 'moon' ? 'days' : 'sols';
+      expect(lobby).toContain(`Ties go to fewer ${unit}`);
+      expect(podium).toContain(`Ties: fewer ${unit}`);
+      if (site === 'moon') expect(lobby + podium).not.toMatch(/\bsols?\b/i);
+      expect(podium).toContain('ran low on air before launch, so they went home safe (rocket 100% full)');
+      expect(podium).not.toMatch(/went home early \(rocket/);
+    }
+  });
+});
+
+describe('podium with a tie', () => {
+  it("says it's a tie with your friend, never 'You won' and 'your friend is ahead' together", async () => {
+    const { podiumContent } = await import('./ui');
+    const g: GhostRun = { seed: 'rtie', site: 'mars', difficulty: 'cadet', callsign: YOU, fuel: [10, 20, 100], status: 'won', dose: 10, life: 4, pool: '', lightTimeMin: 12.5 };
+    const race = createRace({ league: 0, you: YOU, ghost: g, lightTimeMin: 12.5, eventPool: POOL });
+    const results = rankFinishes(
+      race.racers.map((r, i) => ({ id: r.id, racer: r, launched: true, sols: i < 2 ? 3 : 5 + i, dose: 10, life: 4, fuel: 100 })),
+    );
+    const me = results.find((r) => r.id === 'you')!;
+    const ghost = results.find((r) => r.id === 'ghost')!;
+    expect([me.place, ghost.place]).toEqual([1, 1]);
+    const el = document.createElement('div');
+    const content = podiumContent({
+      race,
+      results,
+      xp: 150,
+      outcome: { points: 3, good: true, promoted: false, trophy: true, league: 0 },
+      save: freshSave(),
+      friend: versus(me, ghost),
+      onRaceAgain: () => {},
+      onShare: () => {},
+      onClose: () => {},
+    });
+    el.append(...(Array.isArray(content) ? content : [content]).filter((c): c is HTMLElement => c instanceof Node));
+    const text = el.textContent ?? '';
+    expect(text).toMatch(/It's a tie for 1st!/);
+    expect(text).toMatch(/You tied with your friend/);
+    expect(text).not.toMatch(/You won the race|Your friend is ahead|beat your friend/);
   });
 });

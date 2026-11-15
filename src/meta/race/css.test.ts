@@ -24,6 +24,10 @@ describe('race.css', () => {
     expect(css.slice(gate)).toContain('html:not(.reduce-motion) .race-flash');
   });
 
+  it('keeps the overlay heading clear of the close X', () => {
+    expect(css).toMatch(/\.race-ov-body > :first-child \+ h2 \{[^}]*margin-right:\s*4\dpx/);
+  });
+
   it('shows a visible focus ring on its buttons', () => {
     expect(css).toMatch(/focus-visible[^{]*\{[^}]*outline: 3px solid/);
   });

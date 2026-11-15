@@ -338,6 +338,18 @@ export function giftReady(): { day: number; xp: number } | null {
   return { day: step + 1, xp: GIFTS[step] };
 }
 
+/** No gift opened yet: this is the player's first visit, so it is a welcome, not a welcome back. */
+export function firstGift(): boolean {
+  return seasonState().login.count === 0;
+}
+
+/** The gift pop-up's words: "Welcome, astronaut!" the first time, "Welcome back!" after that. */
+export function giftGreeting(first: boolean, xp: number): { title: string; body: string } {
+  return first
+    ? { title: 'Welcome, astronaut!', body: `+${xp} Season XP. Come back tomorrow for another gift.` }
+    : { title: 'Welcome back!', body: `+${xp} Season XP. See you tomorrow, astronaut.` };
+}
+
 /** Open today's gift. Missing days never reset the strip: it just picks up where it left off. */
 export function openGift(): number {
   const g = giftReady();

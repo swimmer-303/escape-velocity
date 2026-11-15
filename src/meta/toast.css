@@ -1,13 +1,24 @@
 /* Written with AI assistance (Claude Code). See README "Use of AI tools". */
-/* Small pop-ups for rewards ("+50 XP", "New Storm Card!"), stacked at the top of the screen. */
-.ev-toasts { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; width: min(420px, calc(100vw - 24px)); }
-.ev-toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: var(--panel, #1e1a3a); color: var(--ink, #f4ead8); border: 3px solid #000; box-shadow: 4px 4px 0 rgba(0,0,0,0.5), inset 0 0 0 2px var(--toast-accent, #ffb627); padding: 8px 12px; font-size: 15px; line-height: 1.3; width: 100%; }
+/* Small pop-ups for rewards ("+50 XP", "New Storm Card!"). Bottom-left on bigger screens (clear of the headings at
+   the top and the Run sol button at the bottom right), small and at the top on phones. They never catch taps. */
+.ev-toasts {
+  position: fixed; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 90;
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px; pointer-events: none; width: min(380px, calc(100vw - 32px));
+}
+.ev-toast { pointer-events: none; display: flex; align-items: center; gap: 10px; background: var(--panel, #1e1a3a); color: var(--ink, #f4ead8); border: 3px solid #000; box-shadow: 4px 4px 0 rgba(0,0,0,0.5), inset 0 0 0 2px var(--toast-accent, #ffb627); padding: 8px 12px; font-size: 15px; line-height: 1.3; width: 100%; }
+.ev-toast.wait { display: none; }
 .ev-toast b { font-family: var(--font-px, monospace); font-weight: 400; color: var(--toast-accent, #ffb627); }
 .ev-toast.good { --toast-accent: #7ddc5a; }
 .ev-toast.cyan { --toast-accent: #5ef2e6; }
 .ev-toast.gold { --toast-accent: #ffd34d; }
 .ev-toast .ev-toast-icon { flex: none; line-height: 0; }
+@media (max-width: 700px) {
+  .ev-toasts { left: 50%; bottom: auto; top: calc(6px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: calc(100vw - 16px); gap: 4px; }
+  .ev-toast { font-size: 13px; padding: 5px 8px; gap: 8px; box-shadow: 3px 3px 0 rgba(0,0,0,0.5), inset 0 0 0 2px var(--toast-accent, #ffb627); }
+  .ev-toast > div { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ev-toast .ev-toast-icon svg, .ev-toast .ev-toast-icon canvas, .ev-toast .ev-toast-icon img { width: 22px; height: 22px; }
+}
 @media (prefers-reduced-motion: no-preference) {
   html:not(.reduce-motion) .ev-toast { animation: ev-toast-in 0.25s steps(4) both; }
-  @keyframes ev-toast-in { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes ev-toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 }
