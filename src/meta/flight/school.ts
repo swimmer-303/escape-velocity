@@ -69,17 +69,20 @@ function entryButton(e: (typeof ENTRIES)[number], refresh: () => void): HTMLButt
 /** The Flight school panel for the title screen. */
 export function renderFlightSchool(): HTMLElement {
   const row = h('div', { class: 'ev-fs-row' });
+  const count = h('span', null);
+  // After a practice flight the buttons and the medal count are redrawn together, so they never disagree.
   const refresh = () => {
     clear(row);
     for (const e of ENTRIES) row.append(entryButton(e, refresh));
+    const medals = ENTRIES.filter((e) => bestMedal(e.game, e.site)).length;
+    count.textContent = `Practice landing and launching. ${medals} of ${ENTRIES.length} medals.`;
   };
   refresh();
   // A lobby tile group (one grid cell, styled like the tiles in src/meta/tile.ts) with the four flights inside.
-  const medals = ENTRIES.filter((e) => bestMedal(e.game, e.site)).length;
   return h(
     'section',
     { class: 'ev-flight-school title-tile-group accent-cyan', 'data-tile': 'flight-school', 'aria-label': 'Flight school' },
-    h('div', { class: 'ev-fs-head' }, h('b', null, 'Flight school'), h('span', null, `Practice landing and launching. ${medals} of ${ENTRIES.length} medals.`)),
+    h('div', { class: 'ev-fs-head' }, h('b', null, 'Flight school'), count),
     row,
   );
 }

@@ -12,6 +12,7 @@ import { targetCount, todayKey } from './targets';
 import { defaultSite, freshStore } from './store';
 import { bankHaul } from './bank';
 import { LESSON, museumView, resultsCard } from './ui';
+import { touchOnly } from './game';
 import './index';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -147,5 +148,16 @@ describe('Rover Expeditions in the real game', () => {
     expect(text).toContain(LESSON);
     expect(text).toContain('New targets tomorrow');
     expect(card.querySelector('.ev-rarity.legendary')?.textContent).toContain('Legendary');
+  });
+});
+
+describe('scan prompt words', () => {
+  it('only names the Space key when the device has a mouse or keyboard pointer (not on a phone or tablet)', () => {
+    const media = (matches: boolean) => vi.stubGlobal('matchMedia', (q: string) => ({ matches: matches && q.includes('coarse'), media: q }));
+    media(true);
+    expect(touchOnly()).toBe(true);
+    media(false);
+    expect(touchOnly()).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

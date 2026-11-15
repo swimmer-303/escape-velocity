@@ -3,7 +3,7 @@
 // unlocking new parts or decor. Star 1 is the goal; stars 2 and 3 are harder extras (and need star 1).
 // All checks run on the readout and stress test (./stress.ts), which use the game's own numbers.
 
-import { MOON_BATTERY, REAL } from '../../sim/constants';
+import { ARCADIA, MOON_BATTERY, REAL } from '../../sim/constants';
 import { PARTS, STARTER_PARTS, type PartId } from './parts';
 import { countOf, workingParts, type Layout, type SiteId } from './layout';
 import type { Readout } from './stress';
@@ -125,7 +125,7 @@ export const CHALLENGES: Challenge[] = [
     star2: atMost('greenhouse', 1),
     star3: starsAtLeast(2),
     unlocks: ['statue'],
-    tip: 'Water from the ice makes each greenhouse cell grow twice the food here. Cold nights need extra heat.',
+    tip: `Water from the ice makes each greenhouse cell grow ${ARCADIA.greenhouseBoost === 2 ? 'twice' : `${ARCADIA.greenhouseBoost} times`} the food here. Cold nights need extra heat.`,
   },
   {
     id: 'moon-base',

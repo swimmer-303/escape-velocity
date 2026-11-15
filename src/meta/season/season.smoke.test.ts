@@ -6,11 +6,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App } from '../../ui/app';
 import { CssStage } from '../../render/stage';
 import '../index';
-import { claimAll, openGift, resetSeasonEngine, seasonState } from './engine';
+import { addSeasonXp, claimAll, openGift, resetSeasonEngine, seasonState } from './engine';
 import { refreshInPlace } from './index';
 import { decorateLobby, loadLobby } from '../../ui/lobby';
 import { setFeedForTests } from './live';
-import { openSeason, seasonTile, setQuietToasts, SEASON_LABEL, CARD_LABEL } from './ui';
+import { openLocker, openSeason, seasonTile, setQuietToasts, SEASON_LABEL, CARD_LABEL } from './ui';
 import { liveFeed, snapshotWith } from './fixtures';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -101,6 +101,19 @@ describe('Season 1 on the title screen', () => {
     expect(document.querySelector('#modal-root [aria-label="Escape Velocity title screen"]')).not.toBeNull();
     expect(strip()!.textContent).toContain(fresh);
     expect(fetchSpy.mock.calls.length).toBe(callsByGame);
+  });
+
+  it('a reward from a tier already reached says to claim it, not which tier it needs', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline in tests')));
+    new App(new CssStage());
+    await sleep(50);
+    addSeasonXp(1000, 'game');
+    openLocker();
+    const opt = (key: string) => document.querySelector<HTMLElement>(`#modal-root [aria-label="${CARD_LABEL}"] [data-key="${key}"]`)!;
+    // Tier 2's title is reached but not claimed yet; tier 8's is still ahead.
+    expect(opt('title-t-sun-watcher').textContent).toContain('Claim it in the Season Pass');
+    expect(opt('title-t-sun-watcher').textContent).not.toContain('Season tier 2');
+    expect(opt('title-t-oxygen-maker').textContent).toContain('Season tier 8');
   });
 
   it('redraws the Season tile in place, so opening it after a redraw still clears its lobby NEW badge', async () => {

@@ -111,6 +111,8 @@ export class BuilderScene {
   private host: HTMLElement;
   private onCell: SceneOptions['onCell'];
   private fogBase = new THREE.Color();
+  /** Screen pixels covered by panels above and below the pad (phones): the camera frames the pad in the open part. */
+  private inset = { top: 0, bottom: 0 };
 
   constructor(host: HTMLElement, opts: SceneOptions) {
     this.host = host;
@@ -435,6 +437,19 @@ export class BuilderScene {
     this.dirty = true;
   }
 
+  /**
+   * On a phone the readout, the parts and the tools cover the bottom half of the screen. Tell the scene how many pixels
+   * are covered at the top and the bottom, and it centers the pad in the open part between them (taps still land on
+   * the right square: picking uses the same camera).
+   */
+  setInsets(top: number, bottom: number) {
+    const t = Math.max(0, Math.round(top));
+    const b = Math.max(0, Math.round(bottom));
+    if (t === this.inset.top && b === this.inset.bottom) return;
+    this.inset = { top: t, bottom: b };
+    this.resize();
+  }
+
   resetView() {
     this.controls.target.set(0, 0, 0);
     this.camera.position.set(14, 13, 17);
@@ -553,10 +568,16 @@ export class BuilderScene {
     this.renderer.setSize(iw, ih, false);
     this.target.setSize(iw, ih);
     SNAP.value.set(iw * 0.75, ih * 0.75);
-    this.camera.aspect = w / h;
-    this.camera.fov = w / h < 1.1 ? 58 : 45;
+    // The open part of the screen between the panels (the whole screen when nothing covers it).
+    const open = h - this.inset.top - this.inset.bottom;
+    const framed = open >= 160 && open < h;
+    const vh = framed ? open : h;
+    this.camera.aspect = w / vh;
+    this.camera.fov = w / vh < 1.1 ? 58 : 45;
+    if (framed) this.camera.setViewOffset(w, open, 0, -this.inset.top, w, h);
+    else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
-    POINT_SCALE.value = ih / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
+    POINT_SCALE.value = (ih * (vh / h)) / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
     this.dirty = true;
   };
 

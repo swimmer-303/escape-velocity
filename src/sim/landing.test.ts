@@ -2,7 +2,7 @@
 // The ice landing site (Arcadia Planitia): a real two-sided trade-off, sane balance, and Gale Crater left exactly as it was.
 import { describe, it, expect } from 'vitest';
 import { createMission, getBriefing, simulateWhatIf, emptyAlloc, foodPerGreenhouseCell, greenhouseAirPerCell, solarCells, windowSol } from './sim';
-import { builder, balanced, pureGreed, greedyBreathing, playOut, playCampaign } from './strategies';
+import { builder, balanced, evenSplit, ignoresRadiation, pureGreed, greedyBreathing, playOut, playCampaign, type Strategy } from './strategies';
 import { testConfig, TEST_POOL } from './fixtures.test-util';
 import { newCampaign, missionConfigFor, serialize, deserialize, finishExpedition, prefillFor } from './campaign';
 import { ARCADIA, TUNING, ARCADIA_TUNING, MOON_TUNING, RATES, expeditionFor, landingOf, tuningFor } from './constants';
@@ -23,6 +23,25 @@ describe('landing site: Arcadia Planitia (ice)', () => {
     let wins = 0;
     for (let i = 0; i < 100; i++) if (playOut(ice(`aq-${i}`), builder).status === 'won') wins++;
     expect(wins).toBeGreaterThanOrEqual(90);
+  });
+
+  it('Commander at Arcadia is hard but fair: a builder wins some first crews, later crews do not collapse, careless play loses', () => {
+    const n = 60;
+    const wins = (strategy: Strategy) => {
+      const w = [0, 0, 0];
+      for (let i = 0; i < n; i++) for (const r of playCampaign(`acmd-${i}`, 'commander', TEST_POOL, strategy, 11, 'mars', 'arcadia').results) if (r.status === 'won') w[r.n - 1]++;
+      return w;
+    };
+    // Before the bigger greenhouse boost (2 -> 3): about 19 / 18 / 8% for a builder. The first crew had no power to
+    // spare, so nothing got built and crews 2 and 3 (5 and 6 people) had only the 6-cell starting array.
+    const b = wins(builder);
+    expect(b[0]).toBeGreaterThanOrEqual(n * 0.3);
+    expect(b[0]).toBeLessThanOrEqual(n * 0.8);
+    expect(b[1]).toBeGreaterThanOrEqual(n * 0.3);
+    expect(b[2]).toBeGreaterThanOrEqual(n * 0.3);
+    // The radiation choices still matter: ignoring the storms loses almost every first crew.
+    expect(wins(ignoresRadiation)[0]).toBeLessThanOrEqual(n * 0.15);
+    expect(wins(evenSplit)[0]).toBeLessThanOrEqual(n * 0.15);
   });
 
   it('pure greed always loses at Arcadia', () => {
