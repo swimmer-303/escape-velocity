@@ -271,7 +271,11 @@ export function resultsCard(r: ResultsInfo): HTMLElement {
           'p',
           { class: 'ev-rover-tow' },
           'The battery ran out, so a friendly tow rover brought you home. ',
-          r.lost ? `It only had room for ${res.total} of your ${res.total + r.lost} samples. The others are still out there for another try today.` : 'It brought every sample home.',
+          r.lost
+            ? `It only had room for ${res.total} of your ${res.total + r.lost} samples. The others are still out there for another try today.`
+            : res.total
+              ? 'It brought every sample home.'
+              : '',
         )
       : null,
     sorted.length
