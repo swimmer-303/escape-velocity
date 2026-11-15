@@ -1,12 +1,21 @@
 /* Written with AI assistance (Claude Code). See README "Use of AI tools". */
 /* The Hangar: a side panel (a bottom sheet on narrow screens) so the 3D base stays in view while you equip things. */
 
+/* The Hangar moves the camera itself (to the rocket, the habitat...): the stage's "Look at" menu would only get in
+   the way (on a phone it sat on top of the camera's caption). */
+body:has(> #modal-root > .hangar-modal) .look-at { visibility: hidden; }
 /* Only while the Hangar is open: a lighter backdrop that leaves the base visible, and the dialog at the side. */
 #modal-root:has(> .hangar-modal) { place-items: stretch end; padding: 12px; background: linear-gradient(90deg, transparent 0 30%, #0b0a1880); }
 .modal.hangar-modal { width: min(480px, 100%); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); background: #15122bf2; }
 @media (max-width: 720px) {
   #modal-root:has(> .hangar-modal) { place-items: end stretch; padding: 8px; background: linear-gradient(transparent 0 35%, #0b0a1880); }
   .modal.hangar-modal { width: 100%; max-height: 62vh; max-height: 62dvh; }
+  /* On a phone the 3D view sits under the top bar (style.css, max-width 900px), right where this sheet goes. While the
+     Hangar is open, the top bar steps aside so the view moves to the top, and the sheet stops just below it: you see
+     the suit or the paint change the moment you equip it. */
+  body:has(> #modal-root > .hangar-modal) #hud { display: none; }
+  body:has(> #modal-root > .hangar-modal) #app { align-content: start; }
+  .modal.hangar-modal { max-height: calc(100vh - max(220px, 40vh) - 16px); max-height: calc(100dvh - max(220px, 40vh) - 16px); }
 }
 
 .hangar h2 { margin-bottom: 4px; }

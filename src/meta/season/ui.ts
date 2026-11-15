@@ -561,8 +561,15 @@ function optionsFor(slot: CardSlot): Option[] {
   }
 }
 
+/** A tier the player has already reached but not claimed yet: its rewards wait in the Season Pass. */
+function waitingToClaim(slot: CardSlot, id: string): boolean {
+  const t = tierOf(slot, id);
+  return t > 0 && t <= tierProgress(seasonState().xp).tier;
+}
+
 function lockText(slot: CardSlot, id: string): string {
   if (slot === 'patch' && /^(live|archive):/.test(id)) return 'Event patch';
+  if (waitingToClaim(slot, id)) return 'Claim it in the Season Pass';
   const t = tierOf(slot, id);
   return t > 0 ? `Season tier ${t}` : 'Locked';
 }
@@ -605,7 +612,7 @@ export function openLocker(): HTMLElement | null {
                 onclick: () => {
                   if (!have) {
                     sfx('click');
-                    live.textContent = `${o.name} unlocks at ${lockText(slot, o.id)}.`;
+                    live.textContent = waitingToClaim(slot, o.id) ? `${o.name} is ready: claim it in the Season Pass.` : `${o.name} unlocks at ${lockText(slot, o.id)}.`;
                     return;
                   }
                   if (setCard(slot, o.id)) {

@@ -158,7 +158,9 @@
 
 /* ---------- small screens ---------- */
 @media (max-width: 600px) {
-  .ev-fhud { gap: 4px; max-width: calc(100% - 96px); }
+  /* The HUD's box already stops beside Skip: use all of it, so "0.00 of 5.03 km/s" fits inside its gauge instead of
+     spilling over the edge (a max-width here left room for Skip a second time). */
+  .ev-fhud { gap: 4px; max-width: none; }
   .ev-gauge { min-width: 0; padding: 3px 6px 4px; }
   .ev-gauge .bar, .ev-gauge.wide .bar { min-width: 96px; height: 12px; }
   .ev-gauge .val b { font-size: 16px; }

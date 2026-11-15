@@ -224,6 +224,7 @@ export class BuilderView {
       if (this.closed) return;
       this.scene = new BuilderScene(this.stage, { reduced: this.reduced, onCell: (c, kind) => this.onCell(c, kind) });
       this.stage.classList.add('has-3d');
+      this.frameScene();
       this.scene.sync(this.editor.layout);
       this.paintGhost();
     } catch (e) {
@@ -443,11 +444,35 @@ export class BuilderView {
       this.el.style.setProperty('--evb-top-h', `${this.topBar.offsetHeight}px`);
       this.el.style.setProperty('--evb-tools-h', `${this.tools.offsetHeight}px`);
       this.el.style.setProperty('--evb-pal-h', `${this.palette.offsetHeight}px`);
+      this.frameScene();
     };
     sync();
     if (typeof ResizeObserver !== 'function') return;
     this.sizeObs = new ResizeObserver(sync);
-    for (const el of [this.topBar, this.tools, this.palette]) this.sizeObs.observe(el);
+    for (const el of [this.el, this.topBar, this.tools, this.palette, this.readoutBox, this.goalBox]) this.sizeObs.observe(el);
+  }
+
+  /**
+   * On narrow screens the panels stack above and below the pad (builder.css, max-width 860px). Tell the 3D scene how
+   * much of the screen they cover, so the pad sits in the open part instead of half under the readout.
+   */
+  private frameScene() {
+    if (!this.scene) return;
+    let top = 0;
+    let bottom = 0;
+    let narrow = false;
+    try {
+      narrow = !!window.matchMedia?.('(max-width: 860px)').matches;
+    } catch {
+      narrow = false;
+    }
+    if (narrow) {
+      const box = this.el.getBoundingClientRect();
+      top = this.topBar.getBoundingClientRect().bottom - box.top;
+      if (!this.goalBox.hidden) top = Math.max(top, this.goalBox.getBoundingClientRect().bottom - box.top);
+      if (!this.readoutBox.hidden) bottom = box.bottom - this.readoutBox.getBoundingClientRect().top;
+    }
+    this.scene.setInsets(top, bottom);
   }
 
   /** Focus the build pad without scrolling the page (keys work from there). */
