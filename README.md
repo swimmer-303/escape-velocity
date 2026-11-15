@@ -30,6 +30,7 @@ A lesson is one session; curiosity is many. Everything below rewards *playing we
 - **Storm Cards:** every real NASA solar storm a crew faces becomes a collectible card, with rarity from the real flare class (C common, M rare, X epic, X5+ legendary) and a link to its NASA DONKI record. The live feed means new real storms appear as the real Sun erupts (`src/meta/cards`).
 - **The Hangar:** suit colors, rocket paint jobs, base lights and a rover pet, all shown in the 3D outpost and unlocked by rank (`src/meta/hangar`).
 - **Flight mini-games:** land the crew with real Mars or Moon gravity, and fly the rocket to escape velocity; medals and bonus XP for skill, never a penalty for the mission (`src/meta/flight`).
+- **Rover Expeditions:** drive a six-wheeled rover across the real ground around your base (Gale Crater or Arcadia Planitia, from NASA Mars Trek heights) or a Moon map near the south pole, with real gravity. 5 to 8 science targets a day, the same for everyone, fill a Sample Museum of 20 real finds (Curiosity's lake mudstone, the "Lebanon" iron meteorite, LCROSS's shadowed-crater ice...). The battery is the base's lesson again: speed, hills, boost and headlights all cost power, so you must save enough to get home (`src/meta/rover`).
 
 The features plug into the game through one small module (`src/meta/hooks.ts`): the game announces what happened, and each feature listens. Progress is stored only in the browser.
 
@@ -89,6 +90,7 @@ One turn is one **sol** (a Mars day, 24 h 39 min).
 | **Canadian Space Agency**: food production on the Moon and in remote areas | Greenhouse Real Science card (partner agency resource). | Reference |
 | **NASA SWIM** (Subsurface Water Ice Mapping, PSI for NASA's Mars Exploration Program) ice-consistency maps | The Arcadia Planitia landing site: its real map values (top meter +0.55 at Arcadia, about 0 at Gale), 3 Real Science cards, the Science Log. | ARCHIVE (values read from the SWIM 2.0 GeoTIFFs) |
 | **NASA Mars Trek** elevations (MOLA + HRSC DEM) | The 3D ground: Gale Crater with Mount Sharp, or the flat plains of Arcadia Planitia. | ARCHIVE |
+| **NASA Mars Trek** elevations + **NASA SWIM** north-south ice profile | **Rover Expeditions**: the drivable Gale Crater and Arcadia maps (the same heights as the 3D base), and where Arcadia's ice samples appear (more often to the north, where SWIM's top-meter ice consistency is higher). | ARCHIVE |
 
 Full details, raw field names, CORS findings and the source URL for every number are in [`docs/data-notes.md`](docs/data-notes.md). The in-game **Science Log** shows all of this to players.
 
@@ -100,6 +102,7 @@ The game time-compresses and scales real numbers so a mission fits in about 10 m
 - Fuel: each cell fills a few percent of the tank. A real crewed ascent needs about 25 to 31 tonnes of oxygen from a 25 to 30 kW plant (MOXIE scaled up about 200 times) running for about 16 months.
 - Radiation: the mission dose budget (about 27 mSv) is much stricter than NASA's real 600 mSv career limit, so radiation choices matter in a short game. The background dose per sol is the real measured value.
 - Dust storms take 2 or 3 of 7 cells: gentler than Opportunity's real storms.
+- Rover Expeditions: the Mars maps are shrunk 100 times side to side with hills 1.5 times taller, the rover is far faster than Curiosity's real 4 cm/s, and the Moon map is made up. The start card's Science notes say so.
 - We never invent space-weather events, values or study IDs, and we never label stored data as live.
 
 ## Architecture

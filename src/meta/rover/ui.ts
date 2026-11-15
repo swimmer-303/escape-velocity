@@ -281,7 +281,7 @@ export function resultsCard(r: ResultsInfo): HTMLElement {
       { class: 'ev-rover-stats' },
       h('li', null, `Samples banked: ${res.total}`),
       h('li', null, `Distance driven: ${Math.round(r.distance).toLocaleString('en-US')} m`),
-      res.total && res.bestHaul.isNew ? h('li', { class: 'best' }, `New best: ${res.total} samples in one trip!`) : null,
+      res.total && res.bestHaul.isNew ? h('li', { class: 'best' }, `New best: ${res.total} ${res.total === 1 ? 'sample' : 'samples'} in one trip!`) : null,
       res.bestDistance.isNew && r.distance >= 50 ? h('li', { class: 'best' }, 'New best: your longest drive here!') : null,
     ),
     res.xp > 0 ? h('p', { class: 'ev-flight-xp' }, h('b', null, `+${res.xp} XP`)) : null,

@@ -311,6 +311,7 @@ export class RoverWorld {
   private beams: THREE.InstancedMesh;
   private markers: THREE.InstancedMesh;
   private devilMesh: THREE.InstancedMesh | null = null;
+  private homeBeam: THREE.Object3D | null = null;
   private scanBeam: THREE.Mesh;
   private dust: Particles;
   private sparks: Particles;
@@ -410,7 +411,7 @@ export class RoverWorld {
     this.scene.add(this.rover);
 
     this.scanBeam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 2.2, 1, 10, 1, true).translate(0, 0.5, 0),
+      new THREE.CylinderGeometry(0.1, 1.3, 1, 10, 1, true).translate(0, 0.5, 0),
       new THREE.MeshBasicMaterial({ color: '#5ef2e6', transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
     );
     this.scanBeam.visible = false;
@@ -423,8 +424,8 @@ export class RoverWorld {
       this.scene.add(this.devilMesh);
     }
 
-    this.dust = new Particles(reduced ? 120 : 220, L.dust, 0.7, 0.85);
-    this.sparks = new Particles(reduced ? 40 : 140, '#ffffff', 0.9, 1, true);
+    this.dust = new Particles(reduced ? 120 : 220, L.dust, 0.2, 0.75);
+    this.sparks = new Particles(reduced ? 40 : 140, '#ffffff', 0.22, 1, true);
     this.scene.add(this.dust.points, this.sparks.points);
     this.updateTargets(0);
   }
@@ -444,6 +445,7 @@ export class RoverWorld {
       new THREE.MeshBasicMaterial({ color: '#5ef2e6', transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide }),
     );
     home.position.set(0, y0, 0);
+    this.homeBeam = home;
     // The habitat, solar panels and a radio mast beside the pad (merged into one mesh).
     const parts: THREE.BufferGeometry[] = [];
     const hy = (x: number, z: number) => this.field.height(x, z);
@@ -538,15 +540,17 @@ export class RoverWorld {
     if (!this.reduced) this.shake = Math.max(this.shake, Math.min(0.6, amount));
   }
 
-  private updateTargets(time: number) {
+  private updateTargets(time: number, rx = 0, rz = 0) {
     const pulse = this.reduced ? 1 : 1 + 0.15 * Math.sin(time * 3);
     this.targets.forEach((t, i) => {
       const st = this.targetState[i];
       if (st === 'open') {
+        // Thin the beam as the rover gets close, so the camera never sits inside it.
+        const near = Math.max(0.12, Math.min(1, (Math.hypot(t.x - rx, t.z - rz) - 6) / 40));
         _q.setFromAxisAngle(Y_AXIS, time * (this.reduced ? 0.3 : 0.9) + i);
         _m.compose(_v.set(t.x, t.y + 1.0 + (this.reduced ? 0 : Math.sin(time * 2 + i) * 0.25), t.z), _q, _s.set(1, 1, 1));
         this.markers.setMatrixAt(i, _m);
-        _m.compose(_v.set(t.x, t.y, t.z), _q.identity(), _s.set(pulse, 1, pulse));
+        _m.compose(_v.set(t.x, t.y, t.z), _q.identity(), _s.set(pulse * near, 1, pulse * near));
         this.beams.setMatrixAt(i, _m);
       } else {
         this.markers.setMatrixAt(i, HIDDEN);
@@ -674,9 +678,11 @@ export class RoverWorld {
     if (this.disposed) return;
     this.placeRover(v);
     this.placeCamera(v);
+    // The light over the pad shows the way home; it switches off while you are on the pad.
+    if (this.homeBeam) this.homeBeam.visible = Math.hypot(v.rover.x, v.rover.z) > PAD_RADIUS + 6;
     this.placeScanBeam(v);
     this.placeDevils(v);
-    this.updateTargets(v.time);
+    this.updateTargets(v.time, v.rover.x, v.rover.z);
     this.kickDust(v);
     // Moon dust flies in clean arcs and falls straight back (no air); Mars dust hangs in the thin air a while.
     const g = this.look.airless ? 1.62 : 3.71;

@@ -52,6 +52,8 @@ export interface RoverEnv {
 const ABORT = Symbol('rover-abort');
 type Abort = typeof ABORT;
 const STEP = 1 / 60;
+/** How close the rover can get to a sample rock, m. */
+const ROCK_RADIUS = 3.2;
 
 function reducedWanted(flag: boolean): boolean {
   try {
@@ -624,6 +626,20 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
         }
       }
       const step = stepRover(s, s.battery > 0 ? inp : { ...NO_INPUT, lights: inp.lights }, dt, w.field, g);
+      // Sample rocks are solid: the rover stops beside them instead of driving over them.
+      for (const t of states) {
+        if (t.state !== 'open') continue;
+        const dx = s.x - t.x;
+        const dz = s.z - t.z;
+        const d = Math.hypot(dx, dz);
+        if (d < ROCK_RADIUS && d > 1e-6) {
+          s.x = t.x + (dx / d) * ROCK_RADIUS;
+          s.z = t.z + (dz / d) * ROCK_RADIUS;
+          s.y = w.field.height(s.x, s.z);
+          s.speed *= 0.3;
+          if (once('bump-rock', 1.5)) shell.sfx('deny');
+        }
+      }
       boosting = step.boosting;
       if (step.steep && once('steep', 6)) shell.say('Too steep! The wheels slip. Find a gentler way.', { tone: 'warn' });
       if (step.edge && once('edge', 6)) shell.say('Edge of the map. Turn back!', { tone: 'warn' });
