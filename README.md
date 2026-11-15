@@ -7,6 +7,8 @@ NASA Space Apps Challenge 2026, Charlotte, NC · Team Escape Velocity (Spencer H
 
 **Play it:** https://playescapevelocity.com · no download, no account, works on Chromebooks, desktops and tablets.
 
+**Watch the 30-second demo:** https://youtu.be/usbovDr12Ew
+
 ## The challenge
 
 > Space-themed STEM content often oversimplifies the engineering trade-offs that define a real mission or presents them at a level too complex to hold a young learner's attention. Few tools make those trade-offs both tangible and fun. Your challenge is to design and build an interactive game or app that lets students run a lunar or Martian outpost, balancing competing demands like life support, radiation shielding, power, and food production, so they experience firsthand the decisions that determine whether a mission fails or succeeds.
