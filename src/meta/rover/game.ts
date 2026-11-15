@@ -19,6 +19,7 @@ import {
   devilPush,
   dustDevils,
   homeAlert,
+  HOME_ALERT_TEXT,
   newRover,
   onPad,
   returnCost,
@@ -701,9 +702,9 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
       const next = homeAlert(s.battery, returnCost(Math.hypot(s.x, s.z), w.field.height(0, 0) - s.y, g));
       if (next !== alert) {
         if (next === 'now' && aboard.length + open() > 0) {
-          shell.say('Head home! Your battery is getting low.', { tone: 'bad', ms: 3000 });
+          shell.say(HOME_ALERT_TEXT.now, { tone: 'bad', ms: 3000 });
           shell.sfx('alarm');
-        } else if (next === 'soon' && alert === 'ok') shell.say('Battery half gone. Plan your way home.', { tone: 'warn' });
+        } else if (next === 'soon' && alert === 'ok') shell.say(HOME_ALERT_TEXT.soon, { tone: 'warn' });
         alert = next;
       }
       if (step.emptied) {

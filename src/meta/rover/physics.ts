@@ -273,6 +273,15 @@ export function homeAlert(battery: number, cost: number): HomeAlert {
   return 'ok';
 }
 
+/**
+ * What the warnings say. They match what homeAlert measures: how much of the battery the drive back to the pad
+ * needs from here (not how much battery is used up), so they are true whether you are near the pad or far out.
+ */
+export const HOME_ALERT_TEXT: Record<Exclude<HomeAlert, 'ok'>, string> = {
+  soon: 'Plan your way home: the drive back will use a big part of your battery.',
+  now: 'Time to head home: you need the rest of your battery to get back.',
+};
+
 /** On the charging pad? */
 export function onPad(x: number, z: number): boolean {
   return Math.hypot(x, z) <= PAD_RADIUS;
