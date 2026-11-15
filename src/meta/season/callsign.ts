@@ -7,7 +7,7 @@ export const ADJECTIVES: readonly string[] = [
   'Brave', 'Bright', 'Bold', 'Calm', 'Clever', 'Cosmic', 'Curious', 'Daring', 'Eager', 'Fast',
   'Friendly', 'Gentle', 'Golden', 'Happy', 'Helpful', 'Jolly', 'Keen', 'Kind', 'Lucky', 'Mighty',
   'Nimble', 'Patient', 'Plucky', 'Quick', 'Quiet', 'Rapid', 'Sharp', 'Shiny', 'Silver', 'Smart',
-  'Speedy', 'Steady', 'Sunny', 'Swift', 'Super', 'Trusty', 'Turbo', 'Wise', 'Zippy', 'Stellar',
+  'Sparkly', 'Steady', 'Sunny', 'Swift', 'Super', 'Trusty', 'Turbo', 'Wise', 'Zippy', 'Stellar',
 ];
 
 export const SPACE_NOUNS: readonly string[] = [

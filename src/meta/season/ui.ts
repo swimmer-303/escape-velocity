@@ -11,7 +11,7 @@ import { toast } from '../toast';
 import { itemById as hangarItem } from '../hangar/items';
 import { itemPreview } from '../hangar/preview';
 import { MAX_TIER, SEASON_END_WORDS, SEASON_FACT, SEASON_FACT_SOURCE, SEASON_NAME, seasonCountdown, tierProgress, timeLeftWords, xpToReachTier } from './season';
-import { BANNERS, FRAMES, TIERS, TITLES, rewardWords, tierOf, type CardPatch, type SeasonReward, type TierDef } from './rewards';
+import { BANNERS, FRAMES, TIERS, TITLES, rewardWords, tierOf, type SeasonReward, type TierDef } from './rewards';
 import { giftIcon, patchSvg, sunIcon } from './art';
 import { nextWeekStart } from './weekly';
 import { knownFeed, type LiveSunEvent } from './live';
@@ -21,6 +21,7 @@ import {
   allPatches,
   cardView,
   claimAll,
+  eventPatchArt,
   claimTier,
   claimableTiers,
   eventView,
@@ -198,6 +199,15 @@ function back(): void {
   metaContext()?.showTitle();
 }
 
+/** Escape goes back to the title, like the Back button (the same as the Hangar). */
+function escapeGoesBack(box: HTMLElement): void {
+  box.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    e.preventDefault();
+    back();
+  });
+}
+
 function tierState(t: TierDef, reached: number): 'claimed' | 'ready' | 'locked' {
   if (isClaimed(t.tier)) return 'claimed';
   return t.tier <= reached ? 'ready' : 'locked';
@@ -245,6 +255,9 @@ function utcWords(iso: string): string {
   return `${date} at ${time} UTC`;
 }
 
+// Flare classes: B, C, M and X, each letter ten times stronger than the one before; X is the biggest.
+// Source: NASA Scientific Visualization Studio, "X-Class: A Guide to Solar Flares", https://svs.gsfc.nasa.gov/10109
+// A CME (coronal mass ejection) is a huge cloud of charged gas the Sun throws out; DONKI lists its speed.
 function liveWords(e: LiveSunEvent): string {
   return e.kind === 'flare'
     ? `NASA's DONKI database recorded a real ${e.classType} solar flare on ${utcWords(e.time)}. ${e.classType?.startsWith('X') ? 'X-class flares are the biggest kind.' : 'M-class flares are big: ten times stronger than C-class ones.'}`
@@ -255,18 +268,7 @@ function eventSection(): HTMLElement {
   const v = eventView();
   const e = v.event;
   const feed = knownFeed();
-  const art = allPatches().find((p) => p.id === v.patch.id) ?? null;
-  const patchArt: CardPatch =
-    art ??
-    ({
-      id: v.patch.id,
-      name: e.type === 'live' ? `${v.patch.mark} patch` : 'Gannon Storm 2024',
-      shape: e.type === 'live' ? 'octagon' : 'shield',
-      motif: e.type === 'live' ? 'flare' : 'gannon',
-      bg: e.type === 'live' ? '#2a0c08' : '#0b1a3a',
-      rim: e.type === 'live' ? '#ff7a1a' : '#7dffb0',
-      mark: v.patch.mark,
-    } as CardPatch);
+  const patchArt = eventPatchArt(v.patch);
   const head =
     e.type === 'live'
       ? [
@@ -401,6 +403,7 @@ export function openSeason(): HTMLElement | null {
     const p = tierProgress(s.xp);
     const over = isOver();
     const claim = claimableTiers();
+    const liveNow = sunEvent().type === 'live';
     const track = h(
       'ol',
       { class: 'ss-track', tabindex: '0', 'aria-label': `Season tiers 1 to ${MAX_TIER}. Scroll sideways for more.` },
@@ -429,7 +432,8 @@ export function openSeason(): HTMLElement | null {
       header,
       h('p', { class: 'ss-fact' }, SEASON_FACT, ' ', h('a', { href: SEASON_FACT_SOURCE, target: '_blank', rel: 'noopener' }, 'Source: NASA')),
       over ? null : todaySection(),
-      over ? null : eventSection(),
+      // A LIVE event is the big news, so it goes above the rewards; the ARCHIVE event sits below them.
+      !over && liveNow ? eventSection() : null,
       h(
         'section',
         { class: 'ss-pass', 'aria-label': 'Season rewards' },
@@ -453,6 +457,7 @@ export function openSeason(): HTMLElement | null {
           ),
         ),
       ),
+      !over && !liveNow ? eventSection() : null,
       over
         ? null
         : h(
@@ -493,6 +498,7 @@ export function openSeason(): HTMLElement | null {
   draw();
   const box = ctx.modal(root, { label: SEASON_LABEL, wide: true, onClose: back });
   box.classList.add('season-modal');
+  escapeGoesBack(box);
   return box;
 }
 
@@ -663,5 +669,6 @@ export function openLocker(): HTMLElement | null {
   draw();
   const box = ctx.modal(root, { label: CARD_LABEL, wide: true, onClose: back });
   box.classList.add('season-modal');
+  escapeGoesBack(box);
   return box;
 }

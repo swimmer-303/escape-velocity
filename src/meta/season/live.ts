@@ -165,7 +165,7 @@ export const EVENT_XP = 150;
 export function eventChallenges(e: SunEvent): EventChallengeDef[] {
   if (e.type === 'live') {
     return [
-      { id: 'live-sols', title: 'Play 5 sols while the real Sun is busy', goal: 5, xp: EVENT_XP, count: (ev) => (sol(ev) ? 1 : 0) },
+      { id: 'live-sols', title: 'Play 5 days at your base while the real Sun is busy', goal: 5, xp: EVENT_XP, count: (ev) => (sol(ev) ? 1 : 0) },
       { id: 'live-shelter', title: 'Shelter your crew from a solar storm', goal: 1, xp: EVENT_XP, count: (ev) => (sol(ev) && sheltered(sol(ev)!.report) ? 1 : 0) },
       {
         id: 'live-launch',
@@ -177,7 +177,7 @@ export function eventChallenges(e: SunEvent): EventChallengeDef[] {
     ];
   }
   return [
-    { id: 'gannon-sols', title: 'Play 5 sols of the May 2024 storms', goal: 5, xp: EVENT_XP, count: (ev) => (sol(ev) && isHistory(ev) ? 1 : 0) },
+    { id: 'gannon-sols', title: 'Play 5 days of the May 2024 storms', goal: 5, xp: EVENT_XP, count: (ev) => (sol(ev) && isHistory(ev) ? 1 : 0) },
     {
       id: 'gannon-shelter',
       title: 'Shelter your crew during the May 2024 storms',

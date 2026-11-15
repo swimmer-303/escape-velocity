@@ -2,6 +2,7 @@
 // Weekly challenges: 7 bigger goals a week, the same for everyone, picked from the ISO week number (weeks start
 // on Monday). They are week-long totals (40 sols, 3 launches, 4 storms...), so they never repeat the rank
 // module's small daily missions (see ../rank/daily.ts). Each one gives a big chunk of Season XP. Pure, no DOM.
+// Titles pop up during play, also at a Moon base, where a turn is a "day", never a "sol": so titles say "days".
 
 import type { MissionState, SolReport } from '../../sim/types';
 import type { StarId } from '../../sim/campaign';
@@ -30,7 +31,7 @@ const end = (ev: SeasonEvent) => (ev.type === 'end' ? ev : null);
 const built = (r: SolReport) => r.builtAll?.length ?? (r.built ? 1 : 0);
 
 export const WEEKLY_CHALLENGES: readonly ChallengeDef[] = [
-  { id: 'w-sols-40', title: 'Play 40 sols', detail: 'Any mission counts, and Moon days too.', goal: 40, xp: 400, count: (ev) => (sol(ev) ? 1 : 0) },
+  { id: 'w-sols-40', title: 'Play 40 days at your base', detail: 'A Mars day is called a sol. Mars sols and Moon days both count.', goal: 40, xp: 400, count: (ev) => (sol(ev) ? 1 : 0) },
   { id: 'w-launch-3', title: 'Launch 3 rockets home', detail: 'Fill the tank with oxygen and fly your crew home.', goal: 3, xp: 450, count: (ev) => (end(ev)?.won ? 1 : 0) },
   {
     id: 'w-shelter-4',
@@ -44,7 +45,7 @@ export const WEEKLY_CHALLENGES: readonly ChallengeDef[] = [
   { id: 'w-stars-6', title: 'Earn 6 mission stars', detail: 'Stars: launch home, keep the dose low, build an upgrade.', goal: 6, xp: 400, count: (ev) => end(ev)?.stars.length ?? 0 },
   { id: 'w-moon-10', title: 'Play 10 days at a Moon base', detail: 'The lunar night is long and cold. Plan your power!', goal: 10, xp: 350, count: (ev) => (sol(ev)?.after.config.site === 'moon' ? 1 : 0) },
   { id: 'w-fuel-60', title: 'Send 60 cells to rocket FUEL', detail: 'Every cell on FUEL makes oxygen for the rocket home.', goal: 60, xp: 350, count: (ev) => (sol(ev) ? Math.max(0, sol(ev)!.report.alloc.fuel) : 0) },
-  { id: 'w-food-15', title: 'Grow food on 15 sols', detail: 'Greenhouse plants need power for their lights.', goal: 15, xp: 300, count: (ev) => (sol(ev) && sol(ev)!.report.alloc.greenhouse > 0 ? 1 : 0) },
+  { id: 'w-food-15', title: 'Grow food on 15 days', detail: 'Greenhouse plants need power for their lights.', goal: 15, xp: 300, count: (ev) => (sol(ev) && sol(ev)!.report.alloc.greenhouse > 0 ? 1 : 0) },
   { id: 'w-storms-5', title: 'Ride out 5 real solar storms', detail: 'Every storm in the game is a real one from NASA records.', goal: 5, xp: 350, count: (ev) => (sol(ev)?.report.storm ? 1 : 0) },
   {
     id: 'w-medals-3',
@@ -64,7 +65,7 @@ export const WEEKLY_CHALLENGES: readonly ChallengeDef[] = [
     count: (ev) => (ev.type === 'xp' && ev.bonus ? ev.amount : 0),
   },
   { id: 'w-daily-2', title: 'Finish 2 daily challenges', detail: 'Everyone gets the same base and storms each day.', goal: 2, xp: 400, count: (ev) => (end(ev)?.mode === 'daily' ? 1 : 0) },
-  { id: 'w-history-10', title: 'Play 10 sols of the May 2024 storms', detail: 'Replay the real storms of May 2024.', goal: 10, xp: 350, count: (ev) => (sol(ev)?.mode === 'history' ? 1 : 0) },
+  { id: 'w-history-10', title: 'Play 10 days of the May 2024 storms', detail: 'Replay the real storms of May 2024.', goal: 10, xp: 350, count: (ev) => (sol(ev)?.mode === 'history' ? 1 : 0) },
   {
     id: 'w-commander',
     title: 'Win a mission on Commander',
@@ -96,7 +97,7 @@ export const WEEKLY_CHALLENGES: readonly ChallengeDef[] = [
       return st && st.event.severity === 'major' && st.shelterCells > 0 ? 1 : 0;
     },
   },
-  { id: 'w-battery-5', title: 'Save power in the battery on 5 sols', detail: 'Build the battery bank, then store cells for later.', goal: 5, xp: 350, count: (ev) => (sol(ev) && sol(ev)!.report.alloc.battery > 0 ? 1 : 0) },
+  { id: 'w-battery-5', title: 'Save power in the battery on 5 days', detail: 'Build the battery bank, then store cells for later.', goal: 5, xp: 350, count: (ev) => (sol(ev) && sol(ev)!.report.alloc.battery > 0 ? 1 : 0) },
 ];
 
 export const WEEKLY_COUNT = 7;
