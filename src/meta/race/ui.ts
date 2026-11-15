@@ -5,6 +5,7 @@
 
 import { h, clear, append, type Child } from '../../ui/dom';
 import { trophy, statusIcon } from './art';
+import { homeShort } from './banter';
 import { callsignText, type Callsign } from './callsign';
 import { portrait } from './portrait';
 import { LEAGUES, leagueAt } from './rivals';
@@ -111,7 +112,7 @@ export function lobbyContent(o: LobbyOpts): Child {
       null,
       'Race three rival commanders on the ',
       h('b', null, 'same base with the same real storms'),
-      '. First crew to fill the rocket and launch with everyone safe wins! Ties go to fewer sols, then less radiation, then more air and food left.',
+      `. First crew to fill the rocket and launch with everyone safe wins! Ties go to fewer ${o.race.site === 'moon' ? 'days' : 'sols'}, then less radiation, then more air and food left.`,
     ),
     h('p', { class: 'title-foot' }, "Races use the real NASA DONKI storm records stored in the game (the last month, plus May 2024), so every racer, and every friend you challenge, meets the same storms."),
     lg.difficulty === 'commander' ? h('div', { class: 'card danger' }, h('b', null, `${lg.name} races are on Commander difficulty: `), 'more and bigger storms. Watch your radiation!') : null,
@@ -344,7 +345,7 @@ export function podiumContent(o: PodiumOpts): Child {
       ? h(
           'ol',
           { class: 'rp-rest', start: '4' },
-          rest.map((r) => h('li', null, portrait(r.racer.face, { size: 24, ghost: r.racer.kind === 'ghost' }), h('b', null, r.racer.kind === 'you' ? 'You' : r.racer.name), r.launched ? ` launched on ${turn} ${r.sols}` : ` went home early (rocket ${Math.floor(r.fuel)}% full)`)),
+          rest.map((r) => h('li', null, portrait(r.racer.face, { size: 24, ghost: r.racer.kind === 'ghost' }), h('b', null, r.racer.kind === 'you' ? 'You' : r.racer.name), r.launched ? ` launched on ${turn} ${r.sols}` : ` ${homeShort(r.loseReason, r.fuel)}`)),
         )
       : null,
     o.friend === 'ahead' ? h('div', { class: 'card good' }, h('b', null, 'You beat your friend! '), 'Send them a link back and see if they can beat you.') : null,
@@ -361,7 +362,7 @@ export function podiumContent(o: PodiumOpts): Child {
       ? h('div', { class: 'card good rp-promo' }, trophy(lgNow.color, 40), h('div', null, h('b', null, `Promoted to ${lgNow.name} League!`), h('p', null, 'Your new rivals are smarter and faster. Good luck, commander!')))
       : h('div', { class: 'rp-league' }, leagueBadge(o.save.league, 28), progressBar(o.save)),
     h('p', { class: 'rp-tip' }, raceTip(o.results, o.race.site)),
-    h('p', { class: 'rp-rule' }, 'First to launch with the crew safe wins. Ties: fewer sols, then less radiation, then more air and food left.'),
+    h('p', { class: 'rp-rule' }, `First to launch with the crew safe wins. Ties: fewer ${turn}s, then less radiation, then more air and food left.`),
     h(
       'div',
       { class: 'actions' },

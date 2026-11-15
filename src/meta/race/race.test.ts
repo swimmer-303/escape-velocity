@@ -14,7 +14,7 @@ import { createRace, finishRace, isRaceMission, liveRows, newsBetween, racePool,
 import { LEAGUES, pickRivals } from './rivals';
 import { compareFinish, compareLive, rankFinishes, rankLive, tiedWith, versus, xpForPlace, type Finish } from './score';
 import { STORAGE_KEY, applyPlace, freshSave, loadSave, progressLine, sanitize, writeSave } from './store';
-import { banterFor, homeStory } from './banter';
+import { banterFor, homeShort, homeStory } from './banter';
 
 const POOL = racePool();
 const YOU = { adj: 'Brave', noun: 'Comet', num: 42 };
@@ -419,6 +419,37 @@ describe('podium tip', () => {
     expect(raceTip(res({ launched: false, fuel: 60, loseReason: 'window' }, {}), 'mars')).toMatch(/FUEL/);
     expect(raceTip(res({ sols: 8 }, { sols: 9 }), 'mars')).toMatch(/Great flying/);
     expect(raceTip(res({}, {}), 'mars')).toMatch(/perfect tie/);
+  });
+});
+
+describe('race wording', () => {
+  it('says why a crew with a full rocket went home (it did not launch)', () => {
+    expect(homeShort('air', 100)).toBe('ran low on air before launch, so they went home safe (rocket 100% full)');
+    expect(homeShort('dose', 97.6)).toMatch(/radiation before launch.*rocket 97% full/);
+    expect(homeShort('window', 60)).toMatch(/^missed the launch window/);
+    expect(homeShort(undefined, 60)).toMatch(/^missed the launch window/);
+  });
+
+  it('uses days, not sols, for the Moon rules (lobby and podium)', async () => {
+    const { lobbyContent, podiumContent } = await import('./ui');
+    const text = (c: unknown) => {
+      const el = document.createElement('div');
+      el.append(...([c].flat(3) as unknown[]).filter((x): x is Node => x instanceof Node));
+      return el.textContent ?? '';
+    };
+    for (const site of ['moon', 'mars'] as const) {
+      const race = createRace({ league: 0, you: YOU, seed: 'rword', site, lightTimeMin: 12.5, eventPool: POOL });
+      const noop = () => {};
+      const lobby = text(lobbyContent({ save: freshSave(), callsign: YOU, fromCard: false, race, canStart: true, onSite: noop, onStart: noop, onBack: noop, onShare: noop, onNewCallsign: noop }));
+      const results = rankFinishes(race.racers.map((r, i) => ({ id: r.id, racer: r, launched: i < 3, sols: 5 + i, dose: 10, life: 4, fuel: i < 3 ? 100 : 100, loseReason: i < 3 ? undefined : ('air' as const) })));
+      const podium = text(podiumContent({ race, results, xp: 150, outcome: { points: 3, good: true, promoted: false, trophy: true, league: 0 }, save: freshSave(), friend: null, onRaceAgain: noop, onShare: noop, onClose: noop }));
+      const unit = site === 'moon' ? 'days' : 'sols';
+      expect(lobby).toContain(`Ties go to fewer ${unit}`);
+      expect(podium).toContain(`Ties: fewer ${unit}`);
+      if (site === 'moon') expect(lobby + podium).not.toMatch(/\bsols?\b/i);
+      expect(podium).toContain('ran low on air before launch, so they went home safe (rocket 100% full)');
+      expect(podium).not.toMatch(/went home early \(rocket/);
+    }
   });
 });
 
