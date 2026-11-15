@@ -1,6 +1,9 @@
 /* Written with AI assistance (Claude Code). See README "Use of AI tools". */
 /* The Hangar: a side panel (a bottom sheet on narrow screens) so the 3D base stays in view while you equip things. */
 
+/* The Hangar moves the camera itself (to the rocket, the habitat...): the stage's "Look at" menu would only get in
+   the way (on a phone it sat on top of the camera's caption). */
+body:has(> #modal-root > .hangar-modal) .look-at { visibility: hidden; }
 /* Only while the Hangar is open: a lighter backdrop that leaves the base visible, and the dialog at the side. */
 #modal-root:has(> .hangar-modal) { place-items: stretch end; padding: 12px; background: linear-gradient(90deg, transparent 0 30%, #0b0a1880); }
 .modal.hangar-modal { width: min(480px, 100%); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); background: #15122bf2; }
