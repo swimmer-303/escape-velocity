@@ -129,7 +129,7 @@ export const SAMPLE_KINDS: readonly SampleKind[] = [
     rarity: 'rare',
     // NASA JPL, May 29 2019, "Curiosity Tastes First Sample in 'Clay-Bearing Unit'": the highest amounts of clay
     // minerals ever found during the mission (Glen Torridon, on Mount Sharp).
-    fact: 'Clay forms when rock sits in water for a long time. On Mount Sharp, Curiosity found the most clay of its whole trip.',
+    fact: 'Clay forms when rock sits in water for a long time. In 2019, on Mount Sharp, Curiosity found more clay than ever before on its trip.',
     color: '#8c6a50',
     accent: '#c9a27a',
     place: { kind: 'sector', angle: MOUNT_SHARP_BEARING, spread: 45 * DEG },
