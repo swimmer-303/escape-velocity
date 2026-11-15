@@ -25,6 +25,8 @@ import {
   claimTier,
   claimableTiers,
   eventView,
+  firstGift,
+  giftGreeting,
   giftReady,
   giftStrip,
   isClaimed,
@@ -389,10 +391,12 @@ export function openSeason(): HTMLElement | null {
     draw(`claimed-${tiers[tiers.length - 1]}`);
   };
   const onGift = () => {
+    const first = firstGift();
     const xp = openGift();
     if (!xp) return;
     sfx('good');
-    toast('Welcome back!', `+${xp} Season XP. See you tomorrow, astronaut.`, { tone: 'cyan', icon: wrap(giftIcon(28, true)), ms: 4000 });
+    const words = giftGreeting(first, xp);
+    toast(words.title, words.body, { tone: 'cyan', icon: wrap(giftIcon(28, true)), ms: 4000 });
     draw('gift');
   };
 

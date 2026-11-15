@@ -61,6 +61,8 @@
 .race-ov-card h2 { font-family: var(--font-px); font-weight: 400; font-size: 24px; color: var(--amber); margin: 0 0 10px; }
 .race-ov-card .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 .race-x { position: absolute; top: 8px; right: 8px; }
+/* Keep the top lines (the kicker and the heading under it) clear of the X, even on a 360px phone. */
+.race-ov-body > :first-child, .race-ov-body > :first-child + h2 { margin-right: 48px; }
 .race-overlay .btn:focus-visible, .race-overlay input:focus-visible, .race-lobby .crate:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
 
 .rp-podium { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 8px; margin: 10px 0; padding: 0; }

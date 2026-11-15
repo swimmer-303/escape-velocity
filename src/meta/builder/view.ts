@@ -115,6 +115,8 @@ export class BuilderView {
   private timeline: HTMLElement;
   private undoBtn: HTMLButtonElement;
   private redoBtn: HTMLButtonElement;
+  private topBar: HTMLElement;
+  private sizeObs: ResizeObserver | null = null;
 
   constructor(opts: OpenOptions) {
     const ctx = metaContext();
@@ -154,7 +156,7 @@ export class BuilderView {
     this.undoBtn = h('button', { class: 'btn small', type: 'button', 'aria-keyshortcuts': 'Control+Z', onclick: () => this.undo() }, 'Undo');
     this.redoBtn = h('button', { class: 'btn small', type: 'button', 'aria-keyshortcuts': 'Control+Y', onclick: () => this.redo() }, 'Redo');
 
-    const top = h(
+    const top = (this.topBar = h(
       'div',
       { class: 'evb-top' },
       h('div', { class: 'evb-title' }, h('b', null, BUILDER_LABEL), this.siteBox),
@@ -168,7 +170,7 @@ export class BuilderView {
         h('button', { class: 'btn small', type: 'button', onclick: () => this.showStart() }, 'Blueprints'),
         h('button', { class: 'btn small evb-close', type: 'button', 'aria-keyshortcuts': 'Escape', onclick: () => this.close() }, 'Close'),
       ),
-    );
+    ));
 
     this.el = h(
       'div',
@@ -203,6 +205,7 @@ export class BuilderView {
     this.renderSites();
     this.renderPalette();
     this.refresh();
+    this.watchSizes();
     void this.load3d();
 
     if (opts.challenge && challengeById(opts.challenge)) this.startChallenge(challengeById(opts.challenge)!);
@@ -387,6 +390,7 @@ export class BuilderView {
 
   /** Recompute the readout and redraw everything that depends on the pad. */
   private refresh() {
+    const had = document.activeElement as HTMLElement | null;
     this.r = readout(this.layout);
     if (this.selected !== null && !this.layout.parts.some((p) => p.uid === this.selected)) this.selected = null;
     this.renderReadout();
@@ -396,6 +400,9 @@ export class BuilderView {
     this.undoBtn.disabled = !this.editor.canUndo || this.testing;
     this.redoBtn.disabled = !this.editor.canRedo || this.testing;
     this.paintGhost();
+    // A site button that was just redrawn: keep focus on the site now chosen. Anything else redrawn: the pad.
+    if (had && !had.isConnected && had.classList.contains('evb-site')) this.siteBox.querySelector<HTMLElement>('.evb-site.on')?.focus({ preventScroll: true });
+    this.keepFocus();
   }
 
   private say(text: string) {
@@ -421,7 +428,42 @@ export class BuilderView {
     this.renderPalette();
     this.renderTools();
     this.paintGhost();
-    this.say(`${PARTS[part].name} in hand. ${PARTS[part].blurb}`);
+    // The palette was just redrawn, so the button that had focus is gone. Go to the pad: the arrow keys move the
+    // part straight away, Enter puts it down and Escape puts it back.
+    this.focusPad();
+    this.say(`${PARTS[part].name} in hand. ${PARTS[part].blurb} You are on the build pad: arrow keys move it, Enter places it, R turns it, Escape puts it back.`);
+  }
+
+  /**
+   * The top bar wraps and the tool row grows (Turn, Done...) on small screens. Publish their heights as CSS variables
+   * so the panels sit beside them instead of under them.
+   */
+  private watchSizes() {
+    const sync = () => {
+      this.el.style.setProperty('--evb-top-h', `${this.topBar.offsetHeight}px`);
+      this.el.style.setProperty('--evb-tools-h', `${this.tools.offsetHeight}px`);
+      this.el.style.setProperty('--evb-pal-h', `${this.palette.offsetHeight}px`);
+    };
+    sync();
+    if (typeof ResizeObserver !== 'function') return;
+    this.sizeObs = new ResizeObserver(sync);
+    for (const el of [this.topBar, this.tools, this.palette]) this.sizeObs.observe(el);
+  }
+
+  /** Focus the build pad without scrolling the page (keys work from there). */
+  private focusPad() {
+    if (this.closed) return;
+    try {
+      this.stage.focus({ preventScroll: true });
+    } catch {
+      this.stage.focus();
+    }
+  }
+
+  /** After a redraw: if focus fell out of the builder (its button was replaced), bring it back to the pad. */
+  private keepFocus() {
+    const a = document.activeElement;
+    if (!this.closed && (!a || a === document.body || !a.isConnected) && this.overlay.hidden) this.focusPad();
   }
 
   rotate() {
@@ -485,6 +527,7 @@ export class BuilderView {
     this.renderPalette();
     this.renderTools();
     this.paintGhost();
+    this.keepFocus();
   }
 
   undo() {
@@ -541,6 +584,9 @@ export class BuilderView {
   }
 
   private renderPalette() {
+    // Redrawing replaces the buttons: remember which part (or group) had focus so it can get it back.
+    const had = document.activeElement as HTMLElement | null;
+    const hadPart = had && this.palette.contains(had) ? had.getAttribute('data-part') : null;
     const tabs = h(
       'div',
       { class: 'evb-cats', role: 'tablist', 'aria-label': 'Part groups' },
@@ -586,6 +632,7 @@ export class BuilderView {
     });
     this.paletteList.replaceChildren(...items);
     this.palette.replaceChildren(tabs, this.paletteList);
+    if (hadPart) this.paletteList.querySelector<HTMLElement>(`[data-part="${hadPart}"]`)?.focus({ preventScroll: true });
   }
 
   private renderTools() {
@@ -1095,21 +1142,33 @@ export class BuilderView {
         { class: 'evb-bp-result' },
         h('b', null, `Blueprint: ${ch.title}`),
         starRow(score.stars, 22),
-        h('span', { class: 'sr-only' }, `${score.stars} of 3 stars.`),
+        h('p', { class: 'evb-bp-why' }, `${score.stars} of 3 Blueprint stars, from the goal list. These are the stars that count.`),
         rec.added ? h('p', { class: 'evb-xp' }, h('b', null, `+${xp} XP`), ` for ${rec.added} new ${rec.added === 1 ? 'star' : 'stars'}!`) : score.stars ? h('p', null, `Your best: ${Math.max(before, score.stars)} stars.`) : h('p', null, 'No stars yet. Check the goal list and try again!'),
         ch.unlocks.length && score.stars >= 1 ? h('p', { class: 'evb-unlock' }, `Unlocked: ${ch.unlocks.map((p) => PARTS[p].name).join(', ')}.`) : null,
       );
       this.renderGoal();
     }
     const starsLabel = ['Pass', 'Steady', 'Storm-proof'];
+    // In a Blueprint, its goal list gives the stars. The stress test's three results are shown as checks (not stars),
+    // so the card never shows two different star counts at once.
+    const inBlueprint = !!bp;
+    const checks = [res.pass, res.steady, res.stormProof];
     lines.push(
       h('div', { class: 'kicker' }, 'Stress test: a simplified test using the game\'s numbers'),
       h('h2', null, res.pass ? (res.stars === 3 ? 'Perfect run!' : 'Passed!') : 'Not yet'),
+      inBlueprint ? h('p', { class: 'evb-test-head' }, `Stress test checks: ${checks.filter(Boolean).length} of 3`) : null,
       h(
         'ul',
-        { class: 'evb-test-stars' },
-        ...[res.pass, res.steady, res.stormProof].map((ok, i) =>
-          h('li', { class: ok ? 'ok' : '' }, starRow(ok ? 1 : 0, 16).firstElementChild as Element, h('b', null, starsLabel[i]), h('span', { class: 'sr-only' }, ok ? ' earned' : ' not yet'), h('small', null, STAR_TEXT[i])),
+        { class: `evb-test-stars${inBlueprint ? ' as-checks' : ''}` },
+        ...checks.map((ok, i) =>
+          h(
+            'li',
+            { class: ok ? 'ok' : '' },
+            inBlueprint ? h('span', { class: 'evb-tick', 'aria-hidden': 'true' }, ok ? '+' : '-') : (starRow(ok ? 1 : 0, 16).firstElementChild as Element),
+            h('b', null, starsLabel[i]),
+            h('span', { class: 'sr-only' }, inBlueprint ? (ok ? ' passed' : ' not yet') : ok ? ' earned' : ' not yet'),
+            h('small', null, STAR_TEXT[i]),
+          ),
         ),
       ),
       h('ul', { class: 'evb-notes' }, ...res.notes.map((n) => h('li', null, n))),
@@ -1220,6 +1279,8 @@ export class BuilderView {
     }
     this.scene = null;
     this.el.removeEventListener('keydown', this.onKey);
+    this.sizeObs?.disconnect();
+    this.sizeObs = null;
     this.el.remove();
     for (const { el, had } of this.inertEls) if (!had) el.removeAttribute('inert');
     this.inertEls = [];

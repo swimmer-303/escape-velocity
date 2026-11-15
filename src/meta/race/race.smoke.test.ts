@@ -113,7 +113,7 @@ describe('Rival Race in the game', () => {
 
     const podium = await waitFor(() => document.querySelector<HTMLElement>('.race-overlay.race-podium'), 4000);
     expect(podium.getAttribute('role')).toBe('dialog');
-    expect(podium.textContent).toMatch(/You (won the race|finished \d(st|nd|rd|th))!/);
+    expect(podium.textContent).toMatch(/(You (won the race|finished \d(st|nd|rd|th))|It's a tie for \d(st|nd|rd|th))!/);
     expect(podium.querySelectorAll('.rp-step').length).toBe(3);
     expect(podium.textContent).toMatch(/\+\d+ XP/);
     expect(document.activeElement && podium.contains(document.activeElement)).toBe(true);

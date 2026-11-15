@@ -19,6 +19,7 @@ import {
   devilPush,
   dustDevils,
   homeAlert,
+  HOME_ALERT_TEXT,
   newRover,
   onPad,
   returnCost,
@@ -76,7 +77,8 @@ const KEYMAP: Record<string, Key> = {
 const isButtonLike = (t: EventTarget | null) => t instanceof HTMLElement && !!t.closest('button:not(.ev-rover-hold), a, input, select, textarea, summary, [contenteditable="true"]');
 
 /** The full-screen layer: canvas host, HUD, controls, captions and the card panel. */
-class RoverShell {
+/** Exported for tests. */
+export class RoverShell {
   readonly el: HTMLElement;
   readonly view: HTMLElement;
   readonly top: HTMLElement;
@@ -314,7 +316,11 @@ class RoverShell {
     this.abortFn(ABORT);
   }
 
-  choose<T extends string>(content: Node, buttons: Array<{ id: T; label: string; primary?: boolean }>, label: string): Promise<T | Abort> {
+  /**
+   * Show a card with buttons and wait for a pick. `fromTop` is for long cards (the Sample Museum): focus goes to the
+   * heading and the card starts scrolled to the top, instead of jumping down to the button at the bottom.
+   */
+  choose<T extends string>(content: Node, buttons: Array<{ id: T; label: string; primary?: boolean }>, label: string, opts: { fromTop?: boolean } = {}): Promise<T | Abort> {
     this.releaseAll();
     this.unsay();
     clear(this.panel);
@@ -344,11 +350,19 @@ class RoverShell {
     this.panel.append(box);
     this.panel.hidden = false;
     this.el.classList.add('has-panel');
-    (row.querySelector<HTMLElement>('.primary') ?? row.querySelector<HTMLElement>('button'))?.focus();
+    const heading = opts.fromTop ? box.querySelector<HTMLElement>('h2, h3') : null;
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    } else (row.querySelector<HTMLElement>('.primary') ?? row.querySelector<HTMLElement>('button'))?.focus();
     try {
       decorateDialog(box, { autoRead: true });
     } catch {
       /* reading aloud is optional */
+    }
+    if (heading) {
+      box.scrollTop = 0;
+      this.panel.scrollTop = 0;
     }
     return Promise.race([picked, this.aborted]).then((r) => {
       this.stopReading();
@@ -531,7 +545,7 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
           return;
         }
         if (pick === 'museum') {
-          const back = await shell.choose(museumView(), [{ id: 'back', label: 'Back to results', primary: true }], 'Sample Museum');
+          const back = await shell.choose(museumView(), [{ id: 'back', label: 'Back to results', primary: true }], 'Sample Museum', { fromTop: true });
           if (back === ABORT) {
             finish();
             return;
@@ -688,9 +702,9 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
       const next = homeAlert(s.battery, returnCost(Math.hypot(s.x, s.z), w.field.height(0, 0) - s.y, g));
       if (next !== alert) {
         if (next === 'now' && aboard.length + open() > 0) {
-          shell.say('Head home! Your battery is getting low.', { tone: 'bad', ms: 3000 });
+          shell.say(HOME_ALERT_TEXT.now, { tone: 'bad', ms: 3000 });
           shell.sfx('alarm');
-        } else if (next === 'soon' && alert === 'ok') shell.say('Battery half gone. Plan your way home.', { tone: 'warn' });
+        } else if (next === 'soon' && alert === 'ok') shell.say(HOME_ALERT_TEXT.soon, { tone: 'warn' });
         alert = next;
       }
       if (step.emptied) {
