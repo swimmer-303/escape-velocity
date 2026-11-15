@@ -295,7 +295,7 @@ export class App {
       this.modalRoot.scrollTop = keepScroll.root;
       // The old copy had the keyboard focus (PLAY, a crate, a Workshop button): put it back on the same control,
       // or on the dialog's main button, so a redraw never drops a keyboard player back to the page.
-      if (hadFocus) (sameControl(box, hadFocus) ?? box.querySelector<HTMLElement>('[data-autofocus], button.primary'))?.focus({ preventScroll: true });
+      if (hadFocus) (sameControl(box, hadFocus, prev!) ?? box.querySelector<HTMLElement>('[data-autofocus], button.primary'))?.focus({ preventScroll: true });
       return box;
     }
     const focusable = box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>('button.primary, button.go, button');
@@ -2111,11 +2111,17 @@ export class App {
   }
 }
 
-/** The control in a redrawn dialog that matches one from the old copy (same kind, same label or text, still usable). */
-function sameControl(box: HTMLElement, old: HTMLElement): HTMLElement | null {
+/**
+ * The control in a redrawn dialog that matches one from the old copy (same kind, same label or text, still usable).
+ * A label used more than once (the Workshop's "Work on this" buttons) is ambiguous: then there is no match.
+ */
+function sameControl(box: HTMLElement, old: HTMLElement, oldBox: HTMLElement): HTMLElement | null {
+  const sel = 'button, a[href], input, select, [tabindex]';
   const key = (el: Element) => `${el.tagName}|${el.getAttribute('aria-label') ?? ''}|${(el.textContent ?? '').trim()}`;
   const want = key(old);
-  return [...box.querySelectorAll<HTMLElement>('button, a[href], input, select, [tabindex]')].find((el) => key(el) === want && !el.hasAttribute('disabled')) ?? null;
+  if ([...oldBox.querySelectorAll(sel)].filter((el) => key(el) === want).length > 1) return null;
+  const found = [...box.querySelectorAll<HTMLElement>(sel)].filter((el) => key(el) === want && !el.hasAttribute('disabled'));
+  return found.length === 1 ? found[0] : null;
 }
 
 function starRow(stars: StarId[], compact = false): HTMLElement {
