@@ -104,7 +104,8 @@ export class GameAudio {
 
   /** Play a sound effect. `pitch` multiplies every note (1 = as written): placing cells in a row climbs the scale. */
   sfx(name: Sfx, pitch = 1) {
-    if (this.muted) return;
+    // Before the first press the browser keeps sound off anyway, and making an AudioContext then only logs a warning.
+    if (this.muted || !this.unlocked) return;
     try {
       this.ctx ??= new AudioContext();
       const ctx = this.ctx;
