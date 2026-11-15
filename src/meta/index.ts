@@ -6,3 +6,4 @@ import './flight';
 import './hangar';
 import './season';
 import './rover';
+import './race';
