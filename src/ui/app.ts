@@ -278,6 +278,7 @@ export class App {
     const keepScroll = sameDialog ? { box: prev!.scrollTop, root: this.modalRoot.scrollTop } : null;
     clear(this.modalRoot);
     this.modalRoot.classList.toggle('lobby-root', !!opts.lobby);
+    document.documentElement.classList.toggle('ev-lobby', !!opts.lobby);
     const box = h(
       'div',
       { class: `modal ${opts.wide ? 'wide' : ''}${opts.lobby ? ' lobby' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label },
@@ -304,6 +305,7 @@ export class App {
   private closeModal() {
     clear(this.modalRoot);
     this.modalRoot.classList.remove('lobby-root');
+    document.documentElement.classList.remove('ev-lobby');
   }
 
   private closeModalAndPlan() {
