@@ -519,7 +519,7 @@ export function openLab(): void {
       'div',
       { class: 'actions end sticky lab-actions' },
       h('button', { type: 'button', class: 'btn', onclick: () => ctx.showTitle() }, 'Back'),
-      h('button', { type: 'button', class: 'btn primary', 'data-autofocus': true, disabled: !ctx.startQuick, onclick: run }, 'Run the experiment', h('span', { class: 'arrow' })),
+      h('button', { type: 'button', class: 'btn primary', 'data-autofocus': true, disabled: !ctx.startQuick, onclick: run }, h('span', { class: 'lab-run-long' }, 'Run the experiment'), h('span', { class: 'lab-run-short' }, 'Run it'), h('span', { class: 'arrow' })),
     ),
   ];
   ctx.modal(root, { label: LAB_LABEL, wide: true, onClose: () => ctx.showTitle() }).classList.add('lab-screen');
