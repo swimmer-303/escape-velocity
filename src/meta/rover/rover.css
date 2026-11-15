@@ -67,6 +67,8 @@
 .ev-rover:focus-visible { outline: 3px solid var(--cyan, #5ef2e6); outline-offset: -3px; }
 .ev-rover-view { position: absolute; inset: 0; }
 .ev-rover [hidden] { display: none !important; }
+/* The tow: the picture dims while the tow rover brings you home. */
+.ev-rover.towing .ev-rover-view { filter: brightness(0.35) saturate(0.6); }
 .ev-rover-canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; image-rendering: pixelated; }
 .ev-rover::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
   background: repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
@@ -189,6 +191,7 @@
 @media (prefers-reduced-motion: no-preference) {
   html:not(.reduce-motion) .ev-rover:not(.calm) .ev-rover-caption.show { animation: ev-rover-cap 0.35s steps(5) both; }
   html:not(.reduce-motion) .ev-rover:not(.calm) .ev-rover-warn { animation: ev-rover-blink 0.9s steps(2) infinite; }
+  html:not(.reduce-motion) .ev-rover:not(.calm) .ev-rover-view { transition: filter 1.2s steps(6); }
 }
 @keyframes ev-rover-cap { from { transform: translateX(-50%) scale(0.5); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 @keyframes ev-rover-blink { from { opacity: 1; } to { opacity: 0.55; } }

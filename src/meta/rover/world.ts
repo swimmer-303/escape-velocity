@@ -188,7 +188,7 @@ function groundColors(site: RoverSite, field: Heightfield): Float32Array {
       } else if (site === 'arcadia') {
         // Made-up frost patches, for the look.
         const f = Math.sin(x * 0.023 + 1.7) * Math.cos(z * 0.019 - 0.4) + 0.6 * Math.sin(x * 0.007 - z * 0.011 + 2.1);
-        c.lerp(light, Math.max(0, Math.min(1, (f - 0.45) * 1.6)) * 0.75);
+        c.lerp(light, Math.max(0, Math.min(1, (f - 0.45) * 1.6)) * 0.55);
       } else {
         const t = moonTone(x / MOON_SCALE, z / MOON_SCALE);
         if (t >= 0) c.lerp(light, t * 2);
@@ -327,7 +327,10 @@ export class RoverWorld {
   static supported(): boolean {
     try {
       const c = document.createElement('canvas');
-      return !!c.getContext('webgl2');
+      const gl = c.getContext('webgl2');
+      // Give the test context back right away (browsers allow only a few at once).
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      return !!gl;
     } catch {
       return false;
     }

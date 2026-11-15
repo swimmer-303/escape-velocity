@@ -467,7 +467,7 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
     states.forEach((t, i) => w.setTarget(i, t.state));
 
     const hud = new RoverHud(site, w.field);
-    const read = speakButton(() => [hud.summary()], 'rover-hud', { text: 'Read to me', label: 'Read the rover status out loud' });
+    const read = speakButton(() => [hud.summary()], 'rover-hud', { text: 'Read to me', label: 'Read to me: the rover status' });
     if (read) shell.top.querySelector('.ev-rover-buttons')?.prepend(read);
     shell.top.prepend(hud.el);
     shell.el.append(hud.compassEl, hud.mapEl, hud.warn, hud.prompt);
@@ -606,6 +606,7 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
           s.grounded = true;
           s.pushX = 0;
           s.pushZ = 0;
+          shell.el.classList.remove('towing');
           bank(true);
         }
         return;
@@ -620,7 +621,7 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
           s.pushX += p.x * dt;
           s.pushZ += p.z * dt;
           if (once('devil', 8)) {
-            shell.say('Dust devil! It pushes your rover around.', { tone: 'warn' });
+            shell.say('Dust devil! These whirlwinds are real on Mars.', { tone: 'warn' });
             shell.sfx('storm');
           }
         }
@@ -695,6 +696,7 @@ export async function runExpedition(site: RoverSite, env: RoverEnv): Promise<voi
       if (step.emptied) {
         mode = 'tow';
         s.speed = 0;
+        shell.el.classList.add('towing');
         towTimer = shell.reduced ? 1.2 : 2.6;
         shell.sfx('bad');
         shell.say('Battery empty! A friendly tow rover is on its way.', { tone: 'bad', ms: 0 });

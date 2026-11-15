@@ -9,7 +9,9 @@ import { CssStage, SwappableStage } from '../../render/stage';
 import { emitGame, type GameEventMap } from '../hooks';
 import { STORE_KEY } from './store';
 import { targetCount, todayKey } from './targets';
-import { defaultSite } from './store';
+import { defaultSite, freshStore } from './store';
+import { bankHaul } from './bank';
+import { LESSON, resultsCard } from './ui';
 import './index';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -106,5 +108,22 @@ describe('Rover Expeditions in the real game', () => {
     await waitFor(() => document.querySelector('[aria-label="Escape Velocity title screen"]'));
     expect(document.querySelector('.ev-rover-host')).toBeNull();
     expect(document.getElementById('app')!.hasAttribute('inert')).toBe(false);
+  });
+
+  it('results card: haul, distance, XP, new Museum entries, bests, the lesson and new targets tomorrow (and a friendly tow)', () => {
+    const store = freshStore();
+    const result = bankHaul(store, 'gale', '2026-11-14', [{ targetId: '2026-11-14:gale:0', kind: 'gale-organics' }], 1234, () => {});
+    const card = resultsCard({ site: 'gale', result, distance: 1234, towed: true, lost: 1, left: 3 });
+    const text = card.textContent ?? '';
+    expect(text).toContain('Towed home');
+    expect(text).toContain('only had room for 1 of your 2 samples');
+    expect(text).toContain('Rock with ancient organics');
+    expect(text).toContain('New in the Museum');
+    expect(text).toContain('Distance driven: 1,234 m');
+    expect(text).toContain('New best: 1 sample in one trip!');
+    expect(text).toContain(`+${result.xp} XP`);
+    expect(text).toContain(LESSON);
+    expect(text).toContain('New targets tomorrow');
+    expect(card.querySelector('.ev-rarity.legendary')?.textContent).toContain('Legendary');
   });
 });

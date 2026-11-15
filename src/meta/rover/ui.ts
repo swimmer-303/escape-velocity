@@ -9,7 +9,7 @@ import { titleTile } from '../tile';
 import { toast } from '../toast';
 import { roverIcon, rarityTag, sampleIcon } from './icons';
 import { SAMPLE_KINDS, sampleKind, RARITIES, type Rarity } from './samples';
-import { SHARED_NOTES, SITES, SITE_INFO, type RoverSite } from './sites';
+import { DUST_DEVIL_NOTE, SHARED_NOTES, SITES, SITE_INFO, type RoverSite } from './sites';
 import { defaultSite, gotToday, loadStore, type RoverStore } from './store';
 import { targetCount, todayKey } from './targets';
 import type { BankResult } from './bank';
@@ -76,7 +76,7 @@ export function openStart(ctx: MetaContext, pick?: RoverSite): HTMLElement {
   const notes = h('div', { class: 'ev-rover-notes' });
   const drawNotes = () => {
     clear(notes);
-    notes.append(h('ul', null, ...[...SITE_INFO[site].notes, ...SHARED_NOTES].map((n) => h('li', null, n))));
+    notes.append(h('ul', null, ...[...SITE_INFO[site].notes, ...(SITE_INFO[site].world === 'mars' ? [DUST_DEVIL_NOTE] : []), ...SHARED_NOTES].map((n) => h('li', null, n))));
   };
 
   const choices = h(

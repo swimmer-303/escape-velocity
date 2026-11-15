@@ -83,6 +83,12 @@ export const SITE_INFO: Record<RoverSite, SiteInfo> = {
   },
 };
 
+/**
+ * Dust devils are real on Mars: NASA's Spirit rover filmed them in Gusev Crater (2005) and Curiosity has filmed them in
+ * Gale Crater (NASA JPL image releases). Their paths and push in the game are made up.
+ */
+export const DUST_DEVIL_NOTE = "Dust devils (spinning whirlwinds of dust) are real on Mars: NASA's Spirit and Curiosity rovers filmed them. Where they wander here is made up.";
+
 /** Notes that are true for every site. */
 export const SHARED_NOTES = [
   `Gravity is real: Mars pulls with ${GRAVITY.gale} m/s², the Moon with only ${GRAVITY.moon} m/s². That is why bumps send you floating on the Moon.`,
