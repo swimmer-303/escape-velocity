@@ -237,7 +237,8 @@ a { color: var(--cyan); }
   background: var(--panel); border-top: 2px dashed var(--line);
   box-shadow: -20px 0 0 var(--panel), 20px 0 0 var(--panel);
 }
-html.ev-large-text .modal > .actions.sticky { bottom: -16px; margin-bottom: -16px; padding-bottom: 16px; }
+/* Larger text on a phone makes the dialog's bottom padding 16 px (see "Phones" under Access), so the pinned row follows it there. */
+@media (max-width: 520px) { html.ev-large-text .modal > .actions.sticky { bottom: -16px; margin-bottom: -16px; padding-bottom: 16px; } }
 .kicker { font-family: var(--font-px); font-size: 13px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
 .card {
   background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); padding: 10px 12px; margin: 10px 0;
