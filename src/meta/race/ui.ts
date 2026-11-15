@@ -289,15 +289,15 @@ export interface PodiumOpts {
   onClose(): void;
 }
 
-function step(r: Result | undefined, cls: string): HTMLElement | null {
+function step(r: Result | undefined, cls: string, turn: string): HTMLElement | null {
   if (!r) return null;
-  const turn = r.racer.kind === 'you' ? 'You' : r.racer.name;
+  const who = r.racer.kind === 'you' ? 'You' : r.racer.name;
   return h(
     'li',
     { class: `rp-step p${r.place} ${cls} k-${r.racer.kind}` },
     portrait(r.racer.face, { size: r.place === 1 ? 64 : 48, ghost: r.racer.kind === 'ghost' }),
-    h('b', { class: 'rp-name' }, turn),
-    h('span', { class: 'rp-how' }, statusIcon(r.launched ? 'won' : 'lost', 12), r.launched ? ` Sol ${r.sols}` : ` Home, ${Math.floor(r.fuel)}%`),
+    h('b', { class: 'rp-name' }, who),
+    h('span', { class: 'rp-how' }, statusIcon(r.launched ? 'won' : 'lost', 12), r.launched ? ` ${turn} ${r.sols}` : ` Home, ${Math.floor(r.fuel)}%`),
     h('span', { class: 'rp-block' }, ordinal(r.place)),
   );
 }
@@ -307,16 +307,17 @@ export function podiumContent(o: PodiumOpts): Child {
   const lgNow = leagueAt(o.save.league);
   const head = me.place === 1 ? 'You won the race!' : `You finished ${ordinal(me.place)}!`;
   const top = o.results.slice(0, 3);
+  const turn = o.race.site === 'moon' ? 'day' : 'sol';
   const rest = o.results.slice(3);
   return [
     h('div', { class: 'kicker' }, o.race.ghost ? 'Friend challenge' : `Rival Race · ${leagueAt(o.race.league).name} League`),
     h('h2', { class: me.place === 1 ? 'tone-good' : '' }, head),
-    h('ol', { class: 'rp-podium', 'aria-label': 'Podium' }, step(top[1], 'second'), step(top[0], 'first'), step(top[2], 'third')),
+    h('ol', { class: 'rp-podium', 'aria-label': 'Podium' }, step(top[1], 'second', turn === 'day' ? 'Day' : 'Sol'), step(top[0], 'first', turn === 'day' ? 'Day' : 'Sol'), step(top[2], 'third', turn === 'day' ? 'Day' : 'Sol')),
     rest.length
       ? h(
           'ol',
           { class: 'rp-rest', start: '4' },
-          rest.map((r) => h('li', null, portrait(r.racer.face, { size: 24, ghost: r.racer.kind === 'ghost' }), h('b', null, r.racer.kind === 'you' ? 'You' : r.racer.name), r.launched ? ` launched on sol ${r.sols}` : ` went home early (rocket ${Math.floor(r.fuel)}% full)`)),
+          rest.map((r) => h('li', null, portrait(r.racer.face, { size: 24, ghost: r.racer.kind === 'ghost' }), h('b', null, r.racer.kind === 'you' ? 'You' : r.racer.name), r.launched ? ` launched on ${turn} ${r.sols}` : ` went home early (rocket ${Math.floor(r.fuel)}% full)`)),
         )
       : null,
     o.beatFriend === true ? h('div', { class: 'card good' }, h('b', null, 'You beat your friend! '), 'Send them a link back and see if they can beat you.') : null,

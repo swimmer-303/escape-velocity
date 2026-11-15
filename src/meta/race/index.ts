@@ -89,7 +89,7 @@ export function openLobby(race?: Race): void {
 function startRace(ctx: MetaContext, r: Race): void {
   if (!ctx.startQuick) return;
   active = r;
-  getHud().reset(r.league, !!r.ghost);
+  getHud().reset(r.league, !!r.ghost, r.site);
   ctx.audio.sfx('click');
   ctx.startQuick({ seed: r.seed, site: r.site, difficulty: r.difficulty, eventPool: r.eventPool, lightTimeMin: r.lightTimeMin });
 }
@@ -135,9 +135,12 @@ export function openShare(): Overlay {
   return ov;
 }
 
-/** Only a fresh crew on Gale Crater or the Moon can be replayed exactly from a link. */
+/**
+ * Only a fresh crew on Gale Crater or the Moon can be replayed exactly from a link. A mission seeded by a class code
+ * (capital letters) is never shared: the link would show the class code to people outside the class.
+ */
 function shareable(m: MissionState): boolean {
-  return m.config.expedition === 1 && m.config.landing !== 'arcadia' && !m.config.scenario && m.log.length > 0;
+  return m.config.expedition === 1 && m.config.landing !== 'arcadia' && !m.config.scenario && m.log.length > 0 && /^[a-z0-9]{1,24}$/.test(m.config.seed);
 }
 
 /** Add "Challenge a friend" to the end screen the game just drew. */
@@ -181,7 +184,7 @@ function onSol(p: GameEventMap['sol']): void {
       announce(story);
     } else if (n.kind === 'launch') {
       toast(`${n.racer.name} launched!`, p.after.status === 'playing' ? 'Keep going: there are more places on the podium.' : 'What a race!', { tone: 'cyan', ms: 4500, icon: h('span', null, portrait(n.racer.face, { size: 28 })) });
-      announce(`${n.racer.name} launched on sol ${n.sols}.`);
+      announce(`${n.racer.name} launched on ${r.site === 'moon' ? 'day' : 'sol'} ${n.sols}.`);
     } else if (n.kind === 'passed') {
       announce(`${n.racer.name} passed you.`);
     }
@@ -215,8 +218,13 @@ function onMissionEnd(p: GameEventMap['mission-end']): void {
   emitGame('xp', { amount: xp, reason: `Rival Race: ${ordinal(me.place)} place${beatFriend ? ', and you beat your friend' : ''}` });
   if (applied.outcome.promoted) emitGame('xp', { amount: PROMOTION_XP, reason: `Promoted to the ${leagueAt(next.league).name} League` });
   if (podiumTimer) clearTimeout(podiumTimer);
+  // The game draws its end screen right after telling us. Show the podium over it, but only if the player is still
+  // looking at that screen (not if they already went back to the title or started something else).
+  let endScreen: Element | null = null;
+  setTimeout(() => (endScreen = document.querySelector('#modal-root [role="dialog"]')), 0);
   podiumTimer = setTimeout(() => {
     podiumTimer = null;
+    if (endScreen && !endScreen.isConnected) return;
     showPodium(r, results, xp, applied.outcome, beatFriend);
   }, PODIUM_DELAY_MS);
 }

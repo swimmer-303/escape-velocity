@@ -25,6 +25,8 @@ export class StandingsHud {
   private pendingFlash: Set<string> = new Set();
   /** Player's sols played when the rows were last drawn (-1: never). */
   drawnAt = -1;
+  /** 'sol' on Mars, 'day' on the Moon. */
+  private turn = 'sol';
 
   constructor(private reducedMotion: () => boolean) {
     this.leagueEl = h('span', { class: 'rh-league' });
@@ -33,8 +35,9 @@ export class StandingsHud {
     this.root = h('section', { class: 'race-hud', 'aria-label': 'Rival Race standings' }, h('div', { class: 'rh-head' }, h('span', { class: 'rh-kicker' }, 'Rival race'), this.leagueEl), this.list, this.banterEl);
   }
 
-  reset(leagueIndex: number, ghost: boolean): void {
+  reset(leagueIndex: number, ghost: boolean, site: 'mars' | 'moon' = 'mars'): void {
     const lg = leagueAt(leagueIndex);
+    this.turn = site === 'moon' ? 'day' : 'sol';
     this.leagueEl.textContent = ghost ? 'Friend challenge' : `${lg.name} league`;
     this.root.style.setProperty('--lg', lg.color);
     this.order = [];
@@ -54,7 +57,7 @@ export class StandingsHud {
     clear(this.list);
     for (const r of rows) {
       const fuel = Math.max(0, Math.min(100, Math.floor(r.fuel + 1e-9)));
-      const state = r.status === 'won' ? `launched on sol ${r.sols}` : r.status === 'lost' ? 'crew headed home early, safe' : 'crew safe';
+      const state = r.status === 'won' ? `launched on ${this.turn} ${r.sols}` : r.status === 'lost' ? 'crew headed home early, safe' : 'crew safe';
       this.list.append(
         h(
           'li',
