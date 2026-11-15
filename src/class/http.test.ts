@@ -92,6 +92,19 @@ describe('class board over HTTP', () => {
     expect((await post(`/api/class/${code}/report`, report({ playerId: 'b'.repeat(24), rid: '3'.repeat(16) }))).status).toBe(403);
   });
 
+  it('a student who joins shows on the dashboard before any result', async () => {
+    const { json } = await post<RegisterResponse>('/api/class', { code: 'J7W2P' });
+    const { code, key } = json;
+    const j = await post(`/api/class/${code}/join`, { playerId: 'c'.repeat(24), nickname: 'Sam' });
+    expect(j).toEqual({ status: 200, json: { ok: true, num: 1, name: 'Sam' } });
+    const view = (await fetch(`${base}/api/class/${code}?key=${key}`).then((r) => r.json())) as DashboardView;
+    expect(view.players).toEqual([]);
+    expect(view.joined?.map((x) => [x.num, x.name])).toEqual([[1, 'Sam']]);
+    expect(JSON.stringify(view)).not.toContain('c'.repeat(24));
+    expect((await post('/api/class/ZZZZZ/join', { playerId: 'c'.repeat(24) })).status).toBe(404);
+    expect((await fetch(`${base}/api/class/${code}/join`)).status).toBe(405);
+  });
+
   it('rejects bad requests', async () => {
     const { json } = await post<RegisterResponse>('/api/class', { code: 'B4XN9' });
     const { code, key } = json;

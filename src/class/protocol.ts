@@ -81,7 +81,17 @@ export interface ReportResponse {
   duplicate?: boolean;
 }
 
-export type TeacherRequest = { key: string; action: 'remove'; num: number } | { key: string; action: 'clear' };
+/**
+ * A student's game starts a crew with this class code: they show on the board right away
+ * ("playing their first crew"), before they have any result. Same random id and nickname as a report.
+ */
+export interface JoinRequest {
+  playerId: string;
+  nickname?: string | null;
+}
+export type JoinResponse = Omit<ReportResponse, 'duplicate'>;
+
+export type TeacherRequest ={ key: string; action: 'remove'; num: number } | { key: string; action: 'clear' };
 
 // ---------------------------------------------------------------- what the dashboard gets
 
@@ -127,6 +137,14 @@ export interface PlayerView {
   seen: number;
 }
 
+/** A student who started a crew with the code but has not finished one yet. */
+export interface JoinedView {
+  num: number;
+  name: string | null;
+  /** When their game last said it started a crew. */
+  seen: number;
+}
+
 export interface DashboardView {
   code: string;
   /** Goes up by one with every change. */
@@ -135,6 +153,8 @@ export interface DashboardView {
   lastReportAt: number | null;
   expiresAt: number;
   players: PlayerView[];
+  /** Students playing their first crew (no result yet). Missing from a server older than this field. */
+  joined?: JoinedView[];
 }
 
 export type DashboardResponse = DashboardView | { unchanged: true; v: number };

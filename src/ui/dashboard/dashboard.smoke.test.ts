@@ -162,6 +162,26 @@ describe('teacher dashboard page', () => {
     expect(root().querySelector('.db-table')).not.toBeNull();
   });
 
+  it('counts students who joined but have not finished a crew, and lists them', async () => {
+    const view: DashboardView = { ...FIXTURE, players: [], lastReportAt: null, joined: [{ num: 1, name: 'Sam', seen: T0 }, { num: 2, name: null, seen: T0 }] };
+    respond = () => ({ status: 200, json: view });
+    page = openDashboard({ code: 'K7RZQ', key: KEY }, { root: root(), refreshMs: 30 });
+    await waitFor(() => root().querySelector('.db-tile'));
+    expect(root().querySelector('.db-tile')!.textContent).toBe('2Students2 playing their first crew');
+    expect(root().querySelector('.db-playing')!.textContent).toBe('Playing their first crew: Sam, Player 2. Their results show here when the crew ends.');
+    // Hide names (for the projector) hides theirs too.
+    button(/Hide names/)!.click();
+    await waitFor(() => /Player 1, Player 2/.test(root().querySelector('.db-playing')?.textContent ?? ''));
+    // Nobody yet: say when students show up.
+    page.stop();
+    respond = () => ({ status: 200, json: { ...view, v: 8, joined: [] } });
+    root().innerHTML = '';
+    page = openDashboard({ code: 'K7RZQ', key: KEY }, { root: root(), refreshMs: 30 });
+    await waitFor(() => root().querySelector('.db-tile'));
+    expect(root().querySelector('.db-tile')!.textContent).toBe('0Students');
+    expect(root().textContent).toContain('Students show up here as soon as they start a crew with the class code.');
+  });
+
   it('teacher tools: remove a student after a second press', async () => {
     const posts: Array<Record<string, unknown>> = [];
     vi.stubGlobal('fetch', async (input: string, init?: { method?: string; body?: string }) => {

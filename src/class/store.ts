@@ -16,7 +16,7 @@ import type { LoseReason } from '../sim/types';
 import type { Fail, Result } from '../room/room';
 import { RateLimiter } from '../room/store';
 import { checkName } from '../room/names';
-import { CLASS_LIMITS, isTeacherKey, type CrewView, type DashboardResponse, type PlayerView, type RegisterResponse, type ReportResponse, type Tally } from './protocol';
+import { CLASS_LIMITS, isTeacherKey, type CrewView, type DashboardResponse, type JoinResponse, type PlayerView, type RegisterResponse, type ReportResponse, type Tally } from './protocol';
 import { checkReport, isPlayerId, type CleanReport } from './validate';
 
 export const CLASS_FILE = 'classes.json';
@@ -47,6 +47,14 @@ interface StoredPlayer {
   rids: string[];
 }
 
+/** A student who started a crew with the code but has no result yet. Becomes a StoredPlayer (same number) with their first result. */
+interface StoredJoined {
+  id: string;
+  num: number;
+  name: string | null;
+  seen: number;
+}
+
 export interface StoredClass {
   code: string;
   keyHash: string;
@@ -55,6 +63,8 @@ export interface StoredClass {
   v: number;
   nextNum: number;
   players: StoredPlayer[];
+  /** Students playing their first crew. Missing in a classes.json saved before joining existed. */
+  joined?: StoredJoined[];
   /** Player ids the teacher removed: their results are refused. */
   removed: string[];
 }
@@ -268,12 +278,16 @@ export class ClassStore {
 
     let p = c.players.find((x) => x.id === r.playerId);
     if (!p) {
-      if (c.players.length >= CLASS_LIMITS.maxPlayers) return fail(409, 'class-full', 'This class board is full.');
+      // Someone who joined at the start of their crew keeps their number and name.
+      const joined = c.joined ?? [];
+      const j = joined.find((x) => x.id === r.playerId);
+      if (!j && c.players.length + joined.length >= CLASS_LIMITS.maxPlayers) return fail(409, 'class-full', 'This class board is full.');
+      if (j) c.joined = joined.filter((x) => x !== j);
       const crew = crewOf(r, now);
       p = {
         id: r.playerId,
-        num: c.nextNum++,
-        name: null,
+        num: j ? j.num : c.nextNum++,
+        name: j?.name ?? null,
         difficulty: r.difficulty,
         crews: [],
         last: crew,
@@ -285,18 +299,7 @@ export class ClassStore {
       c.players.push(p);
     }
 
-    // The nickname: a first name or nickname through the blocklist, made unique in the class.
-    let nameProblem: ReportResponse['nameProblem'];
-    if (typeof body.nickname === 'string' && body.nickname.trim()) {
-      const n = checkName(body.nickname);
-      if (!n.ok) nameProblem = n.problem;
-      else {
-        const taken = new Set(c.players.filter((x) => x !== p && x.name).map((x) => x.name!.toLowerCase()));
-        p.name = uniqueName(n.name, taken);
-      }
-    } else if (body.nickname !== undefined && body.nickname !== null && typeof body.nickname !== 'string') {
-      nameProblem = 'letters';
-    }
+    const nameProblem = setName(c, p, body.nickname);
 
     if (p.rids.includes(r.rid)) {
       this.changed(c);
@@ -331,6 +334,42 @@ export class ClassStore {
     return ok({ ok: true, num: p.num, name: p.name, ...(nameProblem ? { nameProblem } : {}) });
   }
 
+  /**
+   * A student's game starts a crew with this code, so the teacher sees them right away
+   * ("playing their first crew") instead of only after a whole crew. Their first result keeps the same number.
+   */
+  join(rawCode: string, ip: string, body: Record<string, unknown>): Result<JoinResponse> {
+    const now = this.now();
+    if (!this.rate.report.allow(ip, now)) return TOO_FAST;
+    const c = this.get(rawCode);
+    if (!c) return NO_CLASS;
+    const id = body.playerId;
+    if (!isPlayerId(id)) return fail(400, 'bad-join', 'That is not a player id.');
+    if (!this.rate.player.allow(id, now)) return TOO_FAST;
+    if (c.removed.includes(id)) return fail(403, 'removed', 'Your teacher took you off this class board.');
+
+    // Already on the board with results: only the name can change.
+    const known = c.players.find((x) => x.id === id);
+    if (known) {
+      const before = known.name;
+      const nameProblem = setName(c, known, body.nickname);
+      if (known.name !== before) this.changed(c);
+      return ok({ ok: true, num: known.num, name: known.name, ...(nameProblem ? { nameProblem } : {}) });
+    }
+
+    const joined = (c.joined ??= []);
+    let j = joined.find((x) => x.id === id);
+    if (!j) {
+      if (c.players.length + joined.length >= CLASS_LIMITS.maxPlayers) return fail(409, 'class-full', 'This class board is full.');
+      j = { id, num: c.nextNum++, name: null, seen: now };
+      joined.push(j);
+    }
+    j.seen = now;
+    const nameProblem = setName(c, j, body.nickname);
+    this.changed(c);
+    return ok({ ok: true, num: j.num, name: j.name, ...(nameProblem ? { nameProblem } : {}) });
+  }
+
   /** The teacher's dashboard (the key is required). `since`: the version the page already has. */
   view(rawCode: string, ip: string, key: unknown, since?: number): Result<DashboardResponse> {
     const now = this.now();
@@ -342,7 +381,8 @@ export class ClassStore {
     const players: PlayerView[] = [...c.players]
       .sort((a, b) => a.num - b.num)
       .map((p) => ({ num: p.num, name: p.name, difficulty: p.difficulty, crews: p.crews, last: p.last, tally: p.tally, fuel: p.fuel, seen: p.seen }));
-    return ok({ code: c.code, v: c.v, createdAt: c.createdAt, lastReportAt: c.lastReportAt, expiresAt: expiresAt(c), players });
+    const joined = [...(c.joined ?? [])].sort((a, b) => a.num - b.num).map((j) => ({ num: j.num, name: j.name, seen: j.seen }));
+    return ok({ code: c.code, v: c.v, createdAt: c.createdAt, lastReportAt: c.lastReportAt, expiresAt: expiresAt(c), players, joined });
   }
 
   /** Teacher tools: take one student off the board, or delete every result now. */
@@ -353,18 +393,37 @@ export class ClassStore {
     if (!c) return NO_CLASS;
     if (!sameKey(body.key, c.keyHash)) return BAD_KEY;
     if (body.action === 'remove') {
-      const p = c.players.find((x) => x.num === body.num);
+      const p = c.players.find((x) => x.num === body.num) ?? c.joined?.find((x) => x.num === body.num);
       if (!p) return fail(404, 'no-player', 'That student is not on the board.');
       c.players = c.players.filter((x) => x !== p);
+      c.joined = (c.joined ?? []).filter((x) => x !== p);
       c.removed = [...c.removed, p.id].slice(-CLASS_LIMITS.maxPlayers * 2);
     } else if (body.action === 'clear') {
       c.players = [];
+      c.joined = [];
     } else {
       return fail(400, 'bad-action', 'Unknown teacher action.');
     }
     this.changed(c);
     return ok({ ok: true as const, v: c.v });
   }
+}
+
+/**
+ * The nickname a report or join sent: a first name or nickname through the blocklist, made unique in the class
+ * (against students with results and students still playing their first crew). Returns why a name was not used.
+ */
+function setName(c: StoredClass, self: { name: string | null }, nickname: unknown): ReportResponse['nameProblem'] {
+  if (typeof nickname === 'string' && nickname.trim()) {
+    const n = checkName(nickname);
+    if (!n.ok) return n.problem;
+    const others: Array<{ name: string | null }> = [...c.players, ...(c.joined ?? [])];
+    const taken = new Set(others.filter((x) => x !== self && x.name).map((x) => x.name!.toLowerCase()));
+    self.name = uniqueName(n.name, taken);
+    return undefined;
+  }
+  if (nickname !== undefined && nickname !== null && typeof nickname !== 'string') return 'letters';
+  return undefined;
 }
 
 function crewOf(r: CleanReport, at: number): CrewView {
@@ -402,6 +461,7 @@ function looksLikeClass(x: unknown): x is StoredClass {
     typeof c.nextNum === 'number' &&
     Array.isArray(c.removed) &&
     Array.isArray(c.players) &&
+    (c.joined === undefined || (Array.isArray(c.joined) && c.joined.every((j) => j && isPlayerId(j.id) && typeof j.num === 'number' && typeof j.seen === 'number'))) &&
     c.players.every((p) => p && isPlayerId(p.id) && typeof p.num === 'number' && Array.isArray(p.crews) && !!p.last && !!p.tally && Array.isArray(p.rids))
   );
 }

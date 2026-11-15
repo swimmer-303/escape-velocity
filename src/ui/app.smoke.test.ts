@@ -253,6 +253,9 @@ describe('UI smoke test', () => {
     // The menu, from the end screen: Escape goes back to the end screen.
     document.querySelector<HTMLButtonElement>('#hud button[aria-label="Menu"]')!.click();
     expect(document.querySelector('#modal-root [aria-label="Menu"]')).not.toBeNull();
+    // The run is over: nothing to abandon, the Menu just goes back to the title.
+    expect(button(/Abandon run/)).toBeNull();
+    expect(button(/^Quit to title$/)).not.toBeNull();
     esc();
     await waitFor(() => !document.querySelector('#modal-root [aria-label="Menu"]'));
     expect(button(/Play again/)).not.toBeNull();
@@ -287,6 +290,53 @@ describe('UI smoke test', () => {
     button(/^Skip$/)!.click();
     await waitFor(() => document.querySelector('[aria-label="Sol 1 debrief"]'));
   }, 20000);
+
+  it('Abandon run (Menu) asks first: Keep playing goes back, Abandon ends the mission', async () => {
+    const app = new App(new CssStage());
+    const internals = app as unknown as AppInternals;
+    const openMenu = () => document.querySelector<HTMLButtonElement>('#hud button[aria-label="Menu"]')!.click();
+    (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
+    (await waitFor(() => button(/Land the crew/))).click();
+    (await waitFor(() => button(/Plan the day/))).click();
+    openMenu();
+    // A quick mission in progress: one way out, and it asks first.
+    expect(button(/^Quit to title$/)).toBeNull();
+    button(/^Abandon run$/)!.click();
+    expect(document.querySelector('#modal-root [aria-label="Abandon run"]')!.textContent).toMatch(/Abandon this mission\?.*does not count/);
+    button(/^Keep playing$/)!.click();
+    await waitFor(() => button(/^Suggest a plan$/));
+    expect(internals.mission.status).toBe('playing');
+    // Escape on the question (while planning) goes back to the plan, like every planning dialog: nothing is lost.
+    openMenu();
+    button(/^Abandon run$/)!.click();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await waitFor(() => !document.querySelector('#modal-root [aria-label="Abandon run"]'));
+    expect(internals.mission.status).toBe('playing');
+    openMenu();
+    button(/^Abandon run$/)!.click();
+    button(/^Abandon run$/)!.click();
+    await waitFor(() => button(/Quick mission/));
+    expect(internals.mission).toBeNull();
+  }, 20000);
+
+  it('Abandon run in a campaign deletes the save; Save and quit keeps it', async () => {
+    const app = new App(new CssStage());
+    const internals = app as unknown as AppInternals;
+    const openMenu = () => document.querySelector<HTMLButtonElement>('#hud button[aria-label="Menu"]')!.click();
+    (await waitFor(() => button(/New campaign/))).click();
+    (await waitFor(() => button(/Cadet/))).click();
+    await play(app, () => !!internals.mission && internals.mission.sol >= 2 && !!button(/Plan the day/));
+    expect(localStorage.getItem('ev-save-v1')).not.toBeNull();
+    openMenu();
+    expect(button(/^Save and quit$/)).not.toBeNull();
+    button(/^Abandon run$/)!.click();
+    expect(document.querySelector('#modal-root [aria-label="Abandon run"]')!.textContent).toMatch(/crew 1 of 3.*can't be undone.*Save and quit/);
+    button(/^Delete and abandon$/)!.click();
+    await waitFor(() => button(/Quick mission/));
+    expect(localStorage.getItem('ev-save-v1')).toBeNull();
+    expect(button(/Continue: crew/)).toBeNull();
+  }, 30000);
 
   it('plays the May 2024 history scenario', async () => {
     const app = new App(new CssStage());

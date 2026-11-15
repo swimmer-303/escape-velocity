@@ -1026,7 +1026,10 @@ export class App {
           h('button', { class: 'btn', onclick: () => this.showScienceLog() }, 'Science Log'),
           h('button', { class: 'btn', onclick: () => this.showRadar(this.mode === 'history') }, 'Space weather radar'),
           h('button', { class: 'btn', onclick: () => this.showCredits() }, 'Credits'),
-          h('button', { class: 'btn', onclick: () => this.showTitle() }, this.mode === 'campaign' ? 'Save and quit' : 'Quit to title'),
+          // A campaign can be saved for later or abandoned. Any other run in progress is just abandoned (it asks first);
+          // once a run is over (its end screen, the finale) the Menu simply goes back to the title.
+          this.mode === 'campaign' || !this.canAbandon() ? h('button', { class: 'btn', onclick: () => this.showTitle() }, this.mode === 'campaign' ? 'Save and quit' : 'Quit to title') : null,
+          this.canAbandon() ? h('button', { class: 'btn danger', onclick: () => this.confirmAbandon() }, 'Abandon run') : null,
         ),
         this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
         this.mission
@@ -1039,6 +1042,48 @@ export class App {
       ],
       { label: 'Menu', onClose: () => this.resume() },
     );
+  }
+
+  /** A run is still being played (not its end screen or the campaign finale), so the Menu offers to abandon it. */
+  private canAbandon(): boolean {
+    if (this.demoActive || this.phase === 'title' || this.phase === 'end' || this.phase === 'finale') return false;
+    return !this.mission || this.mission.status === 'playing';
+  }
+
+  /** "Abandon run" from the Menu asks first. Keep playing goes back to the game; Escape goes back to the Menu. */
+  private confirmAbandon() {
+    this.audio.sfx('click');
+    const c = this.mode === 'campaign' ? this.campaign : null;
+    this.modal(
+      [
+        h('div', { class: 'kicker' }, 'Abandon run'),
+        h('h2', null, c ? 'Abandon this campaign?' : 'Abandon this mission?'),
+        h(
+          'p',
+          null,
+          c
+            ? `Your saved campaign will be deleted: crew ${c.expedition} of ${EXPEDITIONS.length} and everything built at the base. This can't be undone. To come back to it later, choose Save and quit instead.`
+            : 'The mission ends now and does not count. You go back to the title screen to start a new one.',
+        ),
+        h(
+          'div',
+          { class: 'actions end' },
+          h('button', { class: 'btn go', 'data-autofocus': true, onclick: () => this.resume() }, 'Keep playing'),
+          h('button', { class: 'btn danger', onclick: () => this.abandonRun() }, c ? 'Delete and abandon' : 'Abandon run'),
+        ),
+      ],
+      { label: 'Abandon run', onClose: () => this.showMenu() },
+    );
+  }
+
+  /** Ends the run with no result: nothing is scored or reported, and a campaign's save is deleted. */
+  private abandonRun() {
+    this.audio.sfx('click');
+    if (this.mode === 'campaign') {
+      this.clearSave();
+      this.campaign = null;
+    }
+    this.showTitle();
   }
 
   /**
@@ -1142,6 +1187,8 @@ export class App {
     if (saved.mission && saved.mission.status === 'playing') {
       this.mission = saved.mission;
       this.audio.playMusic('mission');
+      // Back in a crew already under way: the class board shows this student again as playing.
+      classBoard.join(saved.campaign.classCode);
       this.showBriefing();
     } else {
       this.showExpeditionIntro();
@@ -1443,6 +1490,8 @@ export class App {
     const config = this.mode === 'daily' && this.daily ? dailyMissionConfig(this.daily.config) : missionConfigFor(c, light, q?.eventPool ?? pool);
     this.mission = createMission(lab ? { ...config, lab } : config);
     this.save();
+    // With a class code, the teacher's class board shows this student from now on (results follow after the crew).
+    if (!this.demoActive && !lab && (this.mode === 'campaign' || this.mode === 'quick')) classBoard.join(c.classCode);
     if (!this.demoActive) {
       this.closeModal();
       await runInterstitial('landing', this.interstitialContext());

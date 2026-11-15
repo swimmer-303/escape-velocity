@@ -130,6 +130,7 @@ a { color: var(--cyan); }
 .btn.primary { background: var(--oxide); }
 .btn.go { background: #2f8f4a; }
 .btn.cyan { background: #1f6f6a; }
+.btn.danger { background: #8f2620; }
 .btn.small { font-size: 13px; padding: 6px 10px; min-height: 36px; }
 .btn.icon-only { padding: 6px; min-width: 44px; min-height: 44px; }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.6); }
@@ -629,6 +630,8 @@ html.dash-mode #app, html.dash-mode #modal-root { display: none; }
 .db-problem { max-width: 720px; }
 .db-problem p { margin: 0 0 8px; }
 .db-empty, .db-note { color: var(--muted); margin: 0 0 8px; font-size: 16px; }
+.db-playing { margin: 0 0 10px; font-size: 17px; }
+.db-playing b { color: var(--cyan); }
 .db-ask { margin: 4px 0 0; font-size: 17px; }
 .db-ask b { color: var(--cyan); }
 

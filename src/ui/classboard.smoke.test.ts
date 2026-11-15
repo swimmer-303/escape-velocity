@@ -38,13 +38,13 @@ let posts: Array<{ path: string; body: Record<string, unknown> }> = [];
 /** Routes /api/class calls to the in-memory store, like deploy/server.ts does over HTTP. Everything else is offline. */
 async function fakeFetch(input: string, init?: { method?: string; body?: string }) {
   const url = new URL(input, 'http://test');
-  const m = /^\/api\/class(?:\/([^/]+)(?:\/(report|teacher))?)?$/.exec(url.pathname);
+  const m = /^\/api\/class(?:\/([^/]+)(?:\/(report|join|teacher))?)?$/.exec(url.pathname);
   if (!m) throw new Error('offline in tests');
   const body = init?.body ? JSON.parse(init.body) : {};
   if (init?.method === 'POST') posts.push({ path: url.pathname, body });
   const reply = (status: number, json: unknown) => new Response(JSON.stringify(json), { status, headers: { 'content-type': 'application/json' } });
   const [, code, sub] = m;
-  const r = !code ? store.register('1.1.1.1', body) : !sub ? store.view(code, '1.1.1.1', url.searchParams.get('key')) : store.report(code, '1.1.1.1', body);
+  const r = !code ? store.register('1.1.1.1', body) : !sub ? store.view(code, '1.1.1.1', url.searchParams.get('key')) : sub === 'join' ? store.join(code, '1.1.1.1', body) : store.report(code, '1.1.1.1', body);
   return r.ok ? reply(code ? 200 : 201, r.value) : reply(r.status, { error: r.error, message: r.message });
 }
 
@@ -126,6 +126,8 @@ describe('class board in the game', () => {
     const m = await playQuickMission(app);
 
     const sent = await waitFor(() => posts.find((p) => p.path === '/api/class/B4XN9/report'));
+    // The crew's landing told the class board first, so the teacher saw this student from the start.
+    expect(posts[0]).toEqual({ path: '/api/class/B4XN9/join', body: { playerId: sent.body.playerId, nickname: null } });
     expect(sent.body).toMatchObject({ mode: 'quick', n: 1, site: 'mars', difficulty: 'cadet', status: m.status, sols: m.log.length, nickname: null });
     expect(Object.keys(sent.body).sort()).toEqual(
       ['playerId', 'rid', 'nickname', 'mode', 'site', 'difficulty', 'n', 'status', 'loseReason', 'sols', 'dose', 'doseBudget', 'stars', 'built', 'series'].sort(),

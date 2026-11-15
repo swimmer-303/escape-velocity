@@ -2,6 +2,7 @@
 // The class board (teacher dashboard) HTTP API, run by the droplet's Node server (deploy/server.ts).
 //
 //   POST /api/class                      {code}                                -> 201 {code, key, expiresAt}
+//   POST /api/class/:code/join           {playerId, nickname?}                 -> {ok, num, name, nameProblem?}
 //   POST /api/class/:code/report         {playerId, rid, nickname?, ...result}  -> {ok, num, name, nameProblem?}
 //   GET  /api/class/:code?key=&since=                                          -> the dashboard (or {unchanged, v})
 //   POST /api/class/:code/teacher        {key, action: 'remove', num} | {key, action: 'clear'}
@@ -23,7 +24,7 @@ function send(res: ServerResponse, status: number, body: unknown) {
 
 const sendFail = (res: ServerResponse, f: Fail) => send(res, f.status, { error: f.error, message: f.message });
 
-const ROUTE = /^\/api\/class(?:\/([^/]+)(?:\/(report|teacher))?)?\/?$/;
+const ROUTE = /^\/api\/class(?:\/([^/]+)(?:\/(report|join|teacher))?)?\/?$/;
 
 /**
  * Handles /api/class requests. Resolves true if it answered the request, false if the path
@@ -62,7 +63,7 @@ export function createClassHandler(store: ClassStore) {
         return true;
       }
       const body = await readJson(req, CLASS_LIMITS.maxBody);
-      const r = sub === 'report' ? store.report(code, clientIp(req), body) : store.teacher(code, clientIp(req), body);
+      const r = sub === 'report' ? store.report(code, clientIp(req), body) : sub === 'join' ? store.join(code, clientIp(req), body) : store.teacher(code, clientIp(req), body);
       if (!r.ok) sendFail(res, r);
       else send(res, 200, r.value);
       return true;

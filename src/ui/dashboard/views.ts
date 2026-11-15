@@ -8,7 +8,7 @@
 import { h } from '../dom';
 import { UPGRADES } from '../../sim/upgrades';
 import type { LoseReason } from '../../sim/types';
-import type { CrewView, DashboardView, PlayerView } from '../../class/protocol';
+import type { CrewView, DashboardView, JoinedView, PlayerView } from '../../class/protocol';
 import { latestStars, summarize, type ClassSummary } from '../../class/summary';
 
 /** Plain words for why a crew came home early, and a question for the class. */
@@ -60,11 +60,13 @@ function tile(value: string, label: string, sub?: string): HTMLElement {
   return h('div', { class: 'db-tile' }, h('div', { class: 'db-tile-value' }, value), h('div', { class: 'db-tile-label' }, label), sub ? h('div', { class: 'db-tile-sub' }, sub) : null);
 }
 
-export function summaryTiles(s: ClassSummary): HTMLElement {
+/** `playing`: students who started their first crew and have no result yet (they count as students too). */
+export function summaryTiles(s: ClassSummary, playing = 0): HTMLElement {
+  const total = s.players + playing;
   return h(
     'section',
     { class: 'db-tiles', 'aria-label': 'Class summary' },
-    tile(String(s.players), s.players === 1 ? 'Student' : 'Students'),
+    tile(String(total), total === 1 ? 'Student' : 'Students', playing ? `${playing} playing their first crew` : undefined),
     tile(String(s.launched), 'Crews launched', s.crews ? `of ${s.crews} crews` : undefined),
     tile(String(s.early), 'Sent home early', s.crews ? `of ${s.crews} crews` : undefined),
     tile(s.avgStars === null ? '-' : s.avgStars.toFixed(1), 'Average stars', 'per crew, out of 3'),
@@ -180,9 +182,23 @@ export interface TableHandlers {
   onRemove: (p: PlayerView) => void;
 }
 
-export function studentTable(players: PlayerView[], st: ViewState, on: TableHandlers): HTMLElement {
+/** "Playing their first crew: Ava, Player 4." Students who joined with the code and have no result yet. */
+function playingLine(joined: JoinedView[], hide: boolean): HTMLElement | null {
+  if (!joined.length) return null;
+  const names = joined.map((j) => (!hide && j.name ? j.name : `Player ${j.num}`));
+  return h('p', { class: 'db-playing' }, h('b', null, 'Playing their first crew: '), `${names.join(', ')}. Their results show here when the crew ends.`);
+}
+
+export function studentTable(players: PlayerView[], st: ViewState, on: TableHandlers, joined: JoinedView[] = []): HTMLElement {
   const head = h('h2', { id: 'db-students' }, 'Students');
-  if (!players.length) return h('section', { class: 'db-card' }, head, h('p', { class: 'db-empty' }, 'Nobody has finished a crew yet.'));
+  const playing = playingLine(joined, st.hideNames);
+  if (!players.length)
+    return h(
+      'section',
+      { class: 'db-card' },
+      head,
+      playing ?? h('p', { class: 'db-empty' }, 'Nobody has joined yet. Students show up here as soon as they start a crew with the class code.'),
+    );
   const rows = sortPlayers(players, st.sort, st.dir, st.hideNames).map((p) => {
     const { stars, max } = latestStars(p);
     const best = p.tally.best;
@@ -226,6 +242,7 @@ export function studentTable(players: PlayerView[], st: ViewState, on: TableHand
     'section',
     { class: 'db-card', 'aria-labelledby': 'db-students' },
     head,
+    playing,
     h(
       'div',
       { class: 'db-table-wrap' },
@@ -313,10 +330,11 @@ export function fuelSection(players: PlayerView[], st: ViewState): HTMLElement |
 
 export function dashboardBody(view: DashboardView, st: ViewState, on: TableHandlers): HTMLElement[] {
   const sum = summarize(view.players);
+  const joined = view.joined ?? [];
   return [
-    summaryTiles(sum),
+    summaryTiles(sum, joined.length),
     h('div', { class: 'db-grid' }, troubleSection(sum), upgradeSection(sum)),
-    studentTable(view.players, st, on),
+    studentTable(view.players, st, on, joined),
     fuelSection(view.players, st),
   ].filter((x): x is HTMLElement => !!x);
 }

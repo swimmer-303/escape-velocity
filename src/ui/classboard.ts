@@ -11,7 +11,7 @@ import { resultFor } from '../sim/campaign';
 import type { MissionState } from '../sim/types';
 import { checkName } from '../room/names';
 import { NAME_PROBLEM } from '../room/protocol';
-import { dashboardLink, isTeacherKey, type RegisterResponse, type ReportMode, type ReportRequest, type ReportResponse } from '../class/protocol';
+import { dashboardLink, isTeacherKey, type JoinRequest, type JoinResponse, type RegisterResponse, type ReportMode, type ReportRequest, type ReportResponse } from '../class/protocol';
 
 const ME_KEY = 'ev-class-me';
 const OUTBOX_KEY = 'ev-class-outbox';
@@ -173,6 +173,32 @@ export class ClassBoardClient {
     const all = readJson<Record<string, Me>>(ME_KEY, {});
     const me = { ...this.me(code), ...patch, at: Date.now() };
     writeJson(ME_KEY, newest({ ...all, [code]: me }));
+  }
+
+  /**
+   * A crew just landed with a class code: tell the class board, so the teacher sees this student right away
+   * ("playing their first crew") instead of only after a whole crew. Quiet and best effort: if it fails, the
+   * result at the end of the crew still puts them on the board. Returns at once.
+   */
+  join(code: string | null | undefined) {
+    if (!code || this.unregistered.has(code)) return;
+    const me = this.me(code);
+    const body: JoinRequest = { playerId: me.id, nickname: me.nick };
+    void (async () => {
+      try {
+        const res = await fetch(`/api/class/${encodeURIComponent(code)}/join`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+        if (res.ok) {
+          const json = (await res.json()) as JoinResponse;
+          if (typeof json?.num === 'number') this.saveMe(code, { num: json.num, name: json.name, ...(json.nameProblem ? { nick: null, asked: false } : {}) });
+        } else if (res.status === 403) {
+          // Taken off this board by the teacher: stop sending (the end-of-crew report would be refused too).
+          this.unregistered.add(code);
+        }
+        // A 404 is left alone: the end-of-crew report decides then (the teacher may still be setting up).
+      } catch {
+        /* offline: the result at the end of the crew still counts */
+      }
+    })();
   }
 
   /** Send one finished crew for a class code. Returns at once; sending happens in the background. */

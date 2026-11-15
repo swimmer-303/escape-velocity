@@ -243,6 +243,79 @@ describe('results from students', () => {
   });
 });
 
+describe('students who joined (started a crew, no result yet)', () => {
+  it('show on the board right away, then keep their number and name when the first result arrives', () => {
+    const { s, code, key } = registered();
+    expect(dash(s, code, key).joined).toEqual([]);
+    const j = s.join(code, 'ip', { playerId: pid(1), nickname: 'Ava' });
+    expect(j).toEqual({ ok: true, value: { ok: true, num: 1, name: 'Ava' } });
+    const d1 = dash(s, code, key);
+    expect(d1.players).toEqual([]);
+    expect(d1.joined).toEqual([{ num: 1, name: 'Ava', seen: T0 }]);
+    // Joining again (a second crew, or a page reload) is still one student.
+    s.join(code, 'ip', { playerId: pid(1), nickname: null });
+    expect(dash(s, code, key).joined).toHaveLength(1);
+    // A second student joins with the same name: made unique, like results.
+    expect(s.join(code, 'ip', { playerId: pid(2), nickname: 'Ava' })).toMatchObject({ ok: true, value: { num: 2, name: 'Ava 2' } });
+    // Ava finishes her crew: off the joined list, onto the results table as number 1.
+    const r = s.report(code, 'ip', { ...result({ playerId: pid(1) }) });
+    expect(r).toMatchObject({ ok: true, value: { num: 1, name: 'Ava' } });
+    const d2 = dash(s, code, key);
+    expect(d2.players.map((p) => [p.num, p.name])).toEqual([[1, 'Ava']]);
+    expect(d2.joined?.map((x) => x.num)).toEqual([2]);
+    // Someone already on the board who joins again stays in the table only.
+    s.join(code, 'ip', { playerId: pid(1) });
+    expect(dash(s, code, key).joined?.map((x) => x.num)).toEqual([2]);
+    // A new student after them gets the next number.
+    expect(s.join(code, 'ip', { playerId: pid(3) })).toMatchObject({ ok: true, value: { num: 3, name: null } });
+  });
+
+  it('refuses a bad id, an unknown code and a removed student; the teacher can remove or clear joined students', () => {
+    const { s, code, key } = registered();
+    expect(s.join(code, 'ip', { playerId: 'nope' })).toMatchObject({ ok: false, status: 400 });
+    expect(s.join('ZZZZZ', 'ip', { playerId: pid(1) })).toMatchObject({ ok: false, status: 404 });
+    s.join(code, 'ip', { playerId: pid(1) });
+    expect(s.teacher(code, 'ip', { key, action: 'remove', num: 1 }).ok).toBe(true);
+    expect(dash(s, code, key).joined).toEqual([]);
+    expect(s.join(code, 'ip', { playerId: pid(1) })).toMatchObject({ ok: false, status: 403 });
+    expect(s.report(code, 'ip', { ...result({ playerId: pid(1) }) })).toMatchObject({ ok: false, status: 403 });
+    s.join(code, 'ip', { playerId: pid(2) });
+    s.teacher(code, 'ip', { key, action: 'clear' });
+    expect(dash(s, code, key).joined).toEqual([]);
+  });
+
+  it('joined students count toward the 60-student limit', () => {
+    const { s, code } = registered();
+    for (let i = 1; i <= CLASS_LIMITS.maxPlayers; i++) {
+      const r = i % 2 ? s.join(code, `ip${i}`, { playerId: pid(1000 + i) }) : s.report(code, `ip${i}`, { ...result({ playerId: pid(1000 + i) }) });
+      expect(r.ok, `student ${i}`).toBe(true);
+    }
+    expect(s.join(code, 'ipx', { playerId: pid(5000) })).toMatchObject({ ok: false, error: 'class-full' });
+    expect(s.report(code, 'ipy', { ...result({ playerId: pid(5001) }) })).toMatchObject({ ok: false, error: 'class-full' });
+    // A joined student's first result still goes in (they already have a place).
+    expect(s.report(code, 'ipz', { ...result({ playerId: pid(1001) }) }).ok).toBe(true);
+  });
+
+  it('a classes.json saved before joining existed still loads, and joined students are saved', () => {
+    const dir = tempDir();
+    const now = { t: T0 };
+    const { s, code, key } = registered(now, dir);
+    s.report(code, 'ip', { ...result() });
+    s.flush();
+    const file = join(dir, CLASS_FILE);
+    const old = JSON.parse(readFileSync(file, 'utf8'));
+    delete old.classes[0].joined;
+    writeFileSync(file, JSON.stringify(old));
+    const s2 = new ClassStore({ dir, now: () => now.t, log: () => undefined }).load();
+    expect(dash(s2, code, key).players).toHaveLength(1);
+    expect(dash(s2, code, key).joined).toEqual([]);
+    s2.join(code, 'ip', { playerId: pid(7), nickname: 'Max' });
+    s2.flush();
+    const s3 = new ClassStore({ dir, now: () => now.t, log: () => undefined }).load();
+    expect(dash(s3, code, key).joined).toEqual([{ num: 2, name: 'Max', seen: T0 }]);
+  });
+});
+
 describe('expiry and saving', () => {
   it('a class is deleted 7 days after its last result (or after registering, with no results)', () => {
     const now = { t: T0 };
