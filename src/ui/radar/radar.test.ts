@@ -172,7 +172,7 @@ describe('opening the radar from the game', () => {
 
   it('from the title screen, and back', async () => {
     new App(new CssStage());
-    btn(document, /^Space weather radar$/).click();
+    btn(document, /^Space weather radar/).click();
     const dialog = await waitFor(() => document.querySelector('[aria-label="Space weather radar"]'));
     expect(dialog.querySelector('.radar-svg')).not.toBeNull();
     // Offline: the stored snapshot, labeled ARCHIVE.
@@ -186,7 +186,7 @@ describe('opening the radar from the game', () => {
     const gate = new Promise<void>((r) => (release = r));
     vi.stubGlobal('fetch', () => gate.then(() => Promise.reject(new Error('offline in tests'))));
     new App(new CssStage());
-    btn(document, /^Space weather radar$/).click();
+    btn(document, /^Space weather radar/).click();
     await waitFor(() => document.querySelector('[aria-label="Space weather radar"]'));
     release();
     await sleep(50);
@@ -196,7 +196,7 @@ describe('opening the radar from the game', () => {
 
   it("from the morning briefing's space-weather card", async () => {
     new App(new CssStage());
-    (await waitFor(() => btn(document, /^Quick mission$/))).click();
+    (await waitFor(() => btn(document, /^Quick mission/))).click();
     (await waitFor(() => btn(document, /Start quick mission/) ?? btn(document, /Land the crew/))).click();
     const land = await waitFor(() => btn(document, /Land the crew/) ?? btn(document, /Plan the day/));
     if (/Land the crew/.test(land.textContent ?? '')) land.click();

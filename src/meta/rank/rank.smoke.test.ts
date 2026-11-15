@@ -47,8 +47,10 @@ describe('Astronaut rank in the game', () => {
     const strip = document.querySelector('#modal-root .title-meta .rank-strip');
     expect(strip).not.toBeNull();
     expect(strip!.textContent).toContain('Cadet');
-    // The play buttons come first (a first-time player never scrolls past progress panels to find Play); the card follows.
-    expect(strip!.compareDocumentPosition(button(/Quick mission/)!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    // The big PLAY button comes first (a first-time player never scrolls past progress panels to find Play); the card
+    // follows, then the lobby's mode tiles (Quick mission among them).
+    expect(strip!.compareDocumentPosition(button(/^PLAY/)!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(strip!.compareDocumentPosition(button(/Quick mission/)!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     let celebratedDuringPlay = false;
     const stop = onGame('sol', () => {

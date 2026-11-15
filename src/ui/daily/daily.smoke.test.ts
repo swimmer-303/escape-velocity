@@ -102,7 +102,7 @@ async function playToEnd() {
 describe('daily challenge screens', () => {
   it('plays today\'s challenge from the title, sends the score with a nickname and shows the board', async () => {
     const app = new App(new CssStage());
-    (await waitFor(() => button(/^Daily challenge$/))).click();
+    (await waitFor(() => button(/^Daily challenge/))).click();
     await waitFor(() => button(/Land the crew/));
     const intro = document.querySelector('[role="dialog"]')!.textContent ?? '';
     expect(intro).toMatch(/Daily challenge · Nov 14/);
@@ -156,7 +156,7 @@ describe('daily challenge screens', () => {
 
     // "Today's best" from the title shows the board and this browser's rank.
     button(/Title screen/)!.click();
-    (await waitFor(() => button(/^Today's best$/))).click();
+    (await waitFor(() => button(/^Today's best/))).click();
     await waitFor(() => /Your best game today is number 1 of 1/.test(text()));
     expect(document.querySelector('[aria-label="Today\'s best"]')!.textContent).toMatch(/Daily challenge · Nov 14/);
   }, 60000);
@@ -164,7 +164,7 @@ describe('daily challenge screens', () => {
   it('still plays without our server, labeled ARCHIVE, and says scores cannot be sent', async () => {
     vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
     const app = new App(new CssStage());
-    (await waitFor(() => button(/^Daily challenge$/))).click();
+    (await waitFor(() => button(/^Daily challenge/))).click();
     await waitFor(() => button(/Land the crew/));
     expect(text()).toMatch(/can't reach the scoreboard/);
     button(/Land the crew/)!.click();

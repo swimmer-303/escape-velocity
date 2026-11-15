@@ -1,0 +1,120 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* The lobby (src/ui/lobby.ts) and the cold open (src/ui/coldopen.ts). The title floats over the live 3D outpost;
+   the panel below holds the player's strip and the grid of mode tiles. */
+
+/* ---------- The title dialog becomes a see-through lobby ---------- */
+#modal-root.lobby-root {
+  place-items: start center;
+  background: linear-gradient(180deg, rgba(11, 10, 24, 0.05) 0%, rgba(11, 10, 24, 0.25) 35%, rgba(11, 10, 24, 0.82) 70%);
+}
+.modal.lobby { width: min(1060px, 100%); max-height: none; overflow: visible; background: transparent; border: 0; box-shadow: none; padding: 0; }
+.lobby-hero { min-height: clamp(320px, 56vh, 560px); display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 14px; padding: 6px 0 20px; }
+.title-screen.lobby h1 { font-size: clamp(40px, 9vw, 104px); margin: 6px 0 0; letter-spacing: 0.02em; text-shadow: 5px 5px 0 var(--rust), 0 0 28px rgba(0, 0, 0, 0.75); }
+.lobby-hero-text { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.title-screen.lobby .tagline { max-width: 640px; margin: 0; padding: 6px 12px; background: rgba(11, 10, 24, 0.72); border: 2px solid rgba(0, 0, 0, 0.5); font-size: 18px; }
+.title-screen.lobby .class-code-note, .title-screen.lobby .lobby-hero > .title-foot { background: rgba(11, 10, 24, 0.72); padding: 4px 10px; }
+.title-screen.lobby .menu { width: 100%; max-width: 520px; margin: 0 auto; gap: 10px; }
+
+/* PLAY: the biggest thing on the screen. */
+.btn.play-big {
+  min-height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: #ffd84a; color: #15122b; border: 4px solid #000;
+  box-shadow: inset -5px -5px 0 #c99a00, inset 5px 5px 0 #fff3b0, 6px 6px 0 var(--shadow);
+}
+.btn.play-big:hover { background: #ffe373; }
+.btn.play-big:focus-visible { outline: 4px solid var(--cyan); outline-offset: 3px; }
+.play-word { font-size: clamp(32px, 6vw, 46px); line-height: 1; letter-spacing: 0.08em; }
+.play-sub { font-family: var(--font-body); font-size: 15px; text-transform: none; letter-spacing: 0; font-weight: 700; }
+html.ev-contrast .btn.play-big { background: #fff; color: #000; }
+
+/* ---------- The panel: strips, then a grid of tiles ---------- */
+.lobby-panel { background: rgba(21, 18, 43, 0.95); border: 4px solid var(--line); box-shadow: 8px 8px 0 var(--shadow); padding: 16px 18px 18px; }
+.title-screen.lobby .title-meta { max-width: none; margin: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; text-align: left; align-items: stretch; }
+/* Strips (the rank strip, a player card...) and sections span the whole row; tiles and tile groups take one cell. */
+.title-screen.lobby .title-meta > :not(.title-tile):not(.title-tile-group) { grid-column: 1 / -1; }
+.title-screen.lobby .title-tile { height: 100%; }
+.title-tile:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.title-tile .title-tile-sub { line-height: 1.25; }
+.title-tile .lobby-new, .title-tile-group .lobby-new { background: var(--cyan); font-size: 10px; padding: 1px 5px; }
+.title-tile .sc-row-sun { font-size: 13px; color: var(--muted); }
+.title-tile .sc-row-sun .tag { display: inline-block; font-family: var(--font-px); font-size: 10px; padding: 1px 5px; border: 2px solid #000; background: var(--green); color: #000; }
+
+/* A tile with buttons inside (Flight school's four flights). */
+.title-tile-group, .title-screen .title-tile-group { --tile-accent: var(--amber); position: relative; background: var(--panel-2); border: 3px solid var(--tile-accent); box-shadow: 4px 4px 0 var(--shadow); padding: 10px 12px; }
+.title-tile-group.accent-cyan, .title-screen .title-tile-group.accent-cyan { --tile-accent: var(--cyan); }
+.title-tile-group .ev-fs-head b { font-family: var(--font-px); font-weight: 400; color: var(--tile-accent); }
+.title-screen.lobby .ev-flight-school.title-tile-group { margin: 0; text-align: left; }
+.title-screen.lobby .ev-flight-school .ev-fs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.title-screen.lobby .ev-flight-school .ev-fs-btn { width: 100%; font-size: 11px; padding: 6px 8px; justify-content: flex-start; }
+
+/* Explore the real science: three smaller tiles in a row. */
+.lobby-explore .kicker { color: var(--cyan); margin: 2px 0 8px; }
+.lobby-explore-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.title-tile.small { min-height: 54px; padding: 8px 12px; }
+.title-tile.small .title-tile-icon { width: 32px; height: 32px; }
+.title-tile.small .title-tile-icon > svg { width: 32px; height: 32px; }
+.title-tile.small .title-tile-name { font-size: 13px; }
+.title-tile.small .title-tile-sub { font-size: 13px; }
+
+.title-screen.lobby .menu-links { margin-top: 16px; }
+.title-screen.lobby .menu-links a.btn { text-decoration: none; }
+.title-screen.lobby .sun-panel { text-align: left; }
+
+@media (max-width: 900px) {
+  #modal-root.lobby-root { background: rgba(11, 10, 24, 0.55); padding: 10px; }
+  .lobby-hero { min-height: 0; padding-bottom: 14px; }
+  .title-screen.lobby .title-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lobby-explore-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .title-screen.lobby .title-meta { grid-template-columns: 1fr; }
+  .lobby-panel { padding: 12px 10px 14px; }
+  .title-screen.lobby .tagline { font-size: 16px; }
+  .btn.play-big { min-height: 76px; }
+}
+html.ev-large-text .title-screen.lobby .title-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) { html.ev-large-text .title-screen.lobby .title-meta { grid-template-columns: 1fr; } }
+html.ev-contrast .lobby-panel { background: #05040c; border-color: #fff; }
+html.ev-contrast #modal-root.lobby-root { background: rgba(5, 4, 12, 0.7); }
+
+/* ---------- The lobby slides in (after the cold open, once per page load) ---------- */
+html.ev-lobby-enter .title-screen.lobby h1 { animation: lobbyLogo 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+html.ev-lobby-enter .title-screen.lobby .menu { animation: lobbyUp 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) 0.12s both; }
+html.ev-lobby-enter .title-screen.lobby .lobby-panel { animation: lobbyUp 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) 0.2s both; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > * { animation: lobbyUp 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(1) { animation-delay: 0.25s; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(2) { animation-delay: 0.3s; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(3) { animation-delay: 0.35s; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(4) { animation-delay: 0.4s; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(5) { animation-delay: 0.45s; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(6) { animation-delay: 0.5s; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(7) { animation-delay: 0.55s; }
+html.ev-lobby-enter .title-screen.lobby .title-meta > :nth-child(n + 8) { animation-delay: 0.6s; }
+@keyframes lobbyLogo { 0% { transform: scale(1.8); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes lobbyUp { 0% { transform: translateY(18px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* ---------- The cold open ---------- */
+html.ev-cold #modal-root, html.ev-cold #hud, html.ev-cold .look-at { opacity: 0; pointer-events: none; }
+.cold-open { position: fixed; inset: 0; z-index: 90; cursor: pointer; overflow: hidden; transition: opacity 0.3s ease; }
+.cold-open.leaving { opacity: 0; pointer-events: none; }
+.cold-black { position: absolute; inset: 0; background: #000; transition: opacity 1.6s ease; }
+.cold-open.rolling .cold-black { opacity: 0; }
+.cold-bar { position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
+.cold-bar.top { top: 0; }
+.cold-bar.bottom { bottom: 0; }
+.cold-title { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); opacity: 0; text-align: center; font-family: var(--font-px); white-space: nowrap; pointer-events: none; }
+.cold-title b { display: block; font-weight: 400; font-size: clamp(36px, 10vw, 124px); line-height: 1.05; color: var(--amber); text-shadow: 6px 6px 0 var(--rust), 0 0 34px rgba(0, 0, 0, 0.8); }
+.cold-kicker { display: block; font-size: clamp(12px, 1.8vw, 18px); color: var(--ink); letter-spacing: 0.24em; text-transform: uppercase; text-shadow: 2px 2px 0 #000; }
+.cold-open.slammed .cold-title { animation: coldSlam 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) forwards; }
+.cold-open.slammed::after { content: ''; position: absolute; inset: 0; background: #fff; opacity: 0; animation: coldHit 0.35s ease-out; pointer-events: none; }
+@keyframes coldSlam { 0% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@keyframes coldHit { 0% { opacity: 0.35; } 100% { opacity: 0; } }
+.cold-prompt {
+  position: absolute; left: 50%; bottom: calc(9vh + 44px); transform: translateX(-50%); opacity: 0; pointer-events: none;
+  font-family: var(--font-px); font-size: clamp(14px, 2.2vw, 20px); text-transform: uppercase; color: var(--ink);
+  background: rgba(11, 10, 24, 0.82); border: 3px solid var(--amber); padding: 10px 16px; box-shadow: 4px 4px 0 #000; cursor: pointer;
+}
+.cold-open.prompting .cold-prompt { opacity: 1; pointer-events: auto; animation: coldBreathe 1.6s ease-in-out infinite; }
+.cold-prompt:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+@keyframes coldBreathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.cold-hint { position: absolute; left: 0; right: 0; bottom: calc(9vh + 10px); text-align: center; font-size: 14px; color: rgba(244, 234, 216, 0.75); text-shadow: 1px 1px 0 #000; }

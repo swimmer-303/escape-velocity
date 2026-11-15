@@ -6,6 +6,7 @@
 // sections, and the sky turns to dusk when there are lights or glowing things to admire.
 
 import { h } from '../../ui/dom';
+import { titleTile } from '../tile';
 import { playerLevel, type MetaContext } from '../hooks';
 import { ITEMS, SLOTS, SLOT_WORDS, fullName, isUnlocked, itemsIn, nextUnlock, type HangarItem, type Slot } from './items';
 import { applyLooks, equip, equippedAll, equippedItem, markAllSeen, newItems } from './store';
@@ -172,16 +173,18 @@ export function titleStrip(open: () => void): HTMLElement {
   const n = newItems(level).length;
   const next = nextUnlock(level);
   const note = n ? `${n} new ${n === 1 ? 'item' : 'items'} to equip` : next ? `Next at level ${next.level}: ${fullName(next)}` : 'Everything unlocked!';
-  return h(
-    'div',
-    { class: 'hangar-strip' },
-    h(
-      'button',
-      { class: `btn small hangar-open${n ? ' has-new' : ''}`, onclick: open, 'aria-label': `Hangar: suits, rocket paint, rover pets and lights. ${note}.` },
-      itemPreview(equippedItem('suit', level), 'small'),
-      'Hangar',
-      n ? h('span', { class: 'hangar-new' }, `${n} new`) : null,
-    ),
-    h('span', { class: 'hangar-strip-note', 'aria-hidden': 'true' }, note),
-  );
+  // A lobby tile (src/meta/tile.ts), wearing the crew's current suit as its icon.
+  const tile = titleTile({
+    id: 'hangar',
+    name: 'Hangar',
+    sub: note,
+    icon: itemPreview(equippedItem('suit', level), 'small'),
+    badge: n ? `${n} NEW` : undefined,
+    accent: 'magenta',
+    onClick: open,
+  });
+  tile.classList.add('hangar-strip');
+  if (n) tile.classList.add('has-new');
+  tile.setAttribute('aria-label', `Hangar: suits, rocket paint, rover pets and lights. ${note}.`);
+  return tile;
 }

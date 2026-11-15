@@ -167,14 +167,15 @@ describe('the Storm Cards screen', () => {
       reducedMotion: () => true,
     } as unknown as MetaContext;
     setMetaContext(ctx);
-    const row = renderTitleExtras().find((e) => e.classList.contains('sc-row'))!;
+    // A lobby tile (src/meta/tile.ts): the tile itself is the button.
+    const row = renderTitleExtras().find((e) => e.getAttribute('data-tile') === 'storm-cards') as HTMLButtonElement;
     expect(row).toBeTruthy();
     expect(row.textContent).toContain(`1 of ${poolFacts().length} collected`);
-    expect(row.textContent).toContain('1 Rare');
+    expect(row.textContent).toContain('best: Rare');
     document.body.append(row);
-    const open = row.querySelector<HTMLButtonElement>('button.sc-open')!;
-    expect(open.textContent).toBe('Open Storm Cards1 new');
-    open.click();
+    expect(row.querySelector('.title-tile-badge')!.textContent).toBe('1 NEW');
+    expect(row.getAttribute('aria-label')).toContain('1 new');
+    row.click();
     expect(root.querySelector('[aria-label="Storm Cards"]')).not.toBeNull();
     // Opening the screen shows the card as New once.
     expect(root.querySelector('.sc-new')).not.toBeNull();
@@ -210,7 +211,7 @@ describe('new from the real Sun', () => {
 
     // The title row says it too.
     saveCollection(col);
-    const row = renderTitleExtras().find((e) => e.classList.contains('sc-row'))!;
+    const row = renderTitleExtras().find((e) => e.getAttribute('data-tile') === 'storm-cards')!;
     expect(row.querySelector('.sc-row-sun .tag.live')).not.toBeNull();
     expect(row.querySelector('.sc-row-sun')!.textContent).toMatch(/\d+ new real storms? on the Sun/);
   });

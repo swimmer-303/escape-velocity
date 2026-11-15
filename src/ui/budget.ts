@@ -99,6 +99,8 @@ export interface BudgetCallbacks {
   canEdit?(id: ModuleId): boolean;
   /** Mission Control: what goes under the side panel instead of the Run button (e.g. a Ready button). */
   actions?(left: number): HTMLElement[];
+  /** A cell just landed in this slot (after the dock redrew), for the game-feel pop (see juice.ts). */
+  onPlaced?(id: ModuleId): void;
 }
 
 export class BudgetDock {
@@ -174,6 +176,7 @@ export class BudgetDock {
     this.alloc = { ...this.alloc, [id]: this.alloc[id] + 1 };
     this.cb.sfx?.('place');
     this.cb.onChange(this.alloc);
+    this.cb.onPlaced?.(id);
     return true;
   }
 
@@ -194,6 +197,7 @@ export class BudgetDock {
     this.alloc = { ...this.alloc, [from]: this.alloc[from] - 1, [to]: this.alloc[to] + 1 };
     this.cb.sfx?.('place');
     this.cb.onChange(this.alloc);
+    this.cb.onPlaced?.(to);
   }
 
   private effectFor(id: ModuleId): { text: HTMLElement | string; cls: string } {
@@ -345,7 +349,7 @@ export class BudgetDock {
 
     const run = h(
       'button',
-      { class: 'btn go', disabled: left > 0 ? true : undefined, onclick: () => this.cb.onRun(), 'aria-label': `Run ${siteText(this.site).turn} ${this.briefing.sol}` },
+      { class: `btn go${left > 0 ? '' : ' ready'}`, disabled: left > 0 ? true : undefined, onclick: () => this.cb.onRun(), 'aria-label': `Run ${siteText(this.site).turn} ${this.briefing.sol}` },
       `Run ${siteText(this.site).turn} ${this.briefing.sol}`,
       h('span', { class: 'arrow' }),
     );

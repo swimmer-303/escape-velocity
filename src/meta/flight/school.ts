@@ -74,10 +74,12 @@ export function renderFlightSchool(): HTMLElement {
     for (const e of ENTRIES) row.append(entryButton(e, refresh));
   };
   refresh();
+  // A lobby tile group (one grid cell, styled like the tiles in src/meta/tile.ts) with the four flights inside.
+  const medals = ENTRIES.filter((e) => bestMedal(e.game, e.site)).length;
   return h(
     'section',
-    { class: 'ev-flight-school', 'aria-label': 'Flight school' },
-    h('div', { class: 'ev-fs-head' }, h('b', null, 'Flight school'), h('span', null, 'Practice landing and launching. Beat your best medal to earn XP.')),
+    { class: 'ev-flight-school title-tile-group accent-cyan', 'data-tile': 'flight-school', 'aria-label': 'Flight school' },
+    h('div', { class: 'ev-fs-head' }, h('b', null, 'Flight school'), h('span', null, `Practice landing and launching. ${medals} of ${ENTRIES.length} medals.`)),
     row,
   );
 }

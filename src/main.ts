@@ -6,7 +6,8 @@ import { CssStage, SwappableStage } from './render/stage';
 import { dashboardParams } from './class/protocol';
 
 const stage = new SwappableStage(new CssStage());
-new App(stage);
+// The cold open (a camera swoop to the outpost, then the title) needs the 3D view, which loads just below.
+new App(stage, { intro: want3d() && !dashboardParams(location.search) });
 
 function want3d(): boolean {
   try {

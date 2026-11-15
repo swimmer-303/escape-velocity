@@ -77,6 +77,11 @@ export interface Stage {
   onPick?: (key: FocusKey | null) => void;
   /** Suit colors, rocket paint, rover pet and base lights from the Hangar. */
   setCosmetics?(c: Cosmetics): void;
+  /**
+   * The cold open (src/ui/coldopen.ts): swoop the camera low over the real terrain and around to the opening view of
+   * the base, over `seconds` (0 = cut straight to the opening view). Only the 3D stage has it; never with reduced motion.
+   */
+  flyIn?(seconds: number): void;
   setReducedMotion(on: boolean): void;
   dispose(): void;
 }
@@ -241,6 +246,13 @@ export class SwappableStage implements Stage {
   setCosmetics(c: Cosmetics) {
     this.looks = c;
     this.inner.setCosmetics?.(c);
+  }
+  flyIn(seconds: number) {
+    this.inner.flyIn?.(seconds);
+  }
+  /** True once a stage that can fly the cold open (the 3D one) is inside. */
+  canFlyIn(): boolean {
+    return typeof this.inner.flyIn === 'function';
   }
   setReducedMotion(on: boolean) {
     this.reduced = on;

@@ -15,6 +15,11 @@ import type { Cosmetics, FocusKey, Stage, StageCue, StageScene } from './stage';
 const TARGET_HEIGHT = 400;
 const _tag = new THREE.Vector3();
 const _look = new THREE.Vector3();
+// The cold open's camera (reused every frame: nothing is allocated while it flies).
+const _introSph = new THREE.Spherical();
+const _introOff = new THREE.Vector3();
+const INTRO_FROM_TARGET = new THREE.Vector3(0, 2.4, 0);
+const introEase = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 export class ThreeStage implements Stage {
   private el?: HTMLElement;
@@ -37,6 +42,8 @@ export class ThreeStage implements Stage {
   /** The Hangar's looks, kept so they can be painted once the diorama exists. */
   private looks?: Cosmetics;
   private launching: { start: number; dur: number; resolve: () => void } | null = null;
+  /** The cold open: a camera swoop from far out over the terrain to the opening view. */
+  private intro: { t: number; dur: number; from: THREE.Spherical; to: THREE.Spherical } | null = null;
   private resizeObs?: ResizeObserver;
   private overlay = document.createElement('div');
   private countText = '';
@@ -275,6 +282,50 @@ export class ThreeStage implements Stage {
     this.focus(key, false);
   }
 
+  /** The cold open: swoop low over the terrain and around to the opening view (0 seconds, or reduced motion: cut there). */
+  flyIn(seconds: number) {
+    if (!this.controls || this.launching) return;
+    if (this.focused) this.focus(null, true);
+    this.move.active = false;
+    const to = new THREE.Spherical().setFromVector3(_introOff.copy(OVERVIEW_POSITION).sub(OVERVIEW_TARGET));
+    if (seconds <= 0 || this.reduced) {
+      this.intro = null;
+      this.controls.target.copy(OVERVIEW_TARGET);
+      this.camera.position.copy(OVERVIEW_POSITION);
+      this.camera.lookAt(OVERVIEW_TARGET);
+      this.controls.autoRotate = !this.reduced;
+      return;
+    }
+    // Long version: from far out and low, about two-thirds of the way around. Short version (return visits): a gentle dolly in.
+    const long = seconds >= 3;
+    const from = new THREE.Spherical(long ? 70 : to.radius * 1.35, long ? 1.42 : to.phi - 0.08, to.theta + (long ? 2.3 : 0.45));
+    this.intro = { t: 0, dur: seconds, from, to };
+    this.controls.autoRotate = false;
+    this.stepIntro(0);
+  }
+
+  private stepIntro(dt: number) {
+    const I = this.intro!;
+    I.t = Math.min(1, I.t + dt / I.dur);
+    const e = introEase(I.t);
+    const a = I.from;
+    const b = I.to;
+    _introSph.set(a.radius + (b.radius - a.radius) * e, a.phi + (b.phi - a.phi) * e, a.theta + (b.theta - a.theta) * e);
+    this.controls.target.lerpVectors(INTRO_FROM_TARGET, OVERVIEW_TARGET, e);
+    this.camera.position.setFromSpherical(_introSph).add(this.controls.target);
+    // Never under a hill (the real Gale Crater terrain rises away from the base).
+    const ground = this.diorama.groundAt(this.camera.position.x, this.camera.position.z);
+    if (this.camera.position.y < ground + 2.5) this.camera.position.y = ground + 2.5;
+    this.camera.lookAt(this.controls.target);
+    if (I.t >= 1) {
+      this.intro = null;
+      this.controls.target.copy(OVERVIEW_TARGET);
+      this.camera.position.copy(OVERVIEW_POSITION);
+      this.controls.update();
+      this.controls.autoRotate = !this.reduced;
+    }
+  }
+
   launch(): Promise<void> {
     return new Promise((resolve) => {
       // The cinematic takes the camera: let go of any module we were looking at.
@@ -291,6 +342,7 @@ export class ThreeStage implements Stage {
 
   setReducedMotion(on: boolean) {
     this.reduced = on;
+    if (on && this.intro) this.flyIn(0);
     if (this.controls) this.controls.autoRotate = !on && !this.focused;
     this.el?.classList.toggle('reduced', on);
   }
@@ -302,6 +354,7 @@ export class ThreeStage implements Stage {
     this.diorama.tick(dt, time, this.reduced);
 
     if (this.launching) this.stepLaunch(dt);
+    else if (this.intro) this.stepIntro(dt);
     else if (this.move.active) {
       this.move.step(dt, this.camera, this.controls.target);
       if (!this.move.active) this.arrived();
@@ -413,6 +466,7 @@ export class ThreeStage implements Stage {
   }
 
   private onControlsStart = () => {
+    if (this.intro) this.flyIn(0);
     if (this.move.active) {
       this.move.active = false;
       this.arrived();

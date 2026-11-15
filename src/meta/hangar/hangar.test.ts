@@ -231,7 +231,8 @@ describe('the Hangar screen', () => {
     expect(strip().textContent).toContain('Next at level 2: Cyan suit');
     setLevelProvider(() => 8);
     expect(strip().textContent).toContain('7 new items to equip');
-    expect(strip().querySelector('button')!.getAttribute('aria-label')).toMatch(/^Hangar: .*7 new items to equip/);
+    expect(strip().getAttribute('aria-label')).toMatch(/^Hangar: .*7 new items to equip/);
+    expect(strip().querySelector('.title-tile-badge')!.textContent).toBe('7 NEW');
   });
 
   it('opens from the title, shows locked and unlocked tiles, equips live, and goes back to the title', () => {
@@ -240,7 +241,7 @@ describe('the Hangar screen', () => {
     setLevelProvider(() => 8);
     const strip = renderTitleExtras().find((e) => e.classList.contains('hangar-strip'))!;
     document.body.append(strip);
-    strip.querySelector('button')!.click();
+    (strip as HTMLButtonElement).click();
     const box = dialog()!;
     expect(box).not.toBeNull();
     expect(box.classList.contains('hangar-modal')).toBe(true);
@@ -316,12 +317,13 @@ describe('the Hangar screen', () => {
     // Next visit: nothing is new any more.
     const again = renderTitleExtras().find((e) => e.classList.contains('hangar-strip'))!;
     expect(again.textContent).not.toContain('new');
-    again.querySelector('button')!.click();
+    expect(again.textContent).not.toContain('NEW');
+    (again as HTMLButtonElement).click();
     expect(dialog()!.querySelector('.hangar-new')).toBeNull();
     // The close button and Escape go back to the title too.
     dialog()!.querySelector<HTMLButtonElement>('.close-x')!.click();
     expect(showTitle).toHaveBeenCalledTimes(2);
-    again.querySelector('button')!.click();
+    (again as HTMLButtonElement).click();
     dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(showTitle).toHaveBeenCalledTimes(3);
   });
@@ -329,10 +331,7 @@ describe('the Hangar screen', () => {
   it('with no rank yet (level 1), only the starting items can be equipped', () => {
     const { ctx } = fakeContext();
     setMetaContext(ctx);
-    renderTitleExtras()
-      .find((e) => e.classList.contains('hangar-strip'))!
-      .querySelector('button')!
-      .click();
+    (renderTitleExtras().find((e) => e.classList.contains('hangar-strip')) as HTMLButtonElement).click();
     const box = dialog()!;
     const equipButtons = buttons(box).filter((b) => b.classList.contains('hangar-equip'));
     expect(equipButtons.map((b) => b.closest('.hangar-tile')!.getAttribute('data-id'))).toEqual(['suit-white', 'suit-orange']);

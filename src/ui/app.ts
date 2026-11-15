@@ -53,6 +53,15 @@ import { dailyBadge, dailyEndPanel, dailyHudLabel, dailyIntroCard, dailyKicker, 
 import { initAccess, decorateDialog, statusButton, accessPanel, accessButtonText, ACCESS_DEFAULTS, type AccessSettings } from './access';
 import { certForMission, certForCampaign, certificateView, type CertData } from './certificate';
 import { tripHomeLine } from './planner/tiein';
+// The Hook: the lobby, the cold open, and game feel (juice, perfect-sol streaks, the end-screen score).
+import { addTitleExtra } from '../meta/hooks';
+import { titleTile } from '../meta/tile';
+import { decorateLobby, lobbyExtras, loadLobby, countIntro, markOpened } from './lobby';
+import { runColdOpen } from './coldopen';
+import * as juice from './juice';
+import { isPerfectSol, streakXp, scoreMission, recordBest, GRADE_WORDS, type MissionScore } from './score';
+import { crewFor } from '../data/crew';
+import { crewPortrait } from './crew';
 
 type Phase = 'title' | 'intro' | 'briefing' | 'plan' | 'running' | 'debrief' | 'end' | 'interlude' | 'finale' | 'room' | 'dashboard';
 type Mode = 'campaign' | 'quick' | 'history' | 'daily';
@@ -181,7 +190,8 @@ export class App {
     return this.site === 'mars' && this.landingSite === 'arcadia' ? { site: 'mars', landing: 'arcadia' } : { site: this.site };
   }
 
-  constructor(stage: Stage) {
+  /** `intro`: main.ts asks for the cold open (the real game in a browser; never in tests). */
+  constructor(stage: Stage, opts: { intro?: boolean } = {}) {
     this.stage = stage;
     this.stage.mount(this.stageEl);
     this.audio = new GameAudio(this.settings.muted);
@@ -210,7 +220,9 @@ export class App {
       },
       onRun: () => this.run(),
       onOpenWorkshop: () => this.showWorkshop(() => this.closeModalAndPlan()),
-      sfx: (n) => this.audio.sfx(n),
+      // Placing cells one after another climbs the scale (see juice.ts).
+      sfx: (n) => (n === 'place' ? this.audio.sfx('pop', this.combo.next()) : (n === 'remove' && this.combo.reset(), this.audio.sfx(n))),
+      onPlaced: (id) => this.cellPlaced(id),
     });
     // Tapping a module in 3D highlights its card in the dock.
     this.stage.onPick = (key) => this.budget.highlight(key);
@@ -244,9 +256,12 @@ export class App {
     else if (room) this.openRoom(room);
     else if (isShortDemoUrl(location)) this.startShortDemo();
     else {
+      // The game's own modes are lobby tiles, sorted in with the meta features' tiles (see lobby.ts).
+      this.registerLobbyTiles();
       this.showTitle();
       // ?demo: the attract mode for an event table or a screen recording.
       if (new URLSearchParams(location.search).has('demo')) void this.startDemo();
+      else if (opts.intro && !this.settings.reducedMotion) this.coldOpen();
     }
   }
 
@@ -256,15 +271,16 @@ export class App {
     this.stage.setReducedMotion(this.settings.reducedMotion);
   }
 
-  private modal(content: Child, opts: { wide?: boolean; label: string; onClose?: () => void; autoRead?: boolean } = { label: 'Dialog' }) {
+  private modal(content: Child, opts: { wide?: boolean; label: string; onClose?: () => void; autoRead?: boolean; lobby?: boolean } = { label: 'Dialog' }) {
     // Re-drawing the same dialog (e.g. picking a Workshop project) keeps its scroll position.
     const prev = this.modalRoot.querySelector<HTMLElement>('.modal');
     const sameDialog = prev?.getAttribute('aria-label') === opts.label;
     const keepScroll = sameDialog ? { box: prev!.scrollTop, root: this.modalRoot.scrollTop } : null;
     clear(this.modalRoot);
+    this.modalRoot.classList.toggle('lobby-root', !!opts.lobby);
     const box = h(
       'div',
-      { class: `modal ${opts.wide ? 'wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label },
+      { class: `modal ${opts.wide ? 'wide' : ''}${opts.lobby ? ' lobby' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label },
       opts.onClose ? h('button', { class: 'btn small icon-only close-x', 'aria-label': 'Close', onclick: opts.onClose }, 'X') : null,
       content,
     );
@@ -287,6 +303,7 @@ export class App {
 
   private closeModal() {
     clear(this.modalRoot);
+    this.modalRoot.classList.remove('lobby-root');
   }
 
   private closeModalAndPlan() {
@@ -394,6 +411,9 @@ export class App {
       },
       this.hudButtons(),
     );
+    // Planning: bars glide to the plan's new values (a sol's own frames move on their own).
+    if (this.phase === 'plan') juice.easeMeters(this.hud, this.settings.reducedMotion);
+    else juice.resetMeters();
   }
 
   private onKey(e: KeyboardEvent) {
@@ -438,6 +458,241 @@ export class App {
     });
   }
 
+  // ------------------------------------------------------------------ the hook: lobby, cold open, game feel
+  /** Placing cells in a row climbs the scale. */
+  private combo = new juice.PlaceCombo();
+  /** PLAY from a brand-new player's first lobby: a short, friendly crew intro. */
+  private firstRun = false;
+  /** Perfect sols in a row this mission (see score.ts), and whether the last sol was one. */
+  private streak = 0;
+  private lastPerfect = false;
+  /** The plan's projected meters, to flash a meter when a change pushes it across a line. */
+  private planMeters: juice.MeterSnapshot | null = null;
+  /** The end screen's score, worked out once per mission (redrawing the end screen keeps it). */
+  private endScore: { mission: MissionState; score: MissionScore; isNew: boolean; previous: number | null } | null = null;
+
+  private registerLobbyTiles() {
+    for (const extra of lobbyExtras({
+      quick: () => this.startQuick(),
+      campaign: () => this.chooseDifficulty(),
+      daily: () => void this.startDaily(),
+      history: () => this.startHistory(),
+      historyReady: !!MAY2024_SNAPSHOT,
+      classMission: () => this.openRoom(),
+      radar: () => this.showRadar(),
+      planner: () => this.showPlanner(() => this.showTitle()),
+      scienceLog: () => this.showScienceLog(),
+    }))
+      addTitleExtra(extra);
+  }
+
+  /** The big PLAY button: straight into a quick mission (Mars unless the player last picked the Moon). */
+  private playNow() {
+    markOpened('play');
+    this.firstRun = !Coach.seen();
+    this.launchQuick();
+  }
+
+  /** First visit: the full cold open. Later visits: a short camera dolly. Never with reduced motion. */
+  private coldOpen() {
+    const full = loadLobby().intros === 0;
+    if (full) countIntro();
+    runColdOpen({
+      stage: this.stage as Stage & { canFlyIn?(): boolean },
+      audio: this.audio,
+      full,
+      onTitle: () => this.phase === 'title' && !this.demoActive,
+      reveal: () => this.modalRoot.querySelector<HTMLElement>('.play-big')?.focus({ preventScroll: true }),
+    });
+  }
+
+  /** A cell landed in a slot: it pops. When the last cell is placed, the Run button lights up. */
+  private cellPlaced(id: string) {
+    const reduced = this.settings.reducedMotion;
+    const boxes = this.dock.querySelectorAll<HTMLElement>(`.slot-row[data-drop="${id}"] .slot-box.filled`);
+    juice.popCell(boxes[boxes.length - 1], reduced);
+    const run = this.dock.querySelector<HTMLElement>('.btn.go.ready');
+    if (run) {
+      juice.bounce(run, reduced);
+      this.audio.sfx('sparkle');
+    }
+  }
+
+  /** Flash a HUD meter when the plan pushes it across a line (life under a day, dose over 75%, a full tank). */
+  private flashPlanMeters(next: Snapshot, doseBudget: number) {
+    const now: juice.MeterSnapshot = { life: Math.min(next.air, next.food), dose: next.dose, fuel: next.fuel };
+    for (const c of juice.crossings(this.planMeters, now, doseBudget)) juice.flashMeter(this.hud, c.meter, c.tone);
+    this.planMeters = now;
+  }
+
+  /** What one crew member says at a big moment of the sol (a portrait and a short line over the 3D view). */
+  private crewSay(m: MissionState, k: number, text: string) {
+    const roster = crewFor(m.config.expedition);
+    const i = (m.sol + k) % roster.members.length;
+    juice.crewBubble(crewPortrait(roster, i), roster.members[i].name, text, { reduced: this.settings.reducedMotion });
+  }
+
+  /** Storm, shelter, cargo and build moments during a sol: screen edges, sparkle, the shelter's clang, crew lines. */
+  private solMoment(m: MissionState, report: SolReport, kind: 'storm' | 'lander' | 'built' | 'full') {
+    const reduced = this.settings.reducedMotion;
+    const mid = this.stageEl.getBoundingClientRect();
+    const x = mid.left + mid.width / 2;
+    const y = mid.top + mid.height * 0.38;
+    if (kind === 'storm' && report.storm) {
+      const s = report.storm;
+      if (s.shelterCells > 0) {
+        juice.vignette('shield', reduced);
+        window.setTimeout(() => this.audio.sfx('clang'), 260);
+        const held = s.doseTaken <= s.doseUnsheltered * 0.5;
+        juice.floatText(x, y, held ? 'SHELTER HELD!' : 'SHELTER HELPED', { tone: 'cyan', big: true, reduced });
+        this.crewSay(m, 0, held ? 'Phew! The shelter blocked it.' : 'The shelter helped. More power next time!');
+      } else {
+        juice.vignette('storm', reduced);
+        juice.floatText(x, y, 'STORM HIT!', { tone: 'red', big: true, reduced });
+        this.crewSay(m, 0, 'Ouch! We felt that one. Power the shelter next time?');
+      }
+    } else if (kind === 'lander') {
+      juice.sparkle(null, reduced);
+      this.audio.sfx('sparkle');
+      this.crewSay(m, 1, 'Supplies are here!');
+    } else if (kind === 'built') {
+      juice.sparkle(null, reduced, 'UPGRADE BUILT!');
+      this.audio.sfx('sparkle');
+      this.crewSay(m, 2, 'We built it! The next crew will love this.');
+    } else {
+      juice.sparkle(null, reduced, 'TANK FULL!');
+      this.audio.sfx('sparkle');
+    }
+  }
+
+  /** After a sol: count perfect sols in a row (game feel only; it never changes the mission). */
+  private trackStreak(report: SolReport, next: MissionState) {
+    const perfect = isPerfectSol(report, next, windowSol(next));
+    this.streak = perfect ? (report.sol === 1 ? 1 : this.streak + 1) : 0;
+    this.lastPerfect = perfect;
+    const xp = streakXp(this.streak);
+    if (xp && !this.demoActive && !this.shortDemo) emitGame('xp', { amount: xp, reason: `Perfect sol streak x${this.streak}` });
+  }
+
+  /** The debrief's "Perfect sol" banner and what the sol made, counting up. */
+  private solFlair(report: SolReport, fresh: boolean): HTMLElement[] {
+    const reduced = this.settings.reducedMotion;
+    const out: HTMLElement[] = [];
+    if (this.lastPerfect) {
+      const n = this.streak;
+      out.push(
+        h(
+          'div',
+          { class: 'streak-banner', role: 'status' },
+          h('b', null, 'PERFECT SOL'),
+          n >= 2 ? h('span', { class: `streak-chip${n >= 5 ? ' blaze' : n >= 3 ? ' hot' : ''}` }, `x${n} STREAK`) : null,
+          h(
+            'span',
+            { class: 'title-foot' },
+            n >= 2 ? `${n} perfect in a row: everyone safe and the tank on pace. Bonus XP!` : 'Everyone stayed safe and the tank is on pace. Do it again for a streak!',
+          ),
+        ),
+      );
+      // The chime climbs with the streak (only when the debrief first opens, not when it is redrawn).
+      if (fresh) window.setTimeout(() => this.audio.sfx('streak', Math.pow(2, Math.min(n - 1, 6) / 12)), 280);
+    }
+    const a = report.after;
+    const b = report.before;
+    const items: Array<{ cls: string; label: string; delta: number; unit: string; digits: number }> = [
+      { cls: 'fuel', label: 'Fuel', delta: a.fuel - b.fuel, unit: '%', digits: 0 },
+      { cls: a.air >= b.air ? 'up' : 'down', label: 'Air', delta: a.air - b.air, unit: ' d', digits: 1 },
+      { cls: a.food >= b.food ? 'up' : 'down', label: 'Food', delta: a.food - b.food, unit: ' d', digits: 1 },
+      { cls: a.dose - b.dose > 0.05 ? 'down' : 'up', label: 'Dose', delta: a.dose - b.dose, unit: '', digits: 1 },
+    ];
+    const tally = h('div', { class: 'sol-tally', 'aria-label': 'What this sol changed' });
+    for (const it of items) {
+      const num = h('b', null, '0');
+      tally.append(h('span', { class: it.cls }, num, it.label));
+      const fmt = (v: number) => `${v >= 0 ? '+' : ''}${it.digits ? v.toFixed(it.digits) : Math.round(v)}${it.unit}`;
+      juice.countUp(num, it.delta, { ms: fresh ? 700 : 0, format: fmt, reduced: reduced || !fresh, onTick: fresh && it.cls === 'fuel' ? () => this.audio.sfx('tick') : undefined });
+    }
+    out.push(tally);
+    return out;
+  }
+
+  /** The end screen's score: a count-up, a letter grade, stars, and a personal best. */
+  private scorePanel(m: MissionState, first: boolean): HTMLElement {
+    const reduced = this.settings.reducedMotion;
+    if (!this.endScore || this.endScore.mission !== m) {
+      const score = scoreMission(m, windowSol(m));
+      const save = first && !this.demoActive && !this.shortDemo;
+      const key = `${this.mode ?? 'quick'}-${siteOf(m.config)}`;
+      const best = save ? recordBest(key, score.score) : { isNew: false, previous: null };
+      this.endScore = { mission: m, score, isNew: best.isNew, previous: best.previous };
+    }
+    const { score, isNew, previous } = this.endScore;
+    const num = h('span', { class: 'score-num' }, '0');
+    const panel = h(
+      'div',
+      { class: 'score-panel', role: 'group', 'aria-label': `Score ${score.score}, grade ${score.grade}` },
+      h('div', { class: `grade g-${score.grade}`, 'aria-hidden': 'true' }, score.grade),
+      h('div', { class: 'score-main' }, h('span', { class: 'score-label' }, 'Score'), num, h('span', { class: 'score-words' }, GRADE_WORDS[score.grade])),
+      h(
+        'div',
+        { class: 'score-main' },
+        isNew ? h('span', { class: 'score-pb' }, 'New personal best!') : null,
+        !isNew && previous !== null ? h('span', { class: 'score-prev' }, `Your best: ${previous.toLocaleString('en-US')}`) : null,
+      ),
+      h(
+        'ul',
+        { class: 'score-parts' },
+        score.parts.filter((p) => p.points > 0).map((p) => h('li', null, `${p.label} `, h('b', null, `+${p.points.toLocaleString('en-US')}`))),
+      ),
+    );
+    juice.countUp(num, score.score, { ms: first ? 1100 : 400, reduced, onTick: first ? () => this.audio.sfx('tick') : undefined });
+    if (first) {
+      window.setTimeout(() => {
+        const stars = this.modalRoot.querySelector('.stars');
+        if (stars?.querySelector('.star.on')) juice.sparkle(stars, reduced);
+        this.audio.sfx(isNew ? 'streak' : 'sparkle');
+      }, 1250);
+    }
+    return panel;
+  }
+
+  /** One or two other modes to try next, as lobby tiles. */
+  private tryNext(m: MissionState): HTMLElement {
+    const moon = siteOf(m.config) === 'moon';
+    const daily = { id: 'daily', name: 'Daily challenge', sub: 'Same mission for everyone today', go: () => void this.startDaily() };
+    const otherWorld = {
+      id: 'quick',
+      name: moon ? 'Fly to Mars' : 'Try the Moon',
+      sub: moon ? 'A quick mission at a Mars base' : 'A quick mission with a two-week night',
+      go: () => {
+        this.site = moon ? 'mars' : 'moon';
+        this.launchQuick();
+      },
+    };
+    const history = { id: 'history', name: 'May 2024 storms', sub: 'Face the real storms of May 2024', go: () => this.startHistory() };
+    const options = this.mode === 'daily' ? [otherWorld, history] : this.mode === 'history' ? [daily, otherWorld] : [daily, MAY2024_SNAPSHOT ? history : otherWorld];
+    return h(
+      'section',
+      { class: 'end-try', 'aria-label': 'Try next' },
+      h('h3', null, 'Try next'),
+      h(
+        'div',
+        { class: 'end-next' },
+        options.map((o) =>
+          titleTile({
+            id: `next-${o.id}`,
+            name: o.name,
+            sub: o.sub,
+            accent: 'cyan',
+            onClick: () => {
+              markOpened(o.id);
+              o.go();
+            },
+          }),
+        ),
+      ),
+    );
+  }
+
   // ------------------------------------------------------------------ title
   showTitle() {
     if (this.demoActive) this.stopDemo();
@@ -446,6 +701,9 @@ export class App {
     this.phase = 'title';
     this.mission = null;
     this.mode = null;
+    this.firstRun = false;
+    this.streak = 0;
+    juice.clearCrewBubbles();
     clear(this.dock);
     this.refreshHud();
     this.audio.playMusic('title');
@@ -454,94 +712,85 @@ export class App {
     const counts = this.feed.snapshot ? countByClass(this.feed.snapshot) : null;
     const saved = readSave();
     const canContinue = saved && !campaignDone(saved.campaign);
-    this.modal(
+    // The lobby (see lobby.ts): the team logo and a big PLAY over the live 3D outpost, then the player's strip and a grid
+    // of mode tiles (the game's own modes and every meta feature's tile, sorted by order), then the links and the real data.
+    const box = this.modal(
       h(
         'div',
-        { class: 'title-screen' },
-        h('div', { class: 'art' }, h('img', { src: '/art/title.png', alt: 'A tiny outpost on Mars with a rocket on its launch pad (AI-generated art)' })),
-        h('h1', null, 'Escape Velocity'),
-        h('p', { class: 'tagline' }, 'Build a base on Mars, crew after crew. Make air to breathe and oxygen for the rocket home, and leave the base better for the next crew.'),
-        this.codes.titleNote(),
+        { class: 'title-screen lobby' },
         h(
           'div',
-          { class: 'menu' },
-          canContinue
-            ? h(
-                'button',
-                { class: 'btn primary', 'data-autofocus': true, onclick: () => this.continueCampaign(saved) },
-                `Continue: crew ${saved.campaign.expedition} of ${EXPEDITIONS.length}${saved.mission ? `, ${siteText(saved.campaign).turn} ${saved.mission.sol}` : ''}${saved.campaign.site === 'moon' ? ' (Moon)' : ''}`,
-                h('span', { class: 'arrow' }),
-              )
-            : null,
+          { class: 'lobby-hero' },
+          h('h1', { class: 'lobby-logo' }, h('span', { class: 'sr-only' }, 'Escape Velocity'), h('img', { class: 'logo-img', src: '/art/logo.png', alt: '', width: 413, height: 424 })),
           h(
-            'button',
-            { class: `btn ${canContinue ? '' : 'primary'}`, 'data-autofocus': canContinue ? undefined : true, onclick: () => this.chooseDifficulty() },
-            'New campaign: 3 crews',
-            h('span', { class: 'arrow' }),
+            'div',
+            { class: 'lobby-hero-text' },
+            h('p', { class: 'tagline' }, 'Build a base on Mars, crew after crew. Make air to breathe and oxygen for the rocket home, and leave the base better for the next crew.'),
+            this.codes.titleNote(),
           ),
-          h('div', { class: 'title-foot', style: 'margin:-4px 0 4px' }, 'About 35 minutes. Saves after every sol, so a class can stop and pick up later.'),
-          h('button', { class: 'btn', title: 'One crew, about 10 minutes', onclick: () => this.startQuick() }, 'Quick mission'),
           h(
-            'a',
-            { class: 'btn github', href: REPO_URL, target: '_blank', rel: 'noopener', title: 'All of our code, the tests, and every AI prompt we used' },
-            githubMark(),
-            'See the code on GitHub',
+            'div',
+            { class: 'menu' },
+            canContinue
+              ? h(
+                  'button',
+                  { class: 'btn primary play-big', 'data-autofocus': true, onclick: () => this.continueCampaign(saved) },
+                  h('span', { class: 'play-word' }, 'PLAY'),
+                  h(
+                    'span',
+                    { class: 'play-sub' },
+                    `Continue: crew ${saved.campaign.expedition} of ${EXPEDITIONS.length}${saved.mission ? `, ${siteText(saved.campaign).turn} ${saved.mission.sol}` : ''}${saved.campaign.site === 'moon' ? ' (Moon)' : ''}`,
+                  ),
+                )
+              : h(
+                  'button',
+                  { class: 'btn primary play-big', 'data-autofocus': true, onclick: () => this.playNow() },
+                  h('span', { class: 'play-word' }, 'PLAY'),
+                  h('span', { class: 'play-sub' }, `One crew on ${this.site === 'moon' ? 'the Moon' : 'Mars'}, about 10 minutes`),
+                ),
+            h(
+              'a',
+              { class: 'btn github', href: REPO_URL, target: '_blank', rel: 'noopener', title: 'All of our code, the tests, and every AI prompt we used' },
+              githubMark(),
+              'See the code on GitHub',
+            ),
           ),
         ),
-        // Rank, Storm Cards, Hangar and Flight school: right under the play buttons, so Play is never pushed down.
-        h('div', { class: 'title-meta' }, ...renderTitleExtras()),
-        // Everything else, grouped so the title screen stays easy to read.
         h(
           'div',
-          { class: 'menu-groups' },
+          { class: 'lobby-panel' },
+          this.settings.view3d ? null : h('div', { class: 'art' }, h('img', { src: '/art/title.png', alt: 'A tiny outpost on Mars with a rocket on its launch pad (AI-generated art)' })),
+          // Rank first (full width), then tiles: quick mission, campaign, daily, May 2024, Storm Cards, Hangar, Flight school...
+          h('div', { class: 'title-meta' }, ...renderTitleExtras()),
           h(
-            'section',
-            { class: 'menu-group', 'aria-label': 'More ways to play' },
-            h('div', { class: 'kicker' }, 'Play'),
-            h('button', { class: 'btn small go', onclick: () => void this.startDaily() }, 'Daily challenge'),
-            h('button', { class: 'btn small', onclick: () => this.showTodaysBest(() => this.showTitle()) }, "Today's best"),
-            h('button', { class: 'btn small', onclick: () => this.startHistory(), disabled: MAY2024_SNAPSHOT ? undefined : true }, 'May 2024 storms'),
+            'div',
+            { class: 'menu-links' },
+            h('button', { class: 'btn small', onclick: () => this.showHowTo(() => this.showTitle()) }, 'How to play'),
             h('button', { class: 'btn small', title: 'The game plays itself for about 30 seconds', onclick: () => void this.startDemo() }, 'Watch a demo'),
-          ),
-          h(
-            'section',
-            { class: 'menu-group', 'aria-label': 'For classes' },
-            h('div', { class: 'kicker' }, 'Class'),
-            h('button', { class: 'btn small', onclick: () => this.openRoom() }, 'Class mission: Mission Control'),
+            h('button', { class: 'btn small', onclick: () => this.showTodaysBest(() => this.showTitle()) }, "Today's best"),
             h('a', { class: 'btn small', href: '/teacher/', target: '_blank', rel: 'noopener' }, 'For teachers'),
+            h('button', { class: 'btn small', onclick: () => this.showAccess() }, accessButtonText()),
+            h('button', { class: 'btn small', onclick: () => this.showCredits() }, 'Credits and AI use'),
+          ),
+          sunPanel(this.feed),
+          h(
+            'p',
+            { class: 'title-foot' },
+            `Today Mars is about ${Math.round(lt.distanceKm / 1e6)} million km from Earth, so messages take about ${Math.round(lt.oneWayMinutes)} minutes to arrive (approximate). `,
+            counts ? `${this.feed.status === 'live' ? 'Live' : 'Archived'} NASA data: ${counts.X} X-class and ${counts.M} M-class solar flares in the last 30 days.` : '',
           ),
           h(
-            'section',
-            { class: 'menu-group', 'aria-label': 'Explore the real science' },
-            h('div', { class: 'kicker' }, 'Explore'),
-            h('button', { class: 'btn small cyan', onclick: () => this.showRadar() }, 'Space weather radar'),
-            h('button', { class: 'btn small cyan', onclick: () => this.showPlanner(() => this.showTitle()) }, 'Trip planner: the way home'),
-            h('button', { class: 'btn small', onclick: () => this.showScienceLog() }, 'Science Log'),
+            'p',
+            { class: 'ai-disclosure' },
+            'AI disclosure: the illustrations, crew portraits and music in this game are AI-generated (Higgsfield), and the code was written with AI assistance (Claude Code). The logo is our team\'s own pixel art. The picture of the Sun is real NASA imagery, and all data comes from NASA. ',
+            h('button', { class: 'linklike', onclick: () => this.showCredits() }, 'Details'),
           ),
-        ),
-        h(
-          'div',
-          { class: 'menu-links' },
-          h('button', { class: 'btn small', onclick: () => this.showHowTo(() => this.showTitle()) }, 'How to play'),
-          h('button', { class: 'btn small', onclick: () => this.showAccess() }, accessButtonText()),
-          h('button', { class: 'btn small', onclick: () => this.showCredits() }, 'Credits and AI use'),
-        ),
-        sunPanel(this.feed),
-        h(
-          'p',
-          { class: 'title-foot' },
-          `Today Mars is about ${Math.round(lt.distanceKm / 1e6)} million km from Earth, so messages take about ${Math.round(lt.oneWayMinutes)} minutes to arrive (approximate). `,
-          counts ? `${this.feed.status === 'live' ? 'Live' : 'Archived'} NASA data: ${counts.X} X-class and ${counts.M} M-class solar flares in the last 30 days.` : '',
-        ),
-        h(
-          'p',
-          { class: 'ai-disclosure' },
-          'AI disclosure: the illustrations, crew portraits and music in this game are AI-generated (Higgsfield), and the code was written with AI assistance (Claude Code). The picture of the Sun is real NASA imagery, and all data comes from NASA. ',
-          h('button', { class: 'linklike', onclick: () => this.showCredits() }, 'Details'),
         ),
       ),
-      { label: 'Escape Velocity title screen' },
+      { label: 'Escape Velocity title screen', lobby: true },
     );
+    // NEW badges on modes the player has not opened yet (after the first-sol tutorial, so a first lobby stays calm).
+    decorateLobby(box, Coach.seen());
   }
 
   /** Mission Control (class team play) borrows the stage, HUD, dock and dialogs, and hands them back on exit. */
@@ -1025,6 +1274,31 @@ export class App {
     const isCampaign = this.mode === 'campaign';
     const windowSols = spec.windowSol + tuningFor(c.difficulty, c.site).windowBonus;
     const t = siteText(c);
+    // A brand-new player who pressed PLAY: the goal in one line and the crew's faces, then straight to the landing.
+    if (this.firstRun && this.mode === 'quick') {
+      const roster = crewFor(c.expedition);
+      this.modal(
+        [
+          h('div', { class: 'kicker' }, 'Your first mission'),
+          h('h2', null, spec.name),
+          t.site === 'mars' ? h('div', { class: 'art' }, h('img', { src: '/art/title.png', alt: 'The Mars outpost (AI-generated art)' })) : null,
+          h(
+            'p',
+            { class: 'first-goal' },
+            h('b', null, 'Your goal: '),
+            `fill the rocket with fuel and fly your ${spec.crew} astronauts home by ${t.turn} ${windowSols}. Keep them safe from solar storms!`,
+          ),
+          h(
+            'ul',
+            { class: 'first-crew', 'aria-label': 'Your crew' },
+            roster.members.map((mem, i) => h('li', null, crewPortrait(roster, i), h('span', null, mem.name))),
+          ),
+          h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
+        ],
+        { label: `${spec.name} introduction` },
+      );
+      return;
+    }
     this.modal(
       [
         h('div', { class: 'kicker' }, isCampaign ? `Crew ${c.expedition} of ${EXPEDITIONS.length}` : this.mode === 'daily' && this.daily ? dailyKicker(this.daily.config) : 'Quick mission'),
@@ -1380,6 +1654,8 @@ export class App {
     this.audio.sfx('click');
     this.closeModal();
     this.phase = 'plan';
+    this.planMeters = null;
+    this.combo.reset();
     this.renderPlan();
   }
 
@@ -1393,6 +1669,7 @@ export class App {
     const mini = briefMini(m, b, check.remaining);
     const side = [mini[0], ...planWarnings(m, b, this.alloc, preview.after), ...adviceLines(this.advice), ...mini.slice(1)];
     this.budget.set(m, b, this.alloc, preview, side);
+    this.flashPlanMeters(preview.after, m.doseBudget);
     this.coachUpdate();
   }
 
@@ -1423,6 +1700,14 @@ export class App {
     // Mars: one sol (24 h 39 min) from sunrise to sunrise. Moon: one Earth day, with the Sun barely moving.
     const hours = site === 'moon' ? 24 : 24.66;
     let fired = 0;
+    // Game feel: a crate landing, a storm hitting (or the shelter holding), an upgrade finished, a full tank.
+    const moments: Array<{ at: number; kind: 'storm' | 'lander' | 'built' | 'full' }> = [];
+    if (report.crate) moments.push({ at: 0.1, kind: 'lander' });
+    if (report.storm) moments.push({ at: 0.38, kind: 'storm' });
+    if (report.built) moments.push({ at: 0.74, kind: 'built' });
+    if (report.after.fuel >= 100 && report.before.fuel < 100) moments.push({ at: 0.86, kind: 'full' });
+    moments.sort((a, b) => a.at - b.at);
+    let momentsFired = 0;
     await new Promise<void>((resolve) => {
       const tick = (now: number) => {
         // The player left mid-sol (back to the title, or tapped out of the demo): stop drawing.
@@ -1442,6 +1727,9 @@ export class App {
             this.audio.sfx('storm');
           }
         }
+        // Skipping to the end shows only the last big moment, not a pile of them.
+        if (t >= 1 && momentsFired < moments.length - 1) momentsFired = moments.length - 1;
+        while (momentsFired < moments.length && moments[momentsFired].at <= t) this.solMoment(m, report, moments[momentsFired++].kind);
         const lerp = (a: number, b: number) => a + (b - a) * t;
         renderHud(
           this.hud,
@@ -1472,12 +1760,13 @@ export class App {
 
     this.mission = next;
     emitGame('sol', { before: m, after: next, report, mode: this.mode ?? 'quick', demo: this.demoActive });
+    this.trackStreak(report, next);
     if (report.built) this.audio.sfx('good');
     this.save();
-    this.showDebrief(report);
+    this.showDebrief(report, true);
   }
 
-  private showDebrief(report: SolReport) {
+  private showDebrief(report: SolReport, fresh = false) {
     const m = this.mission!;
     this.phase = 'debrief';
     clear(this.dock);
@@ -1492,6 +1781,7 @@ export class App {
       [
         h('div', { class: 'kicker' }, `${this.hudLabel(m)} · ${t.Turn} ${report.sol} · Debrief`),
         h('p', { class: `headline tone-${d.tone}`, 'aria-live': 'polite' }, d.headline),
+        ...this.solFlair(report, fresh),
         report.storm ? eventCard(report.storm.event, report.storm.lateByMin ? { lateBy: report.storm.lateByMin, lightMin: m.config.lightTimeMin } : undefined) : null,
         d.details.length ? h('ul', { class: 'clean' }, d.details.map((x) => h('li', null, x))) : null,
         scienceCard(fact, t.site),
@@ -1557,6 +1847,7 @@ export class App {
             ),
         h('div', { class: 'kicker' }, won ? `${this.hudLabel(m)} · Mission complete` : `${this.hudLabel(m)} · Heading home early`),
         h('h2', { class: won ? 'tone-good' : '' }, end.title),
+        this.scorePanel(m, first),
         won
           ? h(
               'p',
@@ -1572,6 +1863,31 @@ export class App {
         this.mode !== 'history' ? classCodeLine(this.campaign?.classCode) : null,
         this.mode !== 'history' ? classBoard.card(this.campaign?.classCode) : null,
         this.mode === 'daily' && this.daily ? dailyEndPanel(this.daily, m) : null,
+        // Play again (or the next crew) right under the score, then other modes to try; the full story follows.
+        h(
+          'div',
+          { class: 'actions end-actions' },
+          isCampaign && !last ? h('button', { class: 'btn primary play-again', 'data-autofocus': true, onclick: () => this.showInterlude() }, 'Send the next crew', h('span', { class: 'arrow' })) : null,
+          isCampaign && last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showFinale() }, 'See your base', h('span', { class: 'arrow' })) : null,
+          won
+            ? h(
+                'button',
+                { class: 'btn cyan', onclick: () => this.showCertificate(certForMission(m, { campaign: isCampaign ? this.campaign : null, history: this.mode === 'history' })) },
+                'Get my certificate',
+              )
+            : null,
+          isCampaign ? h('button', { class: 'btn', onclick: () => this.retryExpedition() }, 'Try this crew again') : null,
+          !isCampaign
+            ? h(
+                'button',
+                { class: 'btn primary play-again', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? (this.shortDemo ? this.startShortDemo() : this.startHistory()) : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
+                'Play again',
+              )
+            : null,
+          !isCampaign ? h('button', { class: 'btn', onclick: () => this.chooseDifficulty() }, 'Start a campaign') : null,
+          h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Title screen'),
+        ),
+        isCampaign && !last ? null : this.tryNext(m),
         h('h3', null, 'What happened'),
         h('ul', { class: 'clean' }, end.happened.map((x) => h('li', null, x))),
         missionChartFor(m),
@@ -1588,29 +1904,6 @@ export class App {
         compareCard(m),
         earthCard(m),
         end.badges.length ? [h('h3', null, 'Badges'), h('div', { class: 'badges' }, end.badges.map((b) => h('div', { class: 'badge' }, h('b', null, b.name), h('span', null, b.why))))] : null,
-        h(
-          'div',
-          { class: 'actions' },
-          isCampaign && !last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showInterlude() }, 'Send the next crew', h('span', { class: 'arrow' })) : null,
-          isCampaign && last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showFinale() }, 'See your base', h('span', { class: 'arrow' })) : null,
-          won
-            ? h(
-                'button',
-                { class: 'btn cyan', onclick: () => this.showCertificate(certForMission(m, { campaign: isCampaign ? this.campaign : null, history: this.mode === 'history' })) },
-                'Get my certificate',
-              )
-            : null,
-          isCampaign ? h('button', { class: 'btn', onclick: () => this.retryExpedition() }, 'Try this crew again') : null,
-          !isCampaign
-            ? h(
-                'button',
-                { class: 'btn primary', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? (this.shortDemo ? this.startShortDemo() : this.startHistory()) : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
-                'Play again',
-              )
-            : null,
-          !isCampaign ? h('button', { class: 'btn', onclick: () => this.chooseDifficulty() }, 'Start a campaign') : null,
-          h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Title screen'),
-        ),
         h('p', { class: 'title-foot' }, `Seed ${m.config.seed} · ${m.config.difficulty} · dose budget ${m.doseBudget} mSv (game value)`),
       ],
       { label: won ? 'Mission complete' : 'Mission over' },

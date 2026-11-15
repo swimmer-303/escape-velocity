@@ -355,6 +355,11 @@ export class Diorama {
 
   // ------------------------------------------------------------------ building pieces
 
+  /** Height of the ground at (x, z), for the cold open's camera (it never dips under a hill). */
+  groundAt(x: number, z: number): number {
+    return this.height(x, z);
+  }
+
   /** Ground height. Every site keeps the base pad (within 11 units) perfectly flat at 0. */
   private height(x: number, z: number) {
     if (this.site === 'moon') return moonHeight(x, z);

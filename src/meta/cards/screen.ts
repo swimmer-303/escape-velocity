@@ -3,6 +3,7 @@
 // card, and the compact row on the title screen.
 
 import { h, clear } from '../../ui/dom';
+import { titleTile } from '../tile';
 import { metaContext } from '../hooks';
 import { cardFace, cardSummary, miniCard } from './art';
 import {
@@ -464,39 +465,29 @@ function showCard(col: Collection, id: string): void {
   );
 }
 
-// ------------------------------------------------------------------ title screen row
+// ------------------------------------------------------------------ title screen tile
+/** The lobby tile (src/meta/tile.ts): how many cards, a badge for unseen ones, and a LIVE line for new real storms. */
 export function renderTitleRow(now = new Date()): HTMLElement {
   const col = loadCollection();
   const owned = Object.values(col.cards);
   const possible = possibleCards(col);
   const sun = newFromTheSun(col, now);
   const unseen = owned.filter((c) => c.fresh).length;
-  const counts = RARITIES.slice()
+  const best = RARITIES.slice()
     .reverse()
-    .map((r) => ({ r, n: owned.filter((c) => rarityOf(c) === r).length }));
-  return h(
-    'section',
-    { class: 'sc sc-row', 'aria-label': 'Storm Cards' },
-    h(
-      'div',
-      { class: 'sc-row-main' },
-      h('span', { class: 'sc-row-icon', 'aria-hidden': 'true' }, h('i', null), h('i', null), h('i', null)),
-      h(
-        'div',
-        { class: 'sc-row-text' },
-        h('b', null, 'Storm Cards'),
-        h('span', { class: 'sc-row-count' }, `${owned.length.toLocaleString('en-US')} of ${possible.all.length.toLocaleString('en-US')} collected`),
-        owned.length
-          ? h('span', { class: 'sc-row-rarity' }, ...counts.filter((c) => c.n > 0).map((c) => rarityChip(c.r, `${c.n} ${RARITY_WORD[c.r]}`)))
-          : h('span', { class: 'sc-row-rarity' }, 'Real NASA storms your crews face become cards.'),
-      ),
-      h(
-        'button',
-        { class: 'btn small cyan sc-open', type: 'button', onclick: () => openStormCards() },
-        'Open Storm Cards',
-        unseen ? h('span', { class: 'sc-badge' }, `${unseen} new`) : null,
-      ),
-    ),
-    sun ? h('p', { class: 'sc-row-sun' }, h('span', { class: 'tag live' }, 'Live'), ' ', fromTheSunText(sun)) : null,
-  );
+    .find((r) => owned.some((c) => rarityOf(c) === r));
+  const tile = titleTile({
+    id: 'storm-cards',
+    name: 'Storm Cards',
+    sub: owned.length
+      ? `${owned.length.toLocaleString('en-US')} of ${possible.all.length.toLocaleString('en-US')} collected${best ? ` · best: ${RARITY_WORD[best]}` : ''}`
+      : `0 of ${possible.all.length.toLocaleString('en-US')} collected. Real NASA storms your crews face become cards.`,
+    icon: h('span', { class: 'sc-row-icon' }, h('i', null), h('i', null), h('i', null)),
+    badge: unseen ? `${unseen} NEW` : undefined,
+    accent: 'cyan',
+    onClick: () => openStormCards(),
+  });
+  tile.setAttribute('aria-label', `Open Storm Cards. ${owned.length} of ${possible.all.length} collected${unseen ? `, ${unseen} new` : ''}.`);
+  if (sun) tile.querySelector('.title-tile-text')?.append(h('span', { class: 'sc-row-sun' }, h('span', { class: 'tag live' }, 'Live'), ' ', fromTheSunText(sun)));
+  return tile;
 }

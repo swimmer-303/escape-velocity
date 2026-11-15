@@ -19,7 +19,7 @@ describe('Storm Cards on the title screen', () => {
     const fetchSpy = vi.fn(() => Promise.reject(new Error('offline in tests')));
     vi.stubGlobal('fetch', fetchSpy);
     new App(new CssStage());
-    const row = () => document.querySelector<HTMLElement>('.title-screen .sc-row');
+    const row = () => document.querySelector<HTMLButtonElement>('.title-screen [data-tile="storm-cards"]');
     expect(row()).not.toBeNull();
     expect(row()!.textContent).toContain('Storm Cards');
     // Let the game's own load finish (offline here, so the stored snapshot, labeled ARCHIVE).
@@ -29,7 +29,7 @@ describe('Storm Cards on the title screen', () => {
     expect(row()!.textContent).toContain(`0 of ${poolFacts().length} collected`);
     expect(row()!.querySelector('.tag.live')).toBeNull();
 
-    row()!.querySelector<HTMLButtonElement>('button.sc-open')!.click();
+    row()!.click();
     const screen = document.querySelector('#modal-root [aria-label="Storm Cards"]');
     expect(screen).not.toBeNull();
     expect(screen!.querySelectorAll('.sc-missing').length).toBeGreaterThan(0);

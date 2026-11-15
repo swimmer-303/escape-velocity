@@ -1,0 +1,120 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* Game feel (src/ui/juice.ts): sparks, floating numbers, meter flashes, storm edges, crew bubbles, the ready Run
+   button, streaks and the end-screen score. Every animation is switched off with reduced motion (style.css turns
+   off all animations under html.reduce-motion and prefers-reduced-motion). Nothing flashes faster than 3 times a second. */
+
+.juice-layer { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+.juice-spark { position: absolute; left: -20px; top: -20px; width: 6px; height: 6px; opacity: 0; border: 1px solid #000; }
+.juice-float {
+  position: absolute; white-space: nowrap; font-family: var(--font-px); font-size: 18px; color: var(--amber);
+  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000; transform: translate(-50%, -50%); opacity: 0;
+}
+.juice-float.big { font-size: clamp(20px, 3.4vw, 30px); }
+.juice-float.tone-cyan { color: var(--cyan); }
+.juice-float.tone-green { color: var(--green); }
+.juice-float.tone-red { color: #ff8a80; }
+.juice-float.tone-gold { color: #ffd84a; }
+
+/* Sparks fly out to (--dx, --dy) and fade; words rise and fade (or, with reduced motion, simply show). */
+.juice-spark.go { animation: jSpark 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) forwards; }
+@keyframes jSpark { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(0.4); opacity: 0; } }
+.juice-float.rise { animation: jRise 0.85s ease-out forwards; }
+.juice-float.big.rise { animation-duration: 1.35s; }
+.juice-float.still { opacity: 1; }
+@keyframes jRise {
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+  20% { transform: translate(-50%, calc(-50% - 9px)) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, calc(-50% - 34px)) scale(1); opacity: 0; }
+}
+.j-bounce { animation: jBounce 0.26s ease-out; }
+.j-bounce-big { animation: jBounceBig 0.26s ease-out; }
+@keyframes jBounce { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.12); } 75% { transform: scale(0.97); } }
+@keyframes jBounceBig { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.35); } 75% { transform: scale(0.94); } }
+
+.juice-vignette { position: absolute; inset: 0; opacity: 0; }
+.juice-vignette.pulse { animation: jVignette 1s ease-out; }
+@keyframes jVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+.juice-vignette.storm { box-shadow: inset 0 0 90px 30px rgba(255, 40, 30, 0.75); background: radial-gradient(ellipse at center, transparent 55%, rgba(170, 20, 10, 0.35)); }
+.juice-vignette.shield { box-shadow: inset 0 0 80px 24px rgba(94, 242, 230, 0.6); }
+
+/* HUD meters that cross a line glow for a moment (two slow pulses). */
+.meter.jflash-bad { outline: 3px solid var(--red); outline-offset: 2px; animation: jflashBad 0.5s ease-out 2; }
+.meter.jflash-good { outline: 3px solid var(--green); outline-offset: 2px; animation: jflashGood 0.5s ease-out 2; }
+@keyframes jflashBad { 0% { box-shadow: 0 0 0 0 rgba(255, 90, 79, 0.9), 4px 4px 0 var(--shadow); } 100% { box-shadow: 0 0 0 12px rgba(255, 90, 79, 0), 4px 4px 0 var(--shadow); } }
+@keyframes jflashGood { 0% { box-shadow: 0 0 0 0 rgba(125, 220, 90, 0.9), 4px 4px 0 var(--shadow); } 100% { box-shadow: 0 0 0 12px rgba(125, 220, 90, 0), 4px 4px 0 var(--shadow); } }
+
+/* Every cell placed: the Run button glows and breathes (about once a second). */
+.dock .btn.go.ready { animation: runReady 1.1s ease-in-out infinite; box-shadow: inset -3px -3px 0 #0006, inset 3px 3px 0 #ffffff22, 4px 4px 0 var(--shadow), 0 0 0 3px var(--green); }
+@keyframes runReady {
+  0%, 100% { transform: scale(1); box-shadow: inset -3px -3px 0 #0006, inset 3px 3px 0 #ffffff22, 4px 4px 0 var(--shadow), 0 0 0 3px var(--green); }
+  50% { transform: scale(1.04); box-shadow: inset -3px -3px 0 #0006, inset 3px 3px 0 #ffffff22, 4px 4px 0 var(--shadow), 0 0 0 7px rgba(125, 220, 90, 0.35); }
+}
+
+/* Crew speech bubbles over the 3D view while a sol plays. */
+.crew-bubbles { position: fixed; left: 12px; top: calc(var(--hud-h, 110px) + 12px); z-index: 45; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: min(340px, calc(100vw - 24px)); }
+.crew-bubble { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 3px solid var(--amber); box-shadow: 4px 4px 0 var(--shadow); padding: 6px 10px 6px 6px; animation: bubbleIn 0.25s steps(4) both; transition: opacity 0.3s; }
+.crew-bubble.out { opacity: 0; }
+.crew-bubble .crew-face { width: 40px; height: 40px; flex: none; border: 2px solid #000; image-rendering: pixelated; }
+.crew-bubble-text { display: flex; flex-direction: column; font-size: 15px; line-height: 1.25; }
+.crew-bubble-text b { font-family: var(--font-px); font-weight: 400; font-size: 12px; color: var(--amber); }
+@keyframes bubbleIn { from { transform: translateY(8px) scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Perfect sols and streaks, on the debrief. */
+.streak-banner { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; padding: 8px 10px; background: linear-gradient(90deg, #2f8f4a33, #ffd84a22, #2f8f4a33); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--green); }
+.streak-banner b { font-family: var(--font-px); font-weight: 400; color: var(--green); font-size: 16px; letter-spacing: 0.04em; }
+.streak-chip { font-family: var(--font-px); font-size: 15px; background: #ffd84a; color: #15122b; border: 2px solid #000; padding: 2px 8px; animation: streakIn 0.45s steps(5) both; }
+.streak-chip.hot { background: #ff9a3c; }
+.streak-chip.blaze { background: #ff6bd6; }
+.streak-banner .title-foot { margin: 0; flex-basis: 100%; text-align: center; }
+@keyframes streakIn { 0% { transform: scale(2.2) rotate(-8deg); opacity: 0; } 60% { transform: scale(0.92) rotate(2deg); opacity: 1; } 100% { transform: none; } }
+
+/* What the sol made, counting up, on the debrief. */
+.sol-tally { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.sol-tally span { flex: 1 1 auto; min-width: 96px; text-align: center; background: var(--panel-2); border: 3px solid #000; padding: 4px 8px; font-size: 13px; color: var(--muted); }
+.sol-tally b { display: block; font-family: var(--font-px); font-weight: 400; font-size: 18px; color: var(--ink); }
+.sol-tally .up b { color: var(--green); }
+.sol-tally .down b { color: #ff8a80; }
+.sol-tally .fuel b { color: var(--cyan); }
+
+/* The end-screen score: a big count-up, a letter grade and a burst of stars. */
+.score-panel { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: center; margin: 4px 0 12px; padding: 12px 14px; background: linear-gradient(135deg, var(--panel-2), var(--panel-3)); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--amber), 4px 4px 0 var(--shadow); position: relative; }
+.grade { grid-row: 1 / 3; width: 84px; height: 84px; display: grid; place-items: center; font-family: var(--font-px); font-size: 58px; line-height: 1; border: 4px solid #000; box-shadow: inset -4px -4px 0 #0005, inset 4px 4px 0 #ffffff44, 4px 4px 0 var(--shadow); animation: gradeSlam 0.5s cubic-bezier(.2,1.6,.4,1) 0.75s both; }
+.grade.g-S { background: #ffd84a; color: #15122b; }
+.grade.g-A { background: var(--green); color: #15122b; }
+.grade.g-B { background: var(--cyan); color: #15122b; }
+.grade.g-C { background: var(--panel-3); color: var(--ink); }
+@keyframes gradeSlam { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.score-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.score-num { font-family: var(--font-px); font-size: clamp(30px, 6vw, 46px); color: var(--amber); text-shadow: 3px 3px 0 var(--rust); }
+.score-label { font-family: var(--font-px); font-size: 12px; color: var(--muted); text-transform: uppercase; }
+.score-words { font-family: var(--font-px); font-size: 15px; color: var(--ink); }
+.score-pb { font-family: var(--font-px); font-size: 13px; background: #ffd84a; color: #15122b; border: 2px solid #000; padding: 2px 8px; animation: streakIn 0.45s steps(5) 1.4s both; }
+.score-prev { font-size: 14px; color: var(--muted); }
+.score-parts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--muted); }
+.score-parts b { color: var(--ink); font-family: var(--font-px); font-weight: 400; }
+.end-next { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 10px 0 0; }
+.end-next .title-tile { min-height: 56px; }
+.stars .star.on { animation: starPop 0.4s steps(4) both; }
+.stars .star.on:nth-child(2) { animation-delay: 0.15s; }
+.stars .star.on:nth-child(3) { animation-delay: 0.3s; }
+@keyframes starPop { 0% { transform: scale(0.2); } 70% { transform: scale(1.25); } 100% { transform: none; } }
+
+@media (max-width: 520px) {
+  .score-panel { grid-template-columns: 1fr; text-align: center; justify-items: center; }
+  .grade { grid-row: auto; width: 72px; height: 72px; font-size: 48px; }
+  .score-main { justify-content: center; }
+  .crew-bubbles { left: 8px; }
+}
+@media (forced-colors: active) {
+  .juice-layer { display: none; }
+  .grade { forced-color-adjust: none; }
+}
+
+/* The end screen's main button, right under the score. */
+.btn.play-again { font-size: 22px; padding: 14px 26px; }
+.end-try h3 { margin-top: 6px; }
+/* A first-time player's crew intro: one line of goal and the crew's faces. */
+.first-goal { font-size: 19px; }
+.first-crew { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; list-style: none; margin: 8px 0 0; padding: 0; }
+.first-crew li { display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: var(--font-px); font-size: 12px; }
+.first-crew .crew-face { width: 72px; height: 72px; border: 3px solid #000; box-shadow: 3px 3px 0 var(--shadow); }
