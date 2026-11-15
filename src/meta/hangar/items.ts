@@ -162,8 +162,15 @@ function unlockedElsewhere(id: string): boolean {
 
 // Season 1: Solar Maximum items. Earned at big Season Pass tiers; they also unlock at level 50, so nobody who
 // missed the season is locked out forever. Looks use only options the 3D stage already draws.
+// Aurora fact source: NASA, "What NASA Is Learning From the Biggest Geomagnetic Storm in 20 Years" (May 9, 2025):
+// "As energetic particles from the Sun struck the Martian atmosphere, NASA's MAVEN orbiter watched auroras engulf
+// the Red Planet from May 14 to 20." https://science.nasa.gov/science-research/heliophysics/what-nasa-is-learning-from-the-biggest-geomagnetic-storm-in-20-years
 ITEMS.push(
-  { ...lights('aurora', 'Aurora', 50, '#5dffa8'), season: 'Season 1 tier 10' } as HangarItem,
+  {
+    ...lights('aurora', 'Aurora', 50, '#5dffa8'),
+    season: 'Season 1 tier 10',
+    fact: "Auroras glow when particles from the Sun hit a planet's air. In May 2024, NASA's MAVEN orbiter watched auroras cover Mars.",
+  } as HangarItem,
   { ...suit('solar-flare', 'Solar Flare', 50, '#ff7a1a', '#ffe066', { glow: true }), season: 'Season 1 tier 20' } as HangarItem,
   { ...pet('blaze', 'Blaze', 50, { body: '#ff9a3c', trim: '#7a1f17', eyes: '#fff3b0', glow: true }), season: 'Season 1 tier 30' } as HangarItem,
   {
