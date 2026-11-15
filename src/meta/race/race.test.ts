@@ -345,3 +345,23 @@ describe('storage', () => {
     }
   });
 });
+
+describe('podium tip', () => {
+  it('gives one honest tip from how the race went', async () => {
+    const { raceTip } = await import('./ui');
+    const race = createRace({ league: 0, you: YOU, seed: 'rtip', lightTimeMin: 12.5, eventPool: POOL });
+    const you = race.racers[0];
+    const rival = race.racers[1];
+    const res = (me: Partial<Finish> & { loseReason?: 'dose' | 'air' | 'food' | 'window' }, them: Partial<Finish>) =>
+      rankFinishes([
+        { id: 'you', racer: you, launched: true, sols: 10, dose: 10, life: 4, fuel: 100, ...me },
+        { id: rival.id, racer: rival, launched: true, sols: 10, dose: 10, life: 4, fuel: 100, ...them },
+      ]);
+    expect(raceTip(res({ sols: 12 }, { sols: 9 }), 'mars')).toMatch(/launched 3 sols sooner/);
+    expect(raceTip(res({ sols: 12 }, { sols: 11 }), 'moon')).toMatch(/launched 1 day sooner/);
+    expect(raceTip(res({ dose: 12 }, { dose: 9 }), 'mars')).toMatch(/same sol/);
+    expect(raceTip(res({ launched: false, fuel: 60, loseReason: 'dose' }, {}), 'mars')).toMatch(/storm shelter/);
+    expect(raceTip(res({ launched: false, fuel: 60, loseReason: 'window' }, {}), 'mars')).toMatch(/FUEL/);
+    expect(raceTip(res({ sols: 8 }, { sols: 9 }), 'mars')).toMatch(/Great flying/);
+  });
+});

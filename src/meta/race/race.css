@@ -82,6 +82,7 @@
 .rp-promo { display: flex; align-items: center; gap: 12px; }
 .rp-promo p { margin: 4px 0 0; }
 .rp-league { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rp-tip { margin: 10px 0 0; padding: 8px 10px; background: var(--panel-2); border-left: 4px solid var(--cyan); }
 .rp-rule { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
 
 /* ---------- lobby ---------- */

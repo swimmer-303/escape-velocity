@@ -233,7 +233,7 @@ function showPodium(r: Race, results: ReturnType<typeof finishRace>, xp: number,
   document.querySelectorAll('.race-overlay').forEach((e) => e.remove());
   const ctx = metaContext();
   const me = results.find((x) => x.racer.kind === 'you')!;
-  if (me.place === 1) ctx?.audio.sfx('win');
+  ctx?.audio.sfx('good');
   const ov: Overlay = overlay(
     'Race results',
     podiumContent({

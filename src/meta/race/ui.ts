@@ -303,6 +303,25 @@ function step(r: Result | undefined, cls: string, turn: string): HTMLElement | n
   );
 }
 
+/** One honest, useful tip from how the race went (what the player can try next time). */
+export function raceTip(results: Result[], site: 'mars' | 'moon'): string {
+  const me = results.find((r) => r.racer.kind === 'you')!;
+  const turn = site === 'moon' ? 'day' : 'sol';
+  const winner = results.find((r) => r.place === 1 && r.racer.kind !== 'you');
+  if (!me.launched) {
+    if (me.loseReason === 'dose') return 'Tip: when a storm warning comes, power the storm shelter. Radiation adds up!';
+    if (me.loseReason === 'air' || me.loseReason === 'food') return 'Tip: keep about two days of air and food in store, and keep the heaters on so the batteries stay warm.';
+    return 'Tip: put more cells into FUEL every sol, so the rocket fills before the launch window closes.';
+  }
+  if (!winner) return 'Great flying, commander! Win more races to move up a league.';
+  if (winner.launched && winner.sols < me.sols) {
+    const d = me.sols - winner.sols;
+    return `Tip: ${winner.racer.kind === 'ghost' ? 'your friend' : winner.racer.name} launched ${d} ${turn}${d === 1 ? '' : 's'} sooner. On calm ${turn}s, try more cells on FUEL and just enough air and food.`;
+  }
+  if (winner.launched && winner.sols === me.sols) return `So close: you launched on the same ${turn}! The tie went to the crew with less radiation, then more air and food left. Shelter from storms to win ties.`;
+  return 'Great race! Try again to beat your best.';
+}
+
 export function podiumContent(o: PodiumOpts): Child {
   const me = o.results.find((r) => r.racer.kind === 'you')!;
   const lgNow = leagueAt(o.save.league);
@@ -333,6 +352,7 @@ export function podiumContent(o: PodiumOpts): Child {
     o.outcome.promoted
       ? h('div', { class: 'card good rp-promo' }, trophy(lgNow.color, 40), h('div', null, h('b', null, `Promoted to ${lgNow.name} League!`), h('p', null, 'Your new rivals are smarter and faster. Good luck, commander!')))
       : h('div', { class: 'rp-league' }, leagueBadge(o.save.league, 28), progressBar(o.save)),
+    h('p', { class: 'rp-tip' }, raceTip(o.results, o.race.site)),
     h('p', { class: 'rp-rule' }, 'First to launch with the crew safe wins. Ties: fewer sols, then less radiation, then more air and food left.'),
     h(
       'div',
