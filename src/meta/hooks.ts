@@ -5,7 +5,8 @@
 // feature take over the screen at two moments (interstitials), and shows what features add to the title screen.
 // Features talk to each other through this file too (XP, level rewards), so none imports another.
 
-import type { MissionState, SolReport } from '../sim/types';
+import type { MissionState, SolReport, SpaceWeatherEvent } from '../sim/types';
+import type { Difficulty } from '../sim/constants';
 import type { Campaign, StarId } from '../sim/campaign';
 import type { Stage } from '../render/stage';
 import type { GameAudio } from '../ui/audio';
@@ -61,6 +62,19 @@ export interface MetaContext {
   closeModal(): void;
   showTitle(): void;
   reducedMotion(): boolean;
+  /** Start a quick mission on a given seed (Rival Race); goes straight to the crew intro. Missing in older test contexts. */
+  startQuick?(opts: QuickStart): void;
+}
+
+/** A quick mission everyone can replay exactly: the same seed, world, difficulty, storm pool and light time. */
+export interface QuickStart {
+  seed: string;
+  site?: 'mars' | 'moon';
+  difficulty?: Difficulty;
+  /** Real space-weather events to deal from instead of today's feed (so a friend meets the same storms later). */
+  eventPool?: SpaceWeatherEvent[];
+  /** Earth-Mars light time to use, minutes (it changes a little every day). */
+  lightTimeMin?: number;
 }
 
 let ctx: MetaContext | null = null;
@@ -184,4 +198,30 @@ export function playerLevel(): number {
   } catch {
     return 1;
   }
+}
+
+// ------------------------------------------------------------------ HUD
+/** Something a feature adds to the HUD while a mission is on screen (never in the self-playing demo). */
+export interface HudExtra {
+  id: string;
+  /** Return the same element each time if it animates: the game redraws the HUD many times a second during a sol. */
+  render(mission: MissionState, mode: PlayMode): HTMLElement | null;
+}
+const hudExtras: HudExtra[] = [];
+export function addHudExtra(extra: HudExtra): void {
+  const i = hudExtras.findIndex((e) => e.id === extra.id);
+  if (i >= 0) hudExtras.splice(i, 1);
+  hudExtras.push(extra);
+}
+export function renderHudExtras(mission: MissionState, mode: PlayMode): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  for (const e of hudExtras) {
+    try {
+      const el = e.render(mission, mode);
+      if (el) out.push(el);
+    } catch (err) {
+      console.error(`[meta] HUD extra ${e.id} failed`, err);
+    }
+  }
+  return out;
 }
