@@ -1885,6 +1885,13 @@ export class App {
           { class: 'actions end-actions' },
           isCampaign && !last ? h('button', { class: 'btn primary play-again', 'data-autofocus': true, onclick: () => this.showInterlude() }, 'Send the next crew', h('span', { class: 'arrow' })) : null,
           isCampaign && last ? h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.showFinale() }, 'See your base', h('span', { class: 'arrow' })) : null,
+          !isCampaign
+            ? h(
+                'button',
+                { class: 'btn primary play-again', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? (this.shortDemo ? this.startShortDemo() : this.startHistory()) : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
+                'Play again',
+              )
+            : null,
           won
             ? h(
                 'button',
@@ -1893,13 +1900,6 @@ export class App {
               )
             : null,
           isCampaign ? h('button', { class: 'btn', onclick: () => this.retryExpedition() }, 'Try this crew again') : null,
-          !isCampaign
-            ? h(
-                'button',
-                { class: 'btn primary play-again', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? (this.shortDemo ? this.startShortDemo() : this.startHistory()) : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
-                'Play again',
-              )
-            : null,
           !isCampaign ? h('button', { class: 'btn', onclick: () => this.chooseDifficulty() }, 'Start a campaign') : null,
           h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Title screen'),
         ),

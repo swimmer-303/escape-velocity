@@ -52,18 +52,23 @@ export function burst(x: number, y: number, opts: { count?: number; colors?: str
   const n = Math.min(SPARKS, opts.count ?? 8);
   const colors = opts.colors ?? ['#ffb627', '#ffe7a8', '#5ef2e6'];
   const spread = opts.spread ?? 34;
+  const used: HTMLElement[] = [];
   for (let i = 0; i < n; i++) {
     const s = sparks[nextSpark];
     nextSpark = (nextSpark + 1) % SPARKS;
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
     const d = spread * (0.6 + Math.random() * 0.6);
+    s.classList.remove('go');
     s.style.left = `${x}px`;
     s.style.top = `${y}px`;
     s.style.background = colors[i % colors.length];
     s.style.setProperty('--dx', `${Math.round(Math.cos(a) * d)}px`);
     s.style.setProperty('--dy', `${Math.round(Math.sin(a) * d)}px`);
-    restart(s, 'go');
+    used.push(s);
   }
+  // One layout read for the whole burst (not one per spark), then every spark flies.
+  if (used.length) void used[0].offsetWidth;
+  for (const s of used) s.classList.add('go');
 }
 
 /** Floating words ("+1", "TANK FULL!", "SHELTER HELD!") that rise and fade. With reduced motion they stay still. */
@@ -147,6 +152,7 @@ export function easeMeters(root: HTMLElement, reduced: boolean) {
     return;
   }
   const seen = new Map<string, number>();
+  const moving: Array<{ el: HTMLElement; to: string }> = [];
   bars.forEach((el) => {
     const meter = el.closest('.meter');
     const kind = (meter?.className.match(/\b(power|life|dose|fuel)\b/) ?? ['', 'x'])[1];
@@ -160,9 +166,11 @@ export function easeMeters(root: HTMLElement, reduced: boolean) {
     if (reduced || !from || from === to) return;
     // The bars have a stepped CSS width transition (style.css): start from the old width, then let it glide.
     el.style.width = from;
-    void el.offsetWidth;
-    el.style.width = to;
+    moving.push({ el, to });
   });
+  if (!moving.length) return;
+  void moving[0].el.offsetWidth; // one layout read for all the bars
+  for (const m of moving) m.el.style.width = m.to;
 }
 
 /** Forget the last widths (a new mission starts from scratch). */
