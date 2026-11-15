@@ -106,7 +106,8 @@ export function delayReadout(lab: LabSettings, todayMin: number): string {
   if (!isMarsLab(lab)) return `Off on the Moon: messages take about ${REAL.moonLightSec} seconds, so Earth's warnings always arrive in time.`;
   const min = Math.round(labLightMin(lab, todayMin));
   const late = earthWarningLateBy(min);
-  return `One way: ${min} min. Earth's warning for the fastest storm particles arrives about ${late} min after they hit.`;
+  const today = lab.delayMin === null ? " (today's real value)" : ` (today: ${Math.round(todayMin)} min)`;
+  return `One way: ${min} min${today}. Earth's warning for the fastest storm particles arrives about ${late} min after they hit.`;
 }
 
 export function crewReadout(lab: LabSettings): string {

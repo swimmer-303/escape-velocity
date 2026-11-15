@@ -1956,7 +1956,7 @@ export class App {
           !isCampaign
             ? h(
                 'button',
-                { class: 'btn primary play-again', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? (this.shortDemo ? this.startShortDemo() : this.startHistory()) : this.mode === 'daily' ? void this.startDaily() : this.startQuick()) },
+                { class: 'btn primary play-again', 'data-autofocus': true, onclick: () => (this.mode === 'history' ? (this.shortDemo ? this.startShortDemo() : this.startHistory()) : this.mode === 'daily' ? void this.startDaily() : this.startQuick(lab && this.quickStart ? this.quickStart : undefined)) },
                 'Play again',
               )
             : null,

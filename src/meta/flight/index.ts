@@ -23,7 +23,9 @@ export async function flightInterstitial(game: FlightGame, ctx: InterstitialCont
         scenery: sceneryOf(site, m?.config ? landingOf(m.config) : undefined),
         crew: m?.crew ?? 4,
         lightTimeMin: site === 'mars' ? m?.config?.lightTimeMin : undefined,
-        practice: false,
+        // A Space Lab experiment flies like Flight school: XP only for beating your best medal, so lab missions
+        // (which can be made easy on purpose) never become an XP farm.
+        practice: ctx.mode === 'lab',
       },
       { root: ctx.root, audio: ctx.audio ?? null, reducedMotion: !!ctx.reducedMotion, inert: [document.getElementById('app')] },
     );
