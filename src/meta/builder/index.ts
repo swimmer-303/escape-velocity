@@ -70,7 +70,8 @@ export function openFromLink(search: string = location.search): boolean {
   }
   const layout = decodeLayout(code);
   if (!layout) {
-    toast('That base link did not work.', 'Check the link, or build your own in Outpost Architect.', { tone: 'amber' });
+    // Shown while the page is still settling, so it stays up as long as the bad challenge-link note does.
+    toast('That base link did not work.', 'Check the link, or build your own in Outpost Architect.', { tone: 'amber', ms: 6000 });
     return false;
   }
   openBuilder({ layout, start: false });
