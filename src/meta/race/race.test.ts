@@ -228,6 +228,27 @@ describe('callsigns', () => {
     expect(isCallsign({ adj: 'Brave', noun: 'Comet', num: 100 })).toBe(false);
     expect(parseCallsignSlug('brave-comet-42')).toEqual(YOU);
     expect(parseCallsignSlug('john-smith-12')).toBeNull();
+    // Numbers with rude meanings online are never used (the same list as the Player Card).
+    for (const num of [14, 18, 69, 88]) {
+      expect(isCallsign({ adj: 'Brave', noun: 'Comet', num })).toBe(false);
+      expect(parseCallsignSlug(`brave-comet-${num}`)).toBeNull();
+    }
+    let k = 0;
+    const seq = [0, 0, 13 / 99];
+    expect(randomCallsign(() => seq[k++ % 3]).num).not.toBe(14);
+  });
+
+  it('use the Player Card callsign when there is one (one name everywhere), and ignore a damaged card', async () => {
+    const { myCallsign, PLAYER_CARD_KEY } = await import('./index');
+    localStorage.removeItem(PLAYER_CARD_KEY);
+    expect(myCallsign().fromCard).toBe(false);
+    localStorage.setItem(PLAYER_CARD_KEY, JSON.stringify({ card: { callsign: { adj: 'Sunny', noun: 'Voyager', num: 7 } } }));
+    expect(myCallsign()).toEqual({ callsign: { adj: 'Sunny', noun: 'Voyager', num: 7 }, fromCard: true });
+    localStorage.setItem(PLAYER_CARD_KEY, JSON.stringify({ card: { callsign: { adj: 'Rude', noun: 'Voyager', num: 7 } } }));
+    expect(myCallsign().fromCard).toBe(false);
+    localStorage.setItem(PLAYER_CARD_KEY, '{oops');
+    expect(isCallsign(myCallsign().callsign)).toBe(true);
+    localStorage.removeItem(PLAYER_CARD_KEY);
   });
 });
 

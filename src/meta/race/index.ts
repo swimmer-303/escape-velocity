@@ -19,7 +19,7 @@ import { h } from '../../ui/dom';
 import type { MissionState } from '../../sim/types';
 import { trophy } from './art';
 import { banterFor, homeStory } from './banter';
-import { randomCallsign } from './callsign';
+import { isCallsign, randomCallsign, type Callsign } from './callsign';
 import { challengeUrl, decodeRun, encodeRun, ghostFromMission, raceParam, type GhostRun } from './code';
 import { StandingsHud } from './hud';
 import { portrait } from './portrait';
@@ -54,6 +54,21 @@ function reduced(): boolean {
     return true;
   }
 }
+/** Where the Season module keeps the Player Card (read only: a kid has ONE callsign everywhere). */
+export const PLAYER_CARD_KEY = 'ev-season-v1';
+
+/** The Player Card callsign if there is one, else Rival Race's own. */
+export function myCallsign(): { callsign: Callsign; fromCard: boolean } {
+  try {
+    const raw = localStorage.getItem(PLAYER_CARD_KEY);
+    const c = raw ? (JSON.parse(raw) as { card?: { callsign?: unknown } } | null)?.card?.callsign : null;
+    if (isCallsign(c)) return { callsign: { adj: c.adj, noun: c.noun, num: c.num }, fromCard: true };
+  } catch {
+    /* no card, or storage blocked */
+  }
+  return { callsign: data().callsign, fromCard: false };
+}
+
 function getHud(): StandingsHud {
   return (hud ??= new StandingsHud(reduced));
 }
@@ -63,10 +78,13 @@ export function openLobby(race?: Race): void {
   const ctx = metaContext();
   if (!ctx) return;
   const s = data();
-  const r = race ?? createRace({ league: s.league, you: s.callsign, site });
+  const me = myCallsign();
+  const r = race ?? createRace({ league: s.league, you: me.callsign, site });
   ctx.modal(
     lobbyContent({
       save: s,
+      callsign: me.callsign,
+      fromCard: me.fromCard,
       race: r,
       canStart: !!ctx.startQuick,
       onSite: (next) => {
@@ -99,7 +117,7 @@ export function openChallenge(g: GhostRun): void {
   const ctx = metaContext();
   if (!ctx) return;
   const s = data();
-  const r = createRace({ league: s.league, you: s.callsign, ghost: g });
+  const r = createRace({ league: s.league, you: myCallsign().callsign, ghost: g });
   ctx.modal(
     challengeIntroContent({ ghost: g, race: r, canStart: !!ctx.startQuick, onStart: () => startRace(ctx, r), onCancel: () => ctx.showTitle() }),
     { label: 'Friend challenge', wide: true, onClose: () => ctx.showTitle() },
@@ -110,7 +128,7 @@ export function openChallenge(g: GhostRun): void {
 function shareUrl(): string | null {
   const s = data();
   const g = s.lastCode ? decodeRun(s.lastCode) : null;
-  return g ? challengeUrl({ ...g, callsign: s.callsign }) : null;
+  return g ? challengeUrl({ ...g, callsign: myCallsign().callsign }) : null;
 }
 
 function sharePanelFor(redraw: () => void): HTMLElement {
@@ -118,11 +136,13 @@ function sharePanelFor(redraw: () => void): HTMLElement {
   return url
     ? sharePanel({
         url,
-        callsign: data().callsign,
-        onNewCallsign: () => {
-          store({ ...data(), callsign: randomCallsign() });
-          redraw();
-        },
+        callsign: myCallsign().callsign,
+        onNewCallsign: myCallsign().fromCard
+          ? null
+          : () => {
+              store({ ...data(), callsign: randomCallsign() });
+              redraw();
+            },
       })
     : h('p', null, 'Finish a race or a quick mission first, then challenge a friend to beat it.');
 }
@@ -198,7 +218,7 @@ function onMissionEnd(p: GameEventMap['mission-end']): void {
   const r = active;
   const inRace = !!r && r.status !== 'done' && isRaceMission(r, m);
   if (shareable(m)) {
-    store({ ...s, lastCode: encodeRun(ghostFromMission(m, s.callsign)) });
+    store({ ...s, lastCode: encodeRun(ghostFromMission(m, myCallsign().callsign)) });
     addEndButton();
   }
   if (!inRace || !r) return;

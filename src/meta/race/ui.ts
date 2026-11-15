@@ -87,6 +87,9 @@ function rivalCard(r: Race['racers'][number]): HTMLElement {
 // ------------------------------------------------------------------ lobby
 export interface LobbyOpts {
   save: RaceSave;
+  callsign: Callsign;
+  /** The callsign comes from the Player Card (change it there). */
+  fromCard: boolean;
   race: Race;
   canStart: boolean;
   onSite(site: 'mars' | 'moon'): void;
@@ -142,14 +145,14 @@ export function lobbyContent(o: LobbyOpts): Child {
     h(
       'div',
       { class: 'card race-friend' },
-      h('p', null, 'Your callsign is ', h('b', { class: 'race-callsign' }, callsignText(o.save.callsign)), '. Links show your callsign, never your name.'),
+      h('p', null, 'Your callsign is ', h('b', { class: 'race-callsign' }, callsignText(o.callsign)), o.fromCard ? ' (from your Player Card)' : '', '. Links show your callsign, never your name.'),
       h(
         'div',
         { class: 'actions' },
         o.save.lastCode
           ? h('button', { class: 'btn cyan small', type: 'button', onclick: () => o.onShare() }, 'Share my last run')
           : h('span', { class: 'race-note' }, 'Finish a race or a quick mission to get a challenge link.'),
-        h('button', { class: 'btn small', type: 'button', onclick: () => o.onNewCallsign() }, 'New callsign'),
+        o.fromCard ? null : h('button', { class: 'btn small', type: 'button', onclick: () => o.onNewCallsign() }, 'New callsign'),
       ),
     ),
     h('p', { class: 'title-foot' }, `Races: ${o.save.races} · Trophies: ${o.save.trophies} · League points: ${o.save.points}`),
@@ -242,7 +245,7 @@ export function overlay(label: string, content: Child, onClose: () => void): Ove
 }
 
 /** The "Challenge a friend" box: the link, a Copy button (with a fallback when the clipboard is blocked). */
-export function sharePanel(o: { url: string; callsign: Callsign; onNewCallsign(): void }): HTMLElement {
+export function sharePanel(o: { url: string; callsign: Callsign; onNewCallsign: (() => void) | null }): HTMLElement {
   const input = h('input', { class: 'race-link', type: 'text', readonly: true, value: o.url, 'aria-label': 'Challenge link' }) as HTMLInputElement;
   input.value = o.url;
   const msg = h('p', { class: 'race-copy-msg', role: 'status' });
@@ -274,7 +277,7 @@ export function sharePanel(o: { url: string; callsign: Callsign; onNewCallsign()
     h('p', null, 'Your friend races your run on the same base with the same storms. The link shows your callsign ', h('b', null, callsignText(o.callsign)), ', never your name.'),
     h('div', { class: 'race-share-row' }, input, h('button', { class: 'btn cyan', type: 'button', 'data-autofocus': true, onclick: () => void copy() }, 'Copy link')),
     msg,
-    h('div', { class: 'actions' }, h('button', { class: 'btn small', type: 'button', onclick: () => o.onNewCallsign() }, 'New callsign')),
+    o.onNewCallsign ? h('div', { class: 'actions' }, h('button', { class: 'btn small', type: 'button', onclick: () => o.onNewCallsign?.() }, 'New callsign')) : null,
   );
 }
 

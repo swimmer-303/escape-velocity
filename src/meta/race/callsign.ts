@@ -2,15 +2,26 @@
 // Callsigns for challenge links: an adjective, a space word and a number, e.g. "Brave Comet 42". Kids never type a
 // name, so a link can never carry a real name or anything unkind: every word comes from these two fixed lists.
 
-export const ADJECTIVES = [
-  'Brave', 'Swift', 'Clever', 'Bright', 'Bold', 'Calm', 'Cosmic', 'Daring', 'Eager', 'Epic', 'Happy', 'Jolly',
-  'Keen', 'Lucky', 'Mighty', 'Noble', 'Plucky', 'Quick', 'Rapid', 'Smart', 'Steady', 'Super', 'Turbo', 'Zippy',
-] as const;
+// The same words as the Player Card (src/meta/season/callsign.ts) plus a few more, so any Player Card callsign can
+// travel in a challenge link. Never remove a word: links made with it would stop working.
+export const ADJECTIVES: readonly string[] = [
+  'Brave', 'Bright', 'Bold', 'Calm', 'Clever', 'Cosmic', 'Curious', 'Daring', 'Eager', 'Fast',
+  'Friendly', 'Gentle', 'Golden', 'Happy', 'Helpful', 'Jolly', 'Keen', 'Kind', 'Lucky', 'Mighty',
+  'Nimble', 'Patient', 'Plucky', 'Quick', 'Quiet', 'Rapid', 'Sharp', 'Shiny', 'Silver', 'Smart',
+  'Sparkly', 'Steady', 'Sunny', 'Swift', 'Super', 'Trusty', 'Turbo', 'Wise', 'Zippy', 'Stellar',
+  'Epic', 'Noble',
+];
 
-export const SPACE_NOUNS = [
-  'Comet', 'Rocket', 'Nebula', 'Quasar', 'Pulsar', 'Meteor', 'Orbit', 'Galaxy', 'Rover', 'Lander', 'Moon', 'Star',
-  'Nova', 'Crater', 'Probe', 'Booster', 'Shuttle', 'Satellite', 'Asteroid', 'Aurora', 'Photon', 'Cosmos', 'Eclipse', 'Zenith',
-] as const;
+export const SPACE_NOUNS: readonly string[] = [
+  'Asteroid', 'Astro', 'Aurora', 'Beacon', 'Comet', 'Cosmo', 'Crater', 'Eclipse', 'Galaxy', 'Lander',
+  'Meteor', 'Moon', 'Nebula', 'Nova', 'Orbit', 'Photon', 'Planet', 'Pulsar', 'Quasar', 'Rocket',
+  'Rover', 'Satellite', 'Shuttle', 'Sky', 'Solar', 'Spark', 'Star', 'Starlight', 'Sunbeam', 'Voyager',
+  'Zenith', 'Pioneer', 'Module', 'Booster', 'Capsule', 'Gravity', 'Horizon', 'Ion', 'Lunar', 'Mars',
+  'Cosmos', 'Probe',
+];
+
+/** Numbers that carry rude or hateful meanings online (the same list as the Player Card). Never used. */
+export const BLOCKED_NUMBERS: readonly number[] = [14, 18, 69, 88];
 
 export interface Callsign {
   adj: string;
@@ -26,7 +37,9 @@ export function callsignText(c: Callsign): string {
 /** A random callsign. `random` is injectable for tests. */
 export function randomCallsign(random: () => number = Math.random): Callsign {
   const pick = <T>(xs: readonly T[]) => xs[Math.min(xs.length - 1, Math.floor(random() * xs.length))];
-  return { adj: pick(ADJECTIVES), noun: pick(SPACE_NOUNS), num: 1 + Math.min(98, Math.floor(random() * 99)) };
+  let num = 1 + Math.min(98, Math.floor(random() * 99));
+  while (BLOCKED_NUMBERS.includes(num)) num = (num % 99) + 1;
+  return { adj: pick(ADJECTIVES), noun: pick(SPACE_NOUNS), num };
 }
 
 /** Only a callsign made of words from our lists (exact spelling) and a number 1..99 passes. */
@@ -35,13 +48,14 @@ export function isCallsign(x: unknown): x is Callsign {
   const c = x as Partial<Callsign>;
   return (
     typeof c.adj === 'string' &&
-    (ADJECTIVES as readonly string[]).includes(c.adj) &&
+    ADJECTIVES.includes(c.adj) &&
     typeof c.noun === 'string' &&
-    (SPACE_NOUNS as readonly string[]).includes(c.noun) &&
+    SPACE_NOUNS.includes(c.noun) &&
     typeof c.num === 'number' &&
     Number.isInteger(c.num) &&
     c.num >= 1 &&
-    c.num <= 99
+    c.num <= 99 &&
+    !BLOCKED_NUMBERS.includes(c.num)
   );
 }
 
