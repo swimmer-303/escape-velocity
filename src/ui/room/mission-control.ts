@@ -849,6 +849,7 @@ export class MissionControl {
     const beats = runBeats(r);
     const start = performance.now();
     let fired = 0;
+    let firstFrame = true;
     await new Promise<void>((resolve) => {
       const tick = (now: number) => {
         if (this.stopped) return resolve();
@@ -879,8 +880,10 @@ export class MissionControl {
             crew: m.crew,
             label: crewLabel(v),
           },
-          this.hudButtons(),
+          // New buttons on the first frame only: then a press on Menu or Sound that spans a frame still lands.
+          firstFrame ? this.hudButtons() : 'keep',
         );
+        firstFrame = false;
         if (t < 1) requestAnimationFrame(tick);
         else resolve();
       };

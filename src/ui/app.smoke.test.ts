@@ -262,6 +262,32 @@ describe('UI smoke test', () => {
     expect(button(/Play again/)).not.toBeNull();
   }, 30000);
 
+  it('while a sol plays, the HUD buttons stay put and the Menu pauses the sol', async () => {
+    new App(new CssStage());
+    (await waitFor(() => button(/Quick mission/))).click();
+    (await waitFor(() => button(/Start quick mission/))).click();
+    (await waitFor(() => button(/Land the crew/))).click();
+    (await waitFor(() => button(/Plan the day/))).click();
+    button(/Suggest a plan/)!.click();
+    button(/^Run sol/)!.click();
+    await waitFor(() => document.querySelector('.run-bar'));
+    await sleep(60); // the sol's first frame draws its HUD
+    const menu = await waitFor(() => document.querySelector<HTMLButtonElement>('#hud button[aria-label="Menu"]'));
+    await sleep(120); // several more frames
+    expect(menu.isConnected).toBe(true); // the same button: a press that spans a frame still lands
+    menu.click();
+    expect(document.querySelector('#modal-root [aria-label="Menu"]')).not.toBeNull();
+    expect(button(/^Workshop$/)).toBeNull(); // today's plan is locked in
+    const clock = () => document.querySelector('.run-bar .clock')?.textContent;
+    const before = clock();
+    await sleep(200);
+    expect(clock()).toBe(before);
+    button(/^Resume$/)!.click();
+    await waitFor(() => clock() !== before);
+    button(/^Skip$/)!.click();
+    await waitFor(() => document.querySelector('[aria-label="Sol 1 debrief"]'));
+  }, 20000);
+
   it('plays the May 2024 history scenario', async () => {
     const app = new App(new CssStage());
     (await waitFor(() => button(/May 2024 storms/))).click();

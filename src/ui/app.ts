@@ -1021,8 +1021,9 @@ export class App {
           'div',
           { class: 'actions' },
           h('button', { class: 'btn primary', onclick: () => this.resume() }, 'Resume'),
-          this.mission ? h('button', { class: 'btn', onclick: () => this.showWorkshop(() => this.resume()) }, 'Workshop') : null,
-          this.mission
+          // Not while a sol plays out: today's plan is already locked in.
+          this.mission && this.phase !== 'running' ? h('button', { class: 'btn', onclick: () => this.showWorkshop(() => this.resume()) }, 'Workshop') : null,
+          this.mission && this.phase !== 'running'
             ? h(
                 'button',
                 {
@@ -1766,11 +1767,24 @@ export class App {
     if (report.after.fuel >= 100 && report.before.fuel < 100) moments.push({ at: 0.86, kind: 'full' });
     moments.sort((a, b) => a.at - b.at);
     let momentsFired = 0;
+    let firstFrame = true;
+    // The Menu (or a dialog opened from it) pauses the sol: its clock stops until the player closes it.
+    let pausedAt: number | null = null;
+    let pausedFor = 0;
     await new Promise<void>((resolve) => {
       const tick = (now: number) => {
         // The player left mid-sol (back to the title, or tapped out of the demo): stop drawing.
         if (this.phase !== 'running' || this.mission !== m) return resolve();
-        let t = Math.min(1, (now - start) / duration);
+        if (this.modalRoot.querySelector(':scope > .modal') && !this.ff) {
+          pausedAt ??= now;
+          requestAnimationFrame(tick);
+          return;
+        }
+        if (pausedAt !== null) {
+          pausedFor += now - pausedAt;
+          pausedAt = null;
+        }
+        let t = Math.min(1, (now - start - pausedFor) / duration);
         if (this.ff) t = 1;
         this.stage.setTimeOfDay(site === 'moon' ? moonSky(m, m.sol, t) : t);
         const mins = Math.floor((6 * 60 + t * hours * 60) % (24 * 60));
@@ -1807,8 +1821,10 @@ export class App {
             label: this.hudLabel(m),
             site,
           },
-          this.hudButtons(),
+          // New buttons on the first frame only: then a press on Menu or Sound that spans a frame still lands.
+          firstFrame ? this.hudButtons() : 'keep',
         );
+        firstFrame = false;
         if (t < 1) requestAnimationFrame(tick);
         else resolve();
       };

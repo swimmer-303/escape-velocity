@@ -35,8 +35,12 @@ function bar(cls: string, pct: number, ghostPct?: number, ghostCls = '') {
   );
 }
 
-export function renderHud(root: HTMLElement, m: HudModel, right: HTMLElement[]) {
-  clear(root);
+/**
+ * Draw the HUD. `right` is the row of buttons (Menu, Sound...), or 'keep' to leave the buttons already there in
+ * place: a sol playing out redraws the meters every frame, and new buttons each frame would swallow a press on them.
+ */
+export function renderHud(root: HTMLElement, m: HudModel, right: HTMLElement[] | 'keep') {
+  const kept = right === 'keep' ? root.querySelector<HTMLElement>(':scope > .hud-right') : null;
   const lifeNow = Math.min(m.now.air, m.now.food);
   const lifeNext = m.next ? Math.min(m.next.air, m.next.food) : undefined;
   const lowest = m.now.air <= m.now.food ? 'Air' : 'Food';
@@ -95,7 +99,15 @@ export function renderHud(root: HTMLElement, m: HudModel, right: HTMLElement[]) 
     h('small', null, `${m.crew} crew · window ${t.turn} ${m.windowSol}`),
   );
 
-  root.append(power, life, dose, fuel, h('div', { class: 'hud-right' }, sol, ...right));
+  if (kept) {
+    for (const el of [...root.children]) if (el !== kept) el.remove();
+    kept.querySelector(':scope > .sol-chip')?.remove();
+    kept.prepend(sol);
+    root.prepend(power, life, dose, fuel);
+    return;
+  }
+  clear(root);
+  root.append(power, life, dose, fuel, h('div', { class: 'hud-right' }, sol, ...(right === 'keep' ? [] : right)));
 }
 
 function miniBar(kind: 'air' | 'food', now: number, next?: number) {
