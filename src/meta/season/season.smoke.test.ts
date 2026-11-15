@@ -101,6 +101,23 @@ describe('Season 1 on the title screen', () => {
     expect(fetchSpy.mock.calls.length).toBe(callsByGame);
   });
 
+  it('after January 31, 2027 says "Season 1 complete" and still lets players claim and look', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline in tests')));
+    new App(new CssStage());
+    await sleep(50);
+    resetSeasonEngine({ fresh: true, clock: () => new Date(2027, 1, 3, 10) });
+    const t = seasonTile();
+    expect(t.textContent).toContain('Season 1 complete');
+    const box = openSeason()!;
+    expect(box.textContent).toContain('Season 1 complete');
+    expect(box.querySelector('.ss-weekly')).toBeNull();
+    expect(box.querySelector('.ss-event')).toBeNull();
+    expect(box.querySelector('.ss-gift-open')).toBeNull();
+    expect(box.querySelectorAll('.ss-tier')).toHaveLength(40);
+    box.querySelector<HTMLButtonElement>('[data-tier="1"] .ss-claim')!.click();
+    expect(seasonState().claimed).toEqual([1]);
+  });
+
   it('shows LIVE only when the feed is live with a real big flare, and links its DONKI record', async () => {
     vi.stubGlobal('fetch', () => Promise.reject(new Error('offline in tests')));
     new App(new CssStage());
