@@ -1,0 +1,123 @@
+/* Written with AI assistance (Claude Code). See README "Use of AI tools". */
+/* Rival Race (src/meta/race). Colors come from the game's tokens in src/ui/style.css; --lg is the league color. */
+
+/* ---------- live standings in the HUD ---------- */
+/* Wide screens: a panel floating at the top right of the 3D view, under the HUD and the "Look at" menu. */
+.race-hud {
+  --lg: var(--amber);
+  position: fixed; right: 12px; top: calc(var(--hud-h, 110px) + 60px); z-index: 6; width: 290px; pointer-events: none;
+  background: #15122bee; border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--shadow); padding: 6px 8px 8px; color: var(--ink);
+}
+.rh-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--font-px); font-size: 12px; text-transform: uppercase; }
+.rh-kicker { color: #ff7a6e; }
+.rh-league { color: var(--lg); }
+.rh-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.rh-row { display: grid; grid-template-columns: 16px 20px minmax(0, 1fr) 46px 34px 14px; align-items: center; gap: 5px; height: 26px; padding: 0 3px; font-size: 13px; }
+.rh-row.k-you { background: #ffb62726; box-shadow: inset 0 0 0 2px var(--amber); }
+.rh-row.k-ghost .rh-name { color: var(--cyan); font-style: italic; }
+.rh-row.s-lost { opacity: 0.6; }
+.rh-place { font-family: var(--font-px); font-weight: 400; font-size: 14px; color: var(--amber); text-align: center; }
+.rh-face, .rh-safe { display: grid; place-items: center; line-height: 0; }
+.rh-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rh-row.k-you .rh-name { font-weight: 700; }
+.rh-bar { position: relative; height: 8px; background: #000; border: 2px solid #000; }
+.rh-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--cyan); }
+.rh-row.k-you .rh-bar i { background: var(--amber); }
+.rh-fuel { font-family: var(--font-px); font-size: 12px; text-align: right; }
+.rh-banter { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; padding-top: 6px; border-top: 2px solid var(--line); font-size: 13px; line-height: 1.25; }
+.rh-banter[hidden] { display: none; }
+.rh-banter svg { flex: none; }
+.rh-banter b { font-weight: 700; color: var(--cyan); }
+.race-face { image-rendering: pixelated; display: block; }
+
+/* Narrow screens: a compact strip at the end of the HUD (place, face, fuel). */
+@media (max-width: 900px) {
+  .race-hud { position: static; width: auto; flex: 1 1 100%; order: 10; padding: 4px 6px; background: var(--panel); }
+  .rh-head { display: none; }
+  .rh-list { flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 0; }
+  .rh-row { grid-template-columns: auto auto auto auto; height: 26px; flex: 1 1 22%; gap: 4px; justify-content: center; }
+  .rh-row .rh-name, .rh-row .rh-bar { display: none; }
+  .rh-banter { font-size: 12px; margin-top: 4px; padding-top: 4px; }
+}
+
+/* ---------- big moments ---------- */
+.race-flash {
+  position: fixed; left: 50%; top: 28%; transform: translate(-50%, -50%); z-index: 85; pointer-events: none; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 18px; background: #0b0a18e6; border: 4px solid var(--amber); box-shadow: 0 0 0 4px #000, 8px 8px 0 var(--shadow);
+}
+.race-flash b { font-family: var(--font-px); font-weight: 400; font-size: clamp(30px, 7vw, 64px); color: var(--amber); text-shadow: 4px 4px 0 var(--rust); line-height: 1; }
+.race-flash span { display: flex; align-items: center; gap: 8px; font-size: 18px; color: var(--ink); }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.reduce-motion) .race-flash:not(.still) { animation: race-flash 1.9s steps(8) both; }
+  @keyframes race-flash { 0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; } 15% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } 25%, 80% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+}
+
+/* ---------- overlays: podium and share box ---------- */
+.race-overlay { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: #05040cd9; overflow-y: auto; }
+.race-ov-card {
+  position: relative; width: min(620px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto;
+  background: var(--panel); border: 4px solid #ff7a6e; box-shadow: 0 0 0 4px #000, 10px 10px 0 var(--shadow); padding: 18px 20px 20px; color: var(--ink);
+}
+.race-ov-card h2 { font-family: var(--font-px); font-weight: 400; font-size: 24px; color: var(--amber); margin: 0 0 10px; }
+.race-ov-card .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.race-x { position: absolute; top: 8px; right: 8px; }
+.race-overlay .btn:focus-visible, .race-overlay input:focus-visible, .race-lobby .crate:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+.rp-podium { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 8px; margin: 10px 0; padding: 0; }
+.rp-step { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+.rp-step .rp-name { font-size: 15px; overflow-wrap: anywhere; }
+.rp-step.k-you .rp-name { color: var(--amber); }
+.rp-step.k-ghost .rp-name { color: var(--cyan); }
+.rp-how { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.rp-block { display: grid; place-items: center; width: 100%; font-family: var(--font-px); font-size: 20px; color: #15122b; border: 3px solid #000; box-shadow: inset -4px -4px 0 #0004; }
+.rp-step.first .rp-block { height: 84px; background: #ffd84a; }
+.rp-step.second .rp-block { height: 62px; background: #c9d1dc; }
+.rp-step.third .rp-block { height: 44px; background: #d08a4a; }
+.rp-rest { margin: 4px 0 8px; padding-left: 28px; }
+.rp-rest li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+.rp-rewards { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.rp-rewards > span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 3px solid #000; background: var(--panel-2); font-family: var(--font-px); font-size: 13px; }
+.rp-rewards .rp-xp { color: var(--amber); }
+.rp-rewards .rp-trophy { color: #ffd84a; }
+.rp-promo { display: flex; align-items: center; gap: 12px; }
+.rp-promo p { margin: 4px 0 0; }
+.rp-league { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rp-tip { margin: 10px 0 0; padding: 8px 10px; background: var(--panel-2); border-left: 4px solid var(--cyan); }
+.rp-rule { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+
+/* ---------- lobby ---------- */
+.race-lobby-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+.race-lobby-head h2 { margin: 0 0 4px; }
+.race-lobby-head p { margin: 0; }
+.race-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-px); font-size: 14px; color: var(--lg); }
+.race-progress { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; }
+.rp-pips { display: inline-flex; gap: 4px; }
+.rp-pips span { width: 16px; height: 16px; border: 2px solid #000; background: #3a3150; }
+.rp-pips span.on { background: var(--lg, var(--amber)); }
+.race-ladder { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; padding: 0; }
+.race-ladder li { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px 3px 4px; border: 2px solid #000; background: var(--panel-2); font-family: var(--font-px); font-size: 12px; color: var(--muted); }
+.race-ladder li.now { box-shadow: inset 0 0 0 2px var(--lg); color: var(--lg); }
+.race-ladder li.done { color: var(--ink); }
+.race-ladder li.locked { opacity: 0.75; }
+.race-rivals { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.race-rival { display: flex; gap: 8px; align-items: flex-start; padding: 8px; background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); }
+.race-rival.k-ghost { box-shadow: inset 0 0 0 2px var(--cyan); }
+.race-rival b { display: block; font-family: var(--font-px); font-weight: 400; font-size: 14px; color: var(--amber); }
+.race-rival .rr-style { display: block; font-size: 12px; color: var(--cyan); text-transform: uppercase; font-family: var(--font-px); }
+.race-rival p { margin: 4px 0 0; font-size: 14px; line-height: 1.3; }
+.race-rival svg { flex: none; }
+.race-site { grid-template-columns: 1fr 1fr; }
+.race-friend p { margin: 0 0 6px; }
+.race-callsign { color: var(--cyan); }
+.race-note { font-size: 14px; color: var(--muted); align-self: center; }
+
+/* ---------- share box ---------- */
+.race-share-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+.race-link { flex: 1 1 220px; min-width: 0; min-height: 44px; padding: 6px 10px; background: var(--bg); color: var(--ink); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); font-size: 14px; }
+.race-copy-msg { min-height: 1.3em; margin: 8px 0 0; color: var(--green); }
+
+html.ev-contrast .race-hud, html.ev-contrast .race-ov-card { background: var(--panel); }
+@media (max-width: 480px) {
+  .rp-step .rp-name { font-size: 13px; }
+  .race-site { grid-template-columns: 1fr; }
+}

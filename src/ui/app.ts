@@ -3,7 +3,7 @@
 //   Campaign:  title -> [expedition intro -> (briefing -> budget -> run -> debrief) x sols -> expedition end -> 26 months later] x 3 -> campaign end
 //   Quick:     one expedition.   History: the real May 2024 storms.
 
-import { emitGame, runInterstitial, renderTitleExtras, setMetaContext, type InterstitialContext } from '../meta/hooks';
+import { emitGame, runInterstitial, renderTitleExtras, renderHudExtras, setMetaContext, type InterstitialContext, type QuickStart } from '../meta/hooks';
 import { h, clear, $, prefersReducedMotion, type Child } from './dom';
 import { icon } from './icons';
 import { renderHud } from './hud';
@@ -243,6 +243,7 @@ export class App {
       closeModal: () => this.closeModal(),
       showTitle: () => this.showTitle(),
       reducedMotion: () => this.settings.reducedMotion,
+      startQuick: (opts) => this.startQuick(opts),
     });
     // The planning panel must fit under the HUD, which wraps to two rows on narrower screens (style.css reads --hud-h).
     if (typeof ResizeObserver === 'function') {
@@ -355,6 +356,7 @@ export class App {
   private hudButtons(): HTMLElement[] {
     const status = this.mission ? statusButton(this.hud) : null;
     return [
+      ...(this.mission && !this.demoActive ? renderHudExtras(this.mission, this.mode ?? 'quick') : []),
       this.dataBadge(),
       ...(status ? [status] : []),
       h(
@@ -1207,14 +1209,20 @@ export class App {
     }
   }
 
-  private startQuick() {
-    this.chooseDifficulty('quick');
+  /** A quick mission on a given seed, world and storm pool (Rival Race, src/meta/race), or the usual chooser. */
+  private quickStart: QuickStart | null = null;
+
+  private startQuick(opts?: QuickStart) {
+    this.quickStart = opts ?? null;
+    if (opts) this.launchQuick();
+    else this.chooseDifficulty('quick');
   }
 
   private launchQuick() {
     this.audio.sfx('click');
     this.mode = 'quick';
-    this.campaign = { ...campaignWithCode(this.codes.active, this.seed(), 'cadet'), ...this.place() };
+    const q = this.quickStart;
+    this.campaign = q ? newCampaign(q.seed, q.difficulty ?? 'cadet', q.site ?? 'mars') : { ...campaignWithCode(this.codes.active, this.seed(), 'cadet'), ...this.place() };
     this.showExpeditionIntro();
   }
 
@@ -1359,7 +1367,7 @@ export class App {
               (Object.keys(STAR_INFO) as StarId[]).map((s) => h('div', null, icon('sun', 14), ' ', h('b', null, STAR_INFO[s].name), `: ${STAR_INFO[s].how}`)),
             )
           : null,
-        this.mode === 'quick'
+        this.mode === 'quick' && !this.quickStart
           ? this.codes.panel({
               sfx: (n) => this.audio.sfx(n),
               onChange: (code) => (this.campaign = { ...campaignWithCode(code, this.seed(), 'cadet'), ...this.place() }),
@@ -1383,7 +1391,8 @@ export class App {
     this.modalRoot.querySelectorAll('button').forEach((b) => b.setAttribute('disabled', ''));
     const pool = await this.pool().finally(() => (this.landing = false));
     this.campaignAtStart = c;
-    this.mission = createMission(this.mode === 'daily' && this.daily ? dailyMissionConfig(this.daily.config) : missionConfigFor(c, this.light.oneWayMinutes, pool));
+    const q = this.mode === 'quick' && !this.demoActive ? this.quickStart : null;
+    this.mission = createMission(this.mode === 'daily' && this.daily ? dailyMissionConfig(this.daily.config) : missionConfigFor(c, q?.lightTimeMin ?? this.light.oneWayMinutes, q?.eventPool ?? pool));
     this.save();
     if (!this.demoActive) {
       this.closeModal();

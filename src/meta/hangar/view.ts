@@ -86,7 +86,7 @@ export function openHangar(ctx: MetaContext, start: Slot = 'suit'): HTMLElement 
             'span',
             { class: 'hangar-lock' },
             h('span', { class: 'hangar-lock-icon', html: LOCK_SVG }),
-            h('span', null, h('span', { class: 'sr-only' }, 'Locked. '), h('small', null, 'Unlocks at'), h('b', null, `Level ${item.level}`)),
+            h('span', null, h('span', { class: 'sr-only' }, 'Locked. '), h('small', null, 'Unlocks at'), h('b', null, item.season ? `${item.season} or level ${item.level}` : `Level ${item.level}`)),
           ),
     );
   };
