@@ -88,7 +88,7 @@ export function makeWorldSky() {
         // Dusty air scatters a wide, warm glow around the Sun (none on the Moon: no air).
         c += uGlow * (pow(s, 5.0) * 0.3 + pow(s, 48.0) * 0.75) * uGlowAmt * sunUp * (1.0 - 0.75 * uBlue);
         // Mars sunsets are blue: fine dust scatters blue light forward, so the sky right around the low Sun turns blue.
-        float b = uBlue * (pow(s, 10.0) * 1.15 + pow(s, 4.0) * 0.32) * smoothstep(-0.25, 0.05, d.y);
+        float b = uBlue * (pow(s, 40.0) * 1.1 + pow(s, 12.0) * 0.4) * smoothstep(-0.25, 0.05, d.y);
         c = mix(c, vec3(0.3, 0.48, 0.86), clamp(b, 0.0, 0.88));
         // The Sun's disc (drawn bigger than real so it shows up): soft through dust, sharp with no air.
         float edge = mix(0.00006, 0.000004, uHardSun);

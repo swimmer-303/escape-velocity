@@ -1126,7 +1126,7 @@ export class Diorama {
     this.halos.commit();
     this.pools.commit();
     if (this.blobs.mesh.visible) {
-      const k = 0.2 + 0.35 * (1 - this.night);
+      const k = 0.25 + 0.4 * (1 - this.night);
       for (const b of this.blobSrc) this.blobs.set(b.i, WHITE, this.shown(b.root) ? k : 0);
       this.blobs.commit();
     }
@@ -1145,6 +1145,13 @@ export class Diorama {
 
   get qualityTier(): Quality {
     return this.quality;
+  }
+
+  /** Slide the blob shadows a little away from the Sun (further when it is low), like real shadows. */
+  shadeFrom(sunDir: THREE.Vector3) {
+    const k = Math.min(2.4, 0.9 / Math.max(0.2, sunDir.y));
+    const h = Math.hypot(sunDir.x, sunDir.z) || 1;
+    this.blobs.mesh.position.set((-sunDir.x / h) * k, 0, (-sunDir.z / h) * k);
   }
 
   /**
@@ -1206,7 +1213,7 @@ export class Diorama {
     this.ambient.groundColor.set(moon ? '#3a3a40' : '#6b2e16');
     // No air, no dust.
     this.motes.setWeather((this.scene?.weather ?? 'clear') as DustWeather, !moon);
-    // Worn paths look darker than the undisturbed ground, on both worlds.
+    // Disturbed ground (wheel tracks, trampled paths) tends to look darker than the untouched surface.
     (this.paths.material as THREE.MeshPhongMaterial).color.set(moon ? '#3c3c40' : ice ? '#5a2c18' : '#4a2010');
     // With no air, dust kicked up on the Moon flies out and falls back instead of billowing.
     this.puffs.drag = moon ? 0 : 1.4;

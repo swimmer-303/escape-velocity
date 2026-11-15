@@ -88,6 +88,8 @@ export class ThreeStage implements Stage {
   private watch = { t: 0, n: 0, done: false, dt: new Float32Array(WATCH_MAX) };
   /** The gentle up-and-down "breathing" of the idle camera, applied this frame (taken off again before the next). */
   private breath = 0;
+  /** How much breathing (0..1): eases in whenever the camera comes to rest, so it never jumps. */
+  private breathAmp = 0;
   private frameNo = 0;
   private diorama!: Diorama;
   private clock = new THREE.Clock();
@@ -307,6 +309,7 @@ export class ThreeStage implements Stage {
 
     const L = this.diorama;
     L.sunLight.position.copy(sunDir).multiplyScalar(60);
+    L.shadeFrom(sunDir);
     L.sunLight.intensity = day ? (0.35 + elev * 2.3) * (1 - dust * 0.75) * Math.min(1, elev * 12 + 0.25) : 0;
     L.sunLight.color.copy(MARS.key).lerp(MARS.keyDusk, dusk);
     L.ambient.color.copy(MARS.skyDay).lerp(MARS.skyNight, night).lerp(MARS.skyStorm, dust * 0.6 * dim);
@@ -327,8 +330,8 @@ export class ThreeStage implements Stage {
   /**
    * The Moon: no air, so no haze, no glow around the Sun and no blue sunset: a black sky with crisp stars all day,
    * and a hard white Sun. Near the south pole the Sun stays low, so light comes in at a low angle and shadows are
-   * long and black. The Earth hangs low over the horizon, lit by the Sun (so it shows phases); during the long lunar
-   * night it is close to full, and its light (earthshine) faintly lights the base.
+   * long and black. The Earth hangs low over the horizon, lit by the Sun (so it shows phases). On the Moon's near
+   * side the long lunar night comes when the Earth is close to full, and its light (earthshine) faintly lights the base.
    */
   private lookMoon(t: number) {
     const sunDir = moonSunDirection(t, _sun);
@@ -359,6 +362,7 @@ export class ThreeStage implements Stage {
 
     const L = this.diorama;
     L.sunLight.position.copy(sunDir).multiplyScalar(60);
+    L.shadeFrom(sunDir);
     L.sunLight.intensity = 3.6 * up;
     L.sunLight.color.copy(MOON.sun);
     L.ambient.color.copy(MOON.sky).lerp(MOON.skyNight, night);
@@ -511,10 +515,12 @@ export class ThreeStage implements Stage {
       this.controls.update();
       // A gentle, slow rise and fall while the camera idles (never with reduced motion).
       if (!this.reduced) {
-        this.breath = Math.sin(time * 0.45) * 0.08 + Math.sin(time * 0.17 + 1.3) * 0.05;
+        this.breathAmp = Math.min(1, this.breathAmp + dt * 0.6);
+        this.breath = (Math.sin(time * 0.45) * 0.08 + Math.sin(time * 0.17 + 1.3) * 0.05) * this.breathAmp;
         this.camera.position.y += this.breath;
       }
     }
+    if (this.launching || this.intro || this.move.active || this.reduced) this.breathAmp = 0;
     // The dust in the air is centered on whatever the camera looks at.
     this.diorama.motes.center.copy(this.controls.target);
     // Back in the orbit view (or zoomed out from a module by hand): the usual closest zoom again.
