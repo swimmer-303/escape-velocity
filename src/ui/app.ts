@@ -369,8 +369,9 @@ export class App {
         },
         icon(this.settings.muted ? 'mute' : 'sound', 24),
       ),
-      h('button', { class: 'btn small', onclick: () => this.showMenu(), 'aria-label': 'Menu' }, 'Menu'),
-    ];
+      // The mission menu is for missions; the lobby has its own buttons for everything in it.
+      this.phase === 'title' ? null : h('button', { class: 'btn small', onclick: () => this.showMenu(), 'aria-label': 'Menu' }, 'Menu'),
+    ].filter((x): x is HTMLElement => !!x);
   }
 
   private toggleMute() {
@@ -422,6 +423,16 @@ export class App {
 
   private onKey(e: KeyboardEvent) {
     if (e.key === 'Escape' && this.modalRoot.firstChild && this.phase === 'plan') this.closeModalAndPlan();
+    // In the lobby, Escape closes the open dialog (Storm Cards, Settings, Credits...) like its X button.
+    // Checked after every other handler: the mini-games and the builder use Escape themselves.
+    if (e.key === 'Escape' && this.phase === 'title' && !this.modalRoot.classList.contains('lobby-root')) {
+      const before = this.modalRoot.firstElementChild;
+      window.setTimeout(() => {
+        if (e.defaultPrevented || this.phase !== 'title' || this.modalRoot.classList.contains('lobby-root')) return;
+        if (this.modalRoot.firstElementChild !== before) return;
+        this.modalRoot.querySelector<HTMLButtonElement>(':scope > .modal > .close-x')?.click();
+      }, 0);
+    }
     if (this.phase === 'running' && (e.key === 'f' || e.key === 'F')) this.ff = true;
   }
 
@@ -502,6 +513,8 @@ export class App {
   private coldOpen() {
     // Only the swappable stage can bring the 3D view (a bare simple stage, as in tests, never gets a cold open).
     if (typeof (this.stage as Stage & { canFlyIn?(): boolean }).canFlyIn !== 'function') return;
+    // A shared link (a friend's race, a base to remix, the builder) goes straight to what was shared.
+    if (/[?&](race|base|builder)(=|&|$)/.test(location.search)) return;
     const full = loadLobby().intros === 0;
     if (full) countIntro();
     runColdOpen({
@@ -611,7 +624,7 @@ export class App {
       { cls: a.food >= b.food ? 'up' : 'down', label: 'Food', delta: a.food - b.food, unit: ' d', digits: 1 },
       { cls: a.dose - b.dose > 0.05 ? 'down' : 'up', label: 'Dose', delta: a.dose - b.dose, unit: '', digits: 1 },
     ];
-    const tally = h('div', { class: 'sol-tally', 'aria-label': 'What this sol changed' });
+    const tally = h('div', { class: 'sol-tally', 'aria-label': `What this ${siteText(this.mission?.config ?? this.site).turn} changed` });
     for (const it of items) {
       const num = h('b', null, '0');
       tally.append(h('span', { class: it.cls }, num, it.label));
@@ -1039,6 +1052,26 @@ export class App {
         h('div', { class: 'kicker' }, 'Settings'),
         h('h2', null, accessButtonText()),
         accessPanel(),
+        // Sound and motion here too, so they can be set before a mission (the mission menu has them as well).
+        h(
+          'div',
+          { class: 'toggle-row', style: 'margin-top:12px' },
+          h('button', { class: 'btn small', 'aria-pressed': String(!this.settings.muted), onclick: () => (this.toggleMute(), this.showAccess()) }, this.settings.muted ? 'Sound: off' : 'Sound: on'),
+          h(
+            'button',
+            {
+              class: 'btn small',
+              'aria-pressed': String(this.settings.reducedMotion),
+              onclick: () => {
+                this.settings.reducedMotion = !this.settings.reducedMotion;
+                saveSettings(this.settings);
+                this.applyMotion();
+                this.showAccess();
+              },
+            },
+            this.settings.reducedMotion ? 'Reduced motion: on' : 'Reduced motion: off',
+          ),
+        ),
         h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.resume() }, 'Done')),
       ],
       { label: 'Text and voice settings', onClose: () => this.resume() },
@@ -1307,7 +1340,7 @@ export class App {
             { class: 'first-crew', 'aria-label': 'Your crew' },
             roster.members.map((mem, i) => h('li', null, crewPortrait(roster, i), h('span', null, mem.name))),
           ),
-          h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
+          h('div', { class: 'actions end' }, h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Back'), h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
         ],
         { label: `${spec.name} introduction` },
       );
@@ -1376,7 +1409,7 @@ export class App {
             })
           : null,
         this.mode === 'daily' && this.daily ? dailyIntroCard(this.daily, () => this.showTodaysBest(() => this.showExpeditionIntro())) : null,
-        h('div', { class: 'actions end' }, h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
+        h('div', { class: 'actions end' }, h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Back'), h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
       ],
       { label: `${spec.name} introduction` },
     );
@@ -1832,21 +1865,25 @@ export class App {
     clear(this.dock);
     this.refreshHud();
     const won = m.status === 'won';
+    // The self-playing demo: remember it now, because a tap during the launch below ends the demo (and clears the flag).
+    const demo = this.demoActive;
     if (first) {
       // Class code: send this crew's result to the teacher's class board (in the background).
-      if (this.mode === 'campaign' || this.mode === 'quick') classBoard.report(this.campaign?.classCode, m, this.mode);
+      if (!demo && (this.mode === 'campaign' || this.mode === 'quick')) classBoard.report(this.campaign?.classCode, m, this.mode);
       if (won) {
         this.closeModal();
-        if (!this.demoActive) await runInterstitial('launch', this.interstitialContext());
+        if (!demo) await runInterstitial('launch', this.interstitialContext());
         this.audio.playMusic('launch');
         this.audio.sfx('win');
         await this.stage.launch();
+        // The player left (tapped out of the demo, or went to the title) while the rocket flew: no end screen, no rewards.
+        if (this.mission !== m || this.phase !== 'end') return;
       }
       if (this.mode === 'campaign' && this.campaign) {
         this.campaign = finishExpedition(this.campaign, m);
         this.save();
       }
-      emitGame('mission-end', { mission: m, won, mode: this.mode ?? 'quick', stars: starsFor(m), demo: this.demoActive });
+      emitGame('mission-end', { mission: m, won, mode: this.mode ?? 'quick', stars: starsFor(m), demo });
     }
     const end = endingFor(m);
     const stars = starsFor(m);

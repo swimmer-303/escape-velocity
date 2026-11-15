@@ -210,6 +210,22 @@ describe('the cold open', () => {
     expect(document.querySelector('.cold-open')).toBeNull();
   });
 
+  it('the tap that skips it never lands on the lobby underneath', async () => {
+    const { stage } = fakeStage();
+    const tile = document.createElement('button');
+    const opened = vi.fn();
+    tile.addEventListener('click', opened);
+    document.getElementById('modal-root')!.append(tile);
+    runColdOpen({ stage, audio: new GameAudio(true), full: true, onTitle: () => true, reveal: () => {} });
+    window.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    tile.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(opened).not.toHaveBeenCalled();
+    await sleep(800);
+    tile.click();
+    expect(opened).toHaveBeenCalledTimes(1);
+    tile.remove();
+  });
+
   it('return visits get only a short camera move, with nothing in the way', async () => {
     const { stage, flights } = fakeStage();
     runColdOpen({ stage, audio: new GameAudio(true), full: false, onTitle: () => true, reveal: () => {} });

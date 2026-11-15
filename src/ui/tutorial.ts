@@ -182,6 +182,8 @@ export class Coach {
     );
     // Read-aloud: a new tip stops the old one (and is read out if auto read-aloud is on).
     coachShown(this.bubble, here ? String(this.i) : null);
+    // Bring this step's target into view first (on a Chromebook-sized screen it can sit below the fold).
+    if (here) document.querySelector<HTMLElement>(s.target)?.scrollIntoView?.({ block: 'nearest' });
     this.position();
   }
 
@@ -219,6 +221,8 @@ export class Coach {
     const above = r.top - 14 - bh > 0;
     let top = below ? r.bottom + 14 : above ? r.top - 14 - bh : Math.max(8, vh - bh - 8);
     if (!below && !above && r.height > vh * 0.6) top = 8;
+    // Never off-screen, whatever the target does.
+    top = Math.max(8, Math.min(top, vh - bh - 8));
     const left = Math.min(vw - bw - 8, Math.max(8, r.left + r.width / 2 - bw / 2));
     this.bubble.style.left = `${left}px`;
     this.bubble.style.top = `${top}px`;

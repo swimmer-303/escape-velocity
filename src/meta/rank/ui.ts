@@ -423,7 +423,8 @@ export function showCelebration(): HTMLElement | null {
     overlay.remove();
     // Back to where the player was (or the first button of the dialog underneath).
     const target = before?.isConnected ? before : document.querySelector<HTMLElement>('[role="dialog"] button');
-    target?.focus();
+    // Without scrolling: the end screen's score and grade stay in view.
+    target?.focus({ preventScroll: true });
   };
   const ok = h('button', { class: 'btn primary', onclick: close }, 'Awesome!');
   const overlay = h(
@@ -475,7 +476,7 @@ export function showCelebration(): HTMLElement | null {
     ),
   );
   document.body.append(overlay);
-  ok.focus();
+  ok.focus({ preventScroll: true });
   try {
     metaContext()?.audio.sfx('win');
   } catch {

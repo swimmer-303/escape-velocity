@@ -133,3 +133,11 @@ html.ev-cold #modal-root, html.ev-cold #hud, html.ev-cold .look-at { opacity: 0;
 /* The lobby needs no "Look at" menu (it is for the base during a mission). */
 html.ev-lobby .look-at { visibility: hidden; }
 .title-screen.lobby .ai-disclosure { margin-left: auto; margin-right: auto; }
+
+/* ---------- The HUD over the lobby (QA fixes) ---------- */
+/* Desktop: the live-data badge and the sound button sit above the lobby layer, so they can be clicked. */
+@media (min-width: 901px) { body:has(#modal-root.lobby-root) #hud { z-index: 60; } }
+/* Phones and tablets: the lobby fills the screen; the HUD behind it would only show through and cover the logo. */
+@media (max-width: 900px) { body:has(#modal-root.lobby-root) #hud { visibility: hidden; } }
+/* A clear keyboard focus ring on every lobby tile. */
+.title-tile:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }

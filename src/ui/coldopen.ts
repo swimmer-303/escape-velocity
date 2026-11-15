@@ -119,9 +119,16 @@ export function runColdOpen(d: ColdOpenDeps): void {
     e.stopPropagation();
     finish(true);
   };
+  // The click that follows the skipping tap must not land on the lobby underneath (it would open a tile).
+  const swallowClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
   const onPointer = (e: PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    window.addEventListener('click', swallowClick, true);
+    window.setTimeout(() => window.removeEventListener('click', swallowClick, true), 700);
     finish(true);
   };
   window.addEventListener('keydown', onKey, true);
