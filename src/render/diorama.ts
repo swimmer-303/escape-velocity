@@ -14,9 +14,10 @@ import * as THREE from 'three';
 import { mat, rand } from './retro';
 import { marsHeight, GROUND_RADIUS } from './gale';
 import { arcadiaHeight, frostAmount } from './arcadia';
-import { moonHeight, moonTone, buildEarth, EARTH_POS, EARTH_RADIUS } from './moon';
+import { moonHeight, moonTone, moonCraters, buildLitEarth, EARTH_POS, EARTH_RADIUS } from './moon';
 import { Particles } from './fx';
-import { Rover, DustDevils, Drones, Lander, CommsBeam, worldPoint, type BuildSite } from './life';
+import { DustMotes, GroundSpots, Halos, type DustWeather, type Quality } from './atmosphere';
+import { Rover, DustDevils, Drones, Lander, CommsBeam, worldPoint, ROVER_LOOP, type BuildSite } from './life';
 import { RoverPet, PET_HOME } from './pet';
 import { paintPixels, PAINT_W, PAINT_H, ROCKET_SPAN } from './paint';
 import type { Cosmetics, FocusKey, StageCue, StageScene } from './stage';
@@ -108,6 +109,7 @@ const PULSE_VIOLET = new THREE.Color('#c58bff');
 /** Hull colors that turn a little brighter on the Moon (no red dust settling on them). */
 const HULL_COLORS = new Set([C.hab, C.habShade, C.white, '#d8d4cc'].map((c) => new THREE.Color(c).getHex()));
 const WHITE = new THREE.Color('#ffffff');
+const EARTH_GLOW = new THREE.Color('#6f9dff');
 
 /** Rocket hull UVs: v runs from the bottom of the booster to the tip of the nose, so one paint picture wraps the whole rocket. */
 function rocketUV(m: THREE.Mesh) {
@@ -145,6 +147,211 @@ function groundGeometry(radius: number, segments: number, nearCell: number, heig
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
   return geo.toNonIndexed();
+}
+
+// ------------------------------------------------------------------ ground dressing (looks only: never changes the heights)
+
+/** Smooth made-up noise, 0..1, for patches of color on the ground. */
+function noise2(x: number, z: number) {
+  const h = (a: number, b: number) => {
+    const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  };
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  const fx = x - ix;
+  const fz = z - iz;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uz = fz * fz * (3 - 2 * fz);
+  const a = h(ix, iz) + (h(ix + 1, iz) - h(ix, iz)) * ux;
+  const b = h(ix, iz + 1) + (h(ix + 1, iz + 1) - h(ix, iz + 1)) * ux;
+  return a + (b - a) * uz;
+}
+function fbm(x: number, z: number) {
+  return noise2(x, z) * 0.6 + noise2(x * 2.07 + 5.2, z * 2.07 + 1.3) * 0.28 + noise2(x * 4.3 + 9.1, z * 4.3 - 3.7) * 0.12;
+}
+
+/** How steep the ground is at (x, z): rise over run. */
+function slopeAt(height: (x: number, z: number) => number, x: number, z: number) {
+  const e = 0.6;
+  return Math.hypot(height(x + e, z) - height(x - e, z), height(x, z + e) - height(x, z - e)) / (2 * e);
+}
+
+const smooth = THREE.MathUtils.smoothstep;
+
+/** Rock shapes: a chunky boulder, a rounder one and a flat slab (shared by every site). */
+const ROCK_GEOS = [new THREE.DodecahedronGeometry(0.35, 0), new THREE.IcosahedronGeometry(0.33, 0), new THREE.DodecahedronGeometry(0.34, 0).scale(1.3, 0.45, 1)];
+
+interface RockField {
+  seed: number;
+  count: number;
+  rMin: number;
+  rMax: number;
+  sizeMin: number;
+  sizeMax: number;
+  tones: string[];
+  shadows: boolean;
+  /** Extra spots (x, z, size) to place first, such as blocks thrown out around fresh craters. */
+  extra?: Array<[number, number, number]>;
+}
+
+/**
+ * Rocks scattered over the ground, as instanced meshes (one draw call per shape, however many rocks): mostly small
+ * ones, a few big ones, each a slightly different tone. They stay off the base pad and the rover's patrol track.
+ */
+function scatterRocks(height: (x: number, z: number) => number, f: RockField) {
+  const r = rand(f.seed);
+  const spots: Array<[number, number, number]> = [...(f.extra ?? [])];
+  for (let tries = 0; spots.length < f.count + (f.extra?.length ?? 0) && tries < f.count * 6; tries++) {
+    const a = r() * Math.PI * 2;
+    const d = f.rMin + Math.sqrt(r()) * (f.rMax - f.rMin);
+    if (Math.abs(d - ROVER_LOOP) < 0.9) continue;
+    spots.push([Math.cos(a) * d, Math.sin(a) * d, f.sizeMin + (f.sizeMax - f.sizeMin) * r() ** 3]);
+  }
+  const tones = f.tones.map((t) => new THREE.Color(t));
+  const out: THREE.InstancedMesh[] = [];
+  const m4 = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  const p = new THREE.Vector3();
+  const s = new THREE.Vector3();
+  const c = new THREE.Color();
+  const perShape: Array<Array<[number, number, number]>> = ROCK_GEOS.map(() => []);
+  for (const spot of spots) perShape[Math.floor(r() * ROCK_GEOS.length)].push(spot);
+  perShape.forEach((list, k) => {
+    if (!list.length) return;
+    const im = new THREE.InstancedMesh(ROCK_GEOS[k], mat('#ffffff'), list.length);
+    im.name = 'rocks';
+    list.forEach(([x, z, size], i) => {
+      const y = height(x, z);
+      p.set(x, y + 0.08 * size - 0.06 * size * slopeAt(height, x, z), z);
+      s.set(size * (0.8 + r() * 0.4), size * (0.45 + r() * 0.5), size * (0.8 + r() * 0.4));
+      q.setFromEuler(e.set(r() * 0.6, r() * Math.PI * 2, r() * 0.6));
+      im.setMatrixAt(i, m4.compose(p, q, s));
+      im.setColorAt(i, c.copy(tones[Math.floor(r() * tones.length)]).multiplyScalar(0.85 + r() * 0.3));
+    });
+    im.castShadow = f.shadows;
+    im.receiveShadow = true;
+    im.computeBoundingSphere();
+    out.push(im);
+  });
+  return out;
+}
+
+/** Pairs of wheel tracks along the rover's patrol loop, following the ground (slightly darker, half see-through). */
+function roverTracks(height: (x: number, z: number) => number, color: string, alpha: number) {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const index: number[] = [];
+  const tint = new THREE.Color(color);
+  const segs = 180;
+  for (const off of [-0.3, 0.3]) {
+    const base = pos.length / 3;
+    for (let i = 0; i <= segs; i++) {
+      const a = (i / segs) * Math.PI * 2;
+      for (const w of [-0.09, 0.09]) {
+        const rr = ROVER_LOOP + off + w;
+        const x = Math.cos(a) * rr;
+        const z = Math.sin(a) * rr;
+        pos.push(x, height(x, z) + 0.035, z);
+        col.push(tint.r, tint.g, tint.b, alpha * (0.75 + 0.25 * Math.sin(a * 23 + off * 9)));
+      }
+      if (i < segs) {
+        const v = base + i * 2;
+        index.push(v, v + 2, v + 1, v + 1, v + 2, v + 3);
+      }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  geo.setIndex(index);
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, trackMaterial());
+  m.name = 'rover-tracks';
+  m.receiveShadow = true;
+  m.renderOrder = 1;
+  return m;
+}
+
+function trackMaterial() {
+  return mat('#ffffff', { vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1, flatShading: false });
+}
+
+/** Worn footpaths across the flat base pad, from the habitat door out to the places the crew walks to. */
+const FOOTPATHS: Array<Array<[number, number]>> = [
+  [[0, 2.9], [0.6, 4.6], [1.2, 6.6]], // the shelter door
+  [[0, 2.9], [3.2, 3.2], [6.6, 3.6]], // the launch pad
+  [[0, 2.9], [-1.6, 1.6], [-2.4, -0.4]], // the greenhouse
+  [[0.8, 2.6], [2.6, 0.4], [3.4, -0.6]], // the O2 plant
+  [[-0.6, 2.7], [-3.4, 2.6], [-6.8, 2.6]], // the solar panels
+  [[-1.2, -2.2], [-1, -3.2]], // the Workshop
+];
+
+function footpaths() {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const index: number[] = [];
+  const half = 0.34;
+  for (const path of FOOTPATHS) {
+    // Walk along the path in short steps; each step is a strip of three columns (soft edge, middle, soft edge).
+    const pts: Array<[number, number]> = [];
+    for (let k = 0; k < path.length - 1; k++) {
+      const [ax, az] = path[k];
+      const [bx, bz] = path[k + 1];
+      const n = Math.max(2, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.5));
+      for (let i = 0; i < n; i++) pts.push([ax + ((bx - ax) * i) / n, az + ((bz - az) * i) / n]);
+    }
+    pts.push(path[path.length - 1]);
+    const base = pos.length / 3;
+    pts.forEach(([x, z], i) => {
+      const [nx, nz] = pts[Math.min(pts.length - 1, i + 1)];
+      const [px, pz] = pts[Math.max(0, i - 1)];
+      let dx = nx - px;
+      let dz = nz - pz;
+      const len = Math.hypot(dx, dz) || 1;
+      dx /= len;
+      dz /= len;
+      const ends = Math.min(1, Math.min(i, pts.length - 1 - i) / 2);
+      for (const side of [-1, 0, 1]) {
+        pos.push(x - dz * half * side, 0.02, z + dx * half * side);
+        col.push(1, 1, 1, side === 0 ? 0.55 * ends : 0);
+      }
+      if (i < pts.length - 1) {
+        const v = base + i * 3;
+        index.push(v, v + 1, v + 3, v + 1, v + 4, v + 3, v + 1, v + 2, v + 4, v + 2, v + 5, v + 4);
+      }
+    });
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  geo.setIndex(index);
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, trackMaterial());
+  m.name = 'footpaths';
+  m.receiveShadow = true;
+  m.renderOrder = 1;
+  return m;
+}
+
+/** Joins non-indexed geometries with positions (and normals) into one, for a single draw call. */
+function mergeFlat(list: THREE.BufferGeometry[]) {
+  let n = 0;
+  for (const g of list) n += g.attributes.position.count;
+  const pos = new Float32Array(n * 3);
+  const nor = new Float32Array(n * 3);
+  let o = 0;
+  for (const g of list) {
+    pos.set(g.attributes.position.array as Float32Array, o * 3);
+    if (g.attributes.normal) nor.set(g.attributes.normal.array as Float32Array, o * 3);
+    o += g.attributes.position.count;
+    g.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  return out;
 }
 
 /** Solar panel rows: 3 at the start, then one more for each panel upgrade. */
@@ -196,7 +403,25 @@ export class Diorama {
   private scene?: StageScene;
   private prevLevels?: Levels;
   private pops: Array<{ obj: THREE.Object3D; t: number }> = [];
-  private dust: THREE.Points;
+  /** Dust in the Mars air: drifting specks, or streaks of blowing dust in a storm (see atmosphere.ts). */
+  readonly motes = new DustMotes();
+  /** Its color right now (the 3D stage darkens it at night and reddens it in a storm). */
+  readonly moteColor = new THREE.Color('#e8c08a');
+  /** A cool light from the side away from the Sun: the sky's fill on Mars, earthshine on the Moon. */
+  readonly fillLight: THREE.DirectionalLight;
+  /** Glows around the base's lamps, and the pools of light they throw on the ground at night. */
+  private halos = new Halos(40);
+  private pools = new GroundSpots(24);
+  /** Soft blob shadows under the buildings, used instead of real shadows on the 'low' quality tier. */
+  private blobs = new GroundSpots(16, true);
+  private glowSrc: Array<{ m: THREE.MeshPhongMaterial; root: THREE.Object3D; halo: number; haloK: number; pool: number; poolK: number; color?: THREE.Color }> = [];
+  private blobSrc: Array<{ root: THREE.Object3D; i: number }> = [];
+  /** How dark it is around the base (0 bright day .. 1 night), for the lamp glows. Set by the 3D stage. */
+  gloom = 0;
+  private quality: Quality = 'high';
+  private paths: THREE.Mesh;
+  private earthSun?: (dir: THREE.Vector3) => void;
+  private earthGlow?: Halos;
   private trail: THREE.Points;
   private night = 0;
   private storming = 0;
@@ -265,7 +490,10 @@ export class Diorama {
     sc.near = 1;
     sc.far = 80;
     this.sunLight.shadow.bias = -0.002;
-    this.group.add(this.ambient, this.sunLight, this.sunLight.target);
+    this.sunLight.shadow.normalBias = 0.02;
+    this.fillLight = new THREE.DirectionalLight('#8fa6d8', 0.3);
+    this.fillLight.position.set(-20, 14, 18);
+    this.group.add(this.ambient, this.sunLight, this.sunLight.target, this.fillLight);
 
     this.marsGround = this.buildMarsGround();
     this.group.add(this.marsGround);
@@ -313,8 +541,11 @@ export class Diorama {
     this.group.add(this.scan);
     for (let i = 0; i < 6; i++) this.crew.push(this.buildAstronaut(i));
 
-    this.dust = this.buildDust();
-    this.group.add(this.dust);
+    this.group.add(this.motes.points);
+    this.paths = footpaths();
+    this.group.add(this.paths, this.pools.mesh, this.blobs.mesh, this.halos.points);
+    this.blobs.mesh.visible = false;
+    this.buildGlows(hab, o2, greenhouse, shelter, workshop, pad);
     this.trail = this.buildTrail();
     this.group.add(this.trail);
 
@@ -366,37 +597,42 @@ export class Diorama {
     return this.landing === 'arcadia' ? arcadiaHeight(x, z) : marsHeight(x, z);
   }
 
-  /** Gale Crater from real Mars Trek elevations (Mount Sharp included), plus rocks near the base. */
+  /**
+   * Gale Crater from real Mars Trek elevations (Mount Sharp included). Only the colors are dressed up: light dusty
+   * flats, darker rocky slopes, faint layers on the high ground (Mount Sharp really is built of layered rock), patches
+   * of darker sand, rocks and the rover's tracks. The heights are exactly marsHeight's.
+   */
   private buildMarsGround() {
     const g = new THREE.Group();
     g.name = 'mars-ground';
     const r = rand(7);
-    const cA = new THREE.Color(C.rust);
-    const cB = new THREE.Color(C.oxide);
-    const cC = new THREE.Color(C.dust);
-    const geo = groundGeometry(GROUND_RADIUS, 72, 1.8, marsHeight, (_x, _z, y) => {
-      const k = r();
-      const c = k < 0.45 ? cA : k < 0.85 ? cB : cC;
-      return c.clone().lerp(cC, THREE.MathUtils.clamp(y / 8, 0, 1) * 0.5);
+    const flat = new THREE.Color('#c27a46');
+    const flat2 = new THREE.Color('#b0653a');
+    const rock = new THREE.Color('#6e2f17');
+    const sand = new THREE.Color('#7d4632');
+    const pad = new THREE.Color('#c98a58');
+    const high = new THREE.Color('#d59a66');
+    const geo = groundGeometry(GROUND_RADIUS, 72, 1.8, marsHeight, (x, z, y) => {
+      const rr = Math.hypot(x, z);
+      const slope = slopeAt(marsHeight, x, z);
+      const c = flat.clone().lerp(flat2, fbm(x * 0.09, z * 0.09));
+      c.lerp(high, smooth(y, 2, 9) * 0.45);
+      c.lerp(rock, smooth(slope, 0.12, 0.5) * 0.85);
+      c.lerp(sand, smooth(fbm(x * 0.045 + 9, z * 0.045 - 3), 0.58, 0.72) * (1 - smooth(slope, 0.05, 0.25)) * smooth(rr, 18, 30) * 0.8);
+      if (y > 2.5) c.multiplyScalar(1 + 0.07 * Math.sin(y * 2.3));
+      c.lerp(pad, (1 - smooth(rr, 8, 12)) * 0.5);
+      return c.multiplyScalar(0.94 + r() * 0.12);
     });
     const ground = new THREE.Mesh(geo, mat('#ffffff', { vertexColors: true }));
     ground.receiveShadow = true;
     g.add(ground);
-
-    // Rocks.
-    const rockMat = mat('#6e3418');
-    const rockGeo = new THREE.DodecahedronGeometry(0.35, 0);
-    for (let i = 0; i < 60; i++) {
-      const a = r() * Math.PI * 2;
-      const d = 9 + r() * 16;
-      const x = Math.cos(a) * d;
-      const z = Math.sin(a) * d;
-      const rock = mesh(rockGeo, rockMat, x, marsHeight(x, z) + 0.1, z);
-      const s = 0.5 + r() * 1.6;
-      rock.scale.set(s, s * (0.5 + r() * 0.5), s);
-      rock.rotation.set(r() * 3, r() * 3, r() * 3);
-      g.add(rock);
-    }
+    const tones = ['#6e3418', '#5a2a14', '#7f3f1f', '#4f2617'];
+    g.add(
+      ...scatterRocks(marsHeight, { seed: 71, count: 150, rMin: 11, rMax: 30, sizeMin: 0.35, sizeMax: 1.9, tones, shadows: true }),
+      ...scatterRocks(marsHeight, { seed: 72, count: 70, rMin: 30, rMax: 62, sizeMin: 1.2, sizeMax: 3.6, tones, shadows: false }),
+      ...scatterRocks(marsHeight, { seed: 73, count: 180, rMin: 10.8, rMax: 24, sizeMin: 0.1, sizeMax: 0.32, tones, shadows: false }),
+      roverTracks(marsHeight, '#4a2010', 0.42),
+    );
     return g;
   }
 
@@ -408,86 +644,110 @@ export class Diorama {
     const g = new THREE.Group();
     g.name = 'arcadia-ground';
     const r = rand(4666);
-    const tones = ['#94543a', '#a2623f', '#b27a55'].map((c) => new THREE.Color(c));
+    const a = new THREE.Color('#a2623f');
+    const b = new THREE.Color('#b47c56');
+    const dark = new THREE.Color('#84492f');
     const frost = new THREE.Color('#e3e8ec');
     const geo = groundGeometry(GROUND_RADIUS, 72, 1.8, arcadiaHeight, (x, z) => {
-      const c = tones[Math.floor(r() * tones.length)].clone();
-      return c.lerp(frost, frostAmount(x, z) * 0.8);
+      const c = a.clone().lerp(b, fbm(x * 0.08, z * 0.08));
+      c.lerp(dark, smooth(fbm(x * 0.05 - 4, z * 0.05 + 7), 0.6, 0.75) * 0.6);
+      c.lerp(frost, frostAmount(x, z) * 0.8);
+      return c.multiplyScalar(0.94 + r() * 0.12);
     });
     const ground = new THREE.Mesh(geo, mat('#ffffff', { vertexColors: true }));
     ground.receiveShadow = true;
     g.add(ground);
 
-    // Frost patches: thin, flat, white shapes lying on the ground, mostly where the ground is already frosty.
-    const frostMat = mat('#eef2f5', { transparent: true, opacity: 0.85, emissive: new THREE.Color('#8fa3b5'), emissiveIntensity: 0.15 });
-    let placed = 0;
-    for (let tries = 0; placed < 34 && tries < 400; tries++) {
-      const a = r() * Math.PI * 2;
-      const d = 13 + r() * 30;
-      const x = Math.cos(a) * d;
-      const z = Math.sin(a) * d;
+    // Frost patches: thin, ragged white shapes lying on the ground, mostly where the ground is already frosty.
+    // All of them are one mesh (one draw call).
+    const shapes: THREE.BufferGeometry[] = [];
+    for (let tries = 0; shapes.length < 40 && tries < 500; tries++) {
+      const ang = r() * Math.PI * 2;
+      const d = 13 + r() * 34;
+      const x = Math.cos(ang) * d;
+      const z = Math.sin(ang) * d;
       if (frostAmount(x, z) < 0.15 && r() > 0.25) continue;
-      const patch = new THREE.Mesh(new THREE.CircleGeometry(0.5 + r() * 1.6, 7), frostMat);
-      patch.name = 'frost';
-      patch.rotation.x = -Math.PI / 2;
-      patch.rotation.z = r() * Math.PI;
-      patch.scale.set(1 + r() * 0.8, 0.6 + r() * 0.6, 1);
-      patch.position.set(x, arcadiaHeight(x, z) + 0.05, z);
-      patch.receiveShadow = true;
-      g.add(patch);
-      placed++;
+      const sides = 9;
+      const radius = 0.4 + r() * 1.3;
+      const pts: THREE.Vector2[] = [];
+      for (let i = 0; i < sides; i++) {
+        const t = (i / sides) * Math.PI * 2;
+        const k = radius * (0.6 + r() * 0.5);
+        pts.push(new THREE.Vector2(Math.cos(t) * k * (1.2 + r() * 0.4), Math.sin(t) * k * 0.8));
+      }
+      const shape = new THREE.ShapeGeometry(new THREE.Shape(pts));
+      shape.rotateX(-Math.PI / 2);
+      shape.rotateY(r() * Math.PI);
+      shape.translate(x, arcadiaHeight(x, z) + 0.06, z);
+      shapes.push(shape.index ? shape.toNonIndexed() : shape);
     }
+    const frostMat = mat('#e8eff5', { transparent: true, opacity: 0.5, emissive: new THREE.Color('#9fb3c5'), emissiveIntensity: 0.12, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+    const patches = new THREE.Mesh(mergeFlat(shapes), frostMat);
+    patches.name = 'frost';
+    patches.receiveShadow = true;
+    patches.renderOrder = 1;
+    g.add(patches);
 
     // A few rocks: these plains are smooth.
-    const rockMat = mat('#6e3418');
-    const rockGeo = new THREE.DodecahedronGeometry(0.3, 0);
-    for (let i = 0; i < 24; i++) {
-      const a = r() * Math.PI * 2;
-      const d = 10 + r() * 18;
-      const x = Math.cos(a) * d;
-      const z = Math.sin(a) * d;
-      const rock = mesh(rockGeo, rockMat, x, arcadiaHeight(x, z) + 0.08, z);
-      const s = 0.4 + r() * 1.0;
-      rock.scale.set(s, s * (0.5 + r() * 0.4), s);
-      rock.rotation.set(r() * 3, r() * 3, r() * 3);
-      g.add(rock);
-    }
+    const tones = ['#6e3418', '#5e3020', '#7a4429'];
+    g.add(
+      ...scatterRocks(arcadiaHeight, { seed: 81, count: 40, rMin: 11, rMax: 34, sizeMin: 0.3, sizeMax: 1.2, tones, shadows: true }),
+      ...scatterRocks(arcadiaHeight, { seed: 82, count: 90, rMin: 10.8, rMax: 26, sizeMin: 0.08, sizeMax: 0.26, tones, shadows: false }),
+      roverTracks(arcadiaHeight, '#5a2c18', 0.38),
+    );
     return g;
   }
 
-  /** Made-up Moon ground: gray regolith, lots of craters, boulders, and the Earth in the sky. */
+  /**
+   * Made-up Moon ground: gray regolith, lots of craters (bright fresh rims, darker floors), boulders thrown out
+   * around the fresh craters, and the Earth in the sky. No haze: with no air, far hills are as crisp as near ones.
+   */
   private buildMoonGround() {
     const g = new THREE.Group();
     g.name = 'moon-ground';
     const r = rand(1972);
     const greys = ['#8d8b87', '#7d7c79', '#96948f'].map((c) => new THREE.Color(c));
-    const bright = new THREE.Color('#c4c2bc');
-    const dark = new THREE.Color('#4f4f52');
+    const bright = new THREE.Color('#cbc9c3');
+    const dark = new THREE.Color('#4a4a4d');
     const geo = groundGeometry(110, 84, 1.2, moonHeight, (x, z) => {
-      const base = greys[Math.floor(r() * greys.length)].clone();
+      const base = greys[Math.floor(r() * greys.length)].clone().lerp(greys[2], fbm(x * 0.1, z * 0.1) * 0.6);
       const t = moonTone(x, z);
-      return t >= 0 ? base.lerp(bright, t * 2) : base.lerp(dark, -t * 2);
+      const c = t >= 0 ? base.lerp(bright, t * 2.2) : base.lerp(dark, -t * 2.4);
+      // Steep crater walls show fresher, brighter regolith.
+      c.lerp(bright, smooth(slopeAt(moonHeight, x, z), 0.25, 0.7) * 0.3);
+      return c.multiplyScalar(0.93 + fbm(x * 0.35, z * 0.35) * 0.14);
     });
     const ground = new THREE.Mesh(geo, mat('#ffffff', { vertexColors: true }));
     ground.receiveShadow = true;
     g.add(ground);
 
-    // Boulders.
-    const rockMat = mat('#5d5d60');
-    const rockGeo = new THREE.DodecahedronGeometry(0.35, 0);
-    for (let i = 0; i < 80; i++) {
-      const a = r() * Math.PI * 2;
-      const d = 9 + r() * 30;
-      const x = Math.cos(a) * d;
-      const z = Math.sin(a) * d;
-      const rock = mesh(rockGeo, rockMat, x, moonHeight(x, z) + 0.1, z);
-      const s = 0.4 + r() * 1.4;
-      rock.scale.set(s, s * (0.6 + r() * 0.5), s);
-      rock.rotation.set(r() * 3, r() * 3, r() * 3);
-      g.add(rock);
+    // Boulders: scattered, plus blocks thrown out around the rims of the small fresh craters.
+    const ejecta: Array<[number, number, number]> = [];
+    for (const c of moonCraters()) {
+      if (c.r > 2.7 || Math.hypot(c.x, c.z) > 45) continue;
+      const n = 3 + Math.floor(r() * 4);
+      for (let i = 0; i < n; i++) {
+        const a = r() * Math.PI * 2;
+        const d = c.r * (1.05 + r() * 0.45);
+        ejecta.push([c.x + Math.cos(a) * d, c.z + Math.sin(a) * d, 0.3 + r() * 0.7]);
+      }
     }
+    const tones = ['#5d5d60', '#6b6a68', '#4c4c50', '#7a7976'];
+    g.add(
+      ...scatterRocks(moonHeight, { seed: 91, count: 110, rMin: 11, rMax: 40, sizeMin: 0.35, sizeMax: 1.8, tones, shadows: true, extra: ejecta }),
+      ...scatterRocks(moonHeight, { seed: 92, count: 200, rMin: 10.8, rMax: 26, sizeMin: 0.08, sizeMax: 0.3, tones, shadows: false }),
+      roverTracks(moonHeight, '#3a3a3e', 0.45),
+    );
 
-    g.add(buildEarth());
+    // The Earth, lit by the Sun (so it shows phases), with a soft blue glow around it.
+    const earth = buildLitEarth();
+    this.earthSun = earth.setSun;
+    g.add(earth.mesh);
+    this.earthGlow = new Halos(1, 160);
+    this.earthGlow.add(EARTH_POS.x, EARTH_POS.y, EARTH_POS.z, EARTH_RADIUS * 7);
+    this.earthGlow.points.name = 'earth-glow';
+    this.earthGlow.points.renderOrder = -1;
+    g.add(this.earthGlow.points);
     return g;
   }
 
@@ -796,19 +1056,107 @@ export class Diorama {
     return out.set(x, this.height(x, z), z);
   }
 
-  private buildDust() {
-    const n = 500;
-    const geo = new THREE.BufferGeometry();
-    const p = new Float32Array(n * 3);
-    const r = rand(99);
-    for (let i = 0; i < n; i++) {
-      p[i * 3] = (r() - 0.5) * 50;
-      p[i * 3 + 1] = r() * 10;
-      p[i * 3 + 2] = (r() - 0.5) * 50;
+  /**
+   * Where the lamps are: a soft glow around each (a cheap stand-in for bloom), and for the bigger ones a pool of
+   * light on the ground at night. Each follows its own material's glow, so power, blinking and the Hangar's light
+   * color all show up in the glow too.
+   */
+  private buildGlows(hab: THREE.Object3D, o2: THREE.Object3D, greenhouse: THREE.Object3D, shelter: THREE.Object3D, workshop: THREE.Object3D, pad: THREE.Object3D) {
+    const add = (m: THREE.MeshPhongMaterial, root: THREE.Object3D, hx: number, hy: number, hz: number, size: number, haloK: number, pool?: [number, number, number, number?], poolK = 0, color?: string) => {
+      const halo = this.halos.add(hx, hy, hz, size);
+      const p = pool ? this.pools.add(pool[0], 0.03, pool[1], pool[2], pool[3] ?? pool[2]) : -1;
+      this.glowSrc.push({ m, root, halo, haloK, pool: p, poolK, color: color ? new THREE.Color(color) : undefined });
+    };
+    // Habitat windows, heater vents and the roof antenna's light.
+    const win = this.glow.hab[0];
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + 0.3;
+      add(win, hab, Math.cos(a) * 2.5, 0.92, Math.sin(a) * 2.5, 1.3, 0.75, [Math.cos(a) * 3.4, Math.sin(a) * 3.4, 1.5], 0.45);
     }
-    geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
-    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#e8b57a', size: 0.18, transparent: true, opacity: 0 }));
-    return pts;
+    for (const sx of [-1, 1]) add(this.glow.heater[0], hab, sx * 1.6, 0.32, -1.95, 0.9, 0.5, [sx * 1.6, -2.5, 0.9], 0.35);
+    add(this.commsLight, hab, -0.85, 2.72, -0.85, 0.7, 0.6);
+    // The shelter door, the greenhouses' grow lights, the O2 plant's lights.
+    const [sx, sz] = SPOT.shelter;
+    add(this.glow.shelter[0], shelter, sx, 0.6, sz + 1.95, 1.7, 0.75, [sx, sz + 2.9, 1.9], 0.6);
+    const [gx, gz] = SPOT.greenhouse;
+    add(this.glow.greenhouse[0], greenhouse, gx, 1.0, gz, 4.4, 0.32, [gx, gz, 3.0], 0.5, '#8fe36a');
+    const [dx, dz] = SPOT.dome2;
+    add(this.glow.greenhouse[1], this.upgrades.dome2[0], dx, 0.9, dz, 4, 0.32, [dx, dz, 2.7], 0.5, '#8fe36a');
+    const [ox, oz] = SPOT.o2;
+    add(this.glow.o2[0], o2, ox - 0.5, 0.9, oz + 0.95, 0.9, 0.6, [ox - 0.1, oz + 1.6, 1.3], 0.3);
+    add(this.glow.fuel[0], o2, ox + 0.2, 0.9, oz + 0.95, 0.9, 0.6);
+    // Upgrades: battery lamps, the radiation monitor, the reactor core, the second O2 plant.
+    const [bx, bz] = SPOT.battery;
+    for (let i = 0; i < 3; i++) add(this.glow.battery[0], this.upgrades.battery[0], bx + i * 0.95, 0.7, bz + 0.5, 0.75, 0.6, i === 1 ? [bx + 0.95, bz + 1.3, 1.8, 1.2] : undefined, 0.35);
+    const [mx, mz] = SPOT.monitor;
+    add(this.glow.monitor[0], this.upgrades.monitor[0], mx, 3.5, mz, 1.1, 0.7);
+    const [rx, rz] = SPOT.reactor;
+    add(this.glow.reactor[0], this.upgrades.reactor[0], rx, 1.4, rz + 1.2, 1.3, 0.6, [rx, rz + 1.9, 1.6], 0.4);
+    const [x2, z2] = SPOT.moxie2;
+    add(this.glow.fuel[2], this.upgrades.moxie2[0], x2, 1.2, z2 + 0.95, 0.9, 0.6);
+    // The countdown lights on the launch tower.
+    const [kx, kz] = SPOT.rocket;
+    this.towerLights.forEach((m, i) => add(m, pad, kx - 1.4, 2.1 + i * 0.9, kz + 0.32, 0.75, 0.4));
+
+    // Blob shadows (only shown on the 'low' tier, where real shadows are off).
+    const blob = (root: THREE.Object3D, x: number, z: number, rx: number, rz = rx) => this.blobSrc.push({ root, i: this.blobs.add(x, 0.025, z, rx, rz) });
+    blob(hab, 0.2, 0.2, 3.1);
+    blob(greenhouse, gx, gz, 2.2);
+    blob(this.upgrades.dome2[0], dx, dz, 2);
+    blob(shelter, sx, sz, 2.1, 2.3);
+    blob(workshop, SPOT.workshop[0], SPOT.workshop[1], 1.7, 1.4);
+    blob(o2, ox + 0.2, oz, 1.8, 1.2);
+    blob(pad, kx, kz, 2.1);
+    blob(this.upgrades.battery[0], bx + 0.95, bz, 1.7, 0.8);
+    blob(this.upgrades.moxie2[0], x2 - 0.3, z2, 1.6);
+    blob(this.upgrades.reactor[0], rx, rz, 3.4, 1.4);
+    blob(this.upgrades.monitor[0], mx, mz, 0.7);
+  }
+
+  /** Update the lamp glows, light pools and blob shadows (a few numbers each; nothing allocated). */
+  private updateGlows() {
+    const g = this.gloom;
+    for (const s of this.glowSrc) {
+      const e = this.shown(s.root) ? Math.min(2.5, s.m.emissiveIntensity) : 0;
+      const color = s.color ?? s.m.emissive;
+      this.halos.set(s.halo, color, e * s.haloK * (0.18 + 0.82 * g));
+      // Pools of lamplight only show once it is dark.
+      if (s.pool >= 0) this.pools.set(s.pool, color, e * s.poolK * this.night * 0.7);
+    }
+    this.halos.commit();
+    this.pools.commit();
+    if (this.blobs.mesh.visible) {
+      const k = 0.2 + 0.35 * (1 - this.night);
+      for (const b of this.blobSrc) this.blobs.set(b.i, WHITE, this.shown(b.root) ? k : 0);
+      this.blobs.commit();
+    }
+  }
+
+  /**
+   * The quality tier: 'low' turns real shadows off (soft blob shadows under the buildings instead) and keeps much
+   * less dust in the air.
+   */
+  setQuality(q: Quality) {
+    this.quality = q;
+    this.sunLight.castShadow = q === 'high';
+    this.blobs.mesh.visible = q === 'low';
+    this.motes.setQuality(q);
+  }
+
+  get qualityTier(): Quality {
+    return this.quality;
+  }
+
+  /**
+   * On the Moon: which way the sunlight falling on the Earth comes from (its phase), and how much of the Earth's
+   * face is lit (0 new .. 1 full), for its glow.
+   */
+  setEarthLight(dir: THREE.Vector3, lit: number) {
+    this.earthSun?.(dir);
+    if (this.earthGlow) {
+      this.earthGlow.set(0, EARTH_GLOW, 0.18 + 0.5 * lit);
+      this.earthGlow.commit();
+    }
   }
 
   /** A glowing rectangle at the blueprint's build line (a unit square, scaled to fit). */
@@ -857,7 +1205,9 @@ export class Diorama {
     for (const h of this.hull) this.applyTint(h);
     this.ambient.groundColor.set(moon ? '#3a3a40' : '#6b2e16');
     // No air, no dust.
-    if (moon) (this.dust.material as THREE.PointsMaterial).opacity = 0;
+    this.motes.setWeather((this.scene?.weather ?? 'clear') as DustWeather, !moon);
+    // Worn paths look darker than the undisturbed ground, on both worlds.
+    (this.paths.material as THREE.MeshPhongMaterial).color.set(moon ? '#3c3c40' : ice ? '#5a2c18' : '#4a2010');
     // With no air, dust kicked up on the Moon flies out and falls back instead of billowing.
     this.puffs.drag = moon ? 0 : 1.4;
     this.puffs.gravity = moon ? 1.6 : -0.15;
@@ -929,8 +1279,8 @@ export class Diorama {
     this.rocketPaint = tex;
     hull.map = tex;
     this.tint(hull, '#ffffff'); // the picture has the colors
-    hull.shininess = p.shiny ? 60 : 4;
-    hull.specular.set(p.shiny ? '#fff0b0' : '#111111');
+    hull.shininess = p.shiny ? 70 : 26;
+    hull.specular.set(p.shiny ? '#fff0b0' : '#4a463e');
     this.tint(this.rocketFins, p.fins);
   }
 
@@ -971,6 +1321,7 @@ export class Diorama {
 
   setScene(s: StageScene) {
     this.setSite(s.site ?? 'mars', s.landing);
+    this.motes.setWeather(s.weather as DustWeather, this.site !== 'moon');
     const prev = this.prevLevels;
     this.scene = s;
     // Panels: 3 rows to start, plus one per upgrade.
@@ -1097,7 +1448,7 @@ export class Diorama {
 
   setNight(night: number) {
     this.night = night;
-    this.glow.hab.forEach((m) => (m.emissiveIntensity = 0.3 + night * 1.2));
+    this.glow.hab.forEach((m) => (m.emissiveIntensity = 0.45 + night * 1.5));
     // Glow-in-the-dark suits: a soft glow by day, bright as the sky darkens.
     for (const m of this.suitMats) m.emissiveIntensity = this.suitGlow ? 0.3 + night * 1.4 : 0;
   }
@@ -1152,7 +1503,7 @@ export class Diorama {
     // Monitor blink.
     if (s.alloc.monitor) this.glow.monitor.forEach((m) => (m.emissiveIntensity = Math.sin(time * 6) > 0 ? 1.6 : 0.2));
     // Greenhouse grow lights: brighter with more power, and they glow through the night.
-    const gh = 0.1 + Math.min(1, s.alloc.greenhouse / 3) * 0.8 + this.night * 0.6;
+    const gh = 0.15 + Math.min(1, s.alloc.greenhouse / 3) * 0.8 + this.night * 0.9;
     this.glow.greenhouse.forEach((m) => (m.emissiveIntensity = gh));
     // Reactor hum.
     this.glow.reactor.forEach((m) => (m.emissiveIntensity = 0.8 + Math.sin(time * 2) * 0.3));
@@ -1222,19 +1573,9 @@ export class Diorama {
     (this.scan.material as THREE.LineBasicMaterial).opacity = reduced ? 0.8 : 0.55 + 0.4 * Math.abs(Math.sin(time * 4));
     this.drones.update(dt, time, this.buildSite ? Math.min(3, s.alloc.build) : 0, this.buildSite, this.sparks, reduced);
 
-    // Dust particles drift when it's dusty (never on the Moon: there is no wind to lift it).
-    const dustTarget = this.site === 'moon' ? 0 : s.weather === 'storm' ? 0.85 : s.weather === 'dusty' ? 0.5 : 0;
-    const dm = this.dust.material as THREE.PointsMaterial;
-    dm.opacity += (dustTarget - dm.opacity) * Math.min(1, dt * 2);
-    if (dm.opacity > 0.01 && !reduced) {
-      const p = this.dust.geometry.attributes.position as THREE.BufferAttribute;
-      for (let i = 0; i < p.count; i++) {
-        let x = p.getX(i) + dt * 3;
-        if (x > 25) x -= 50;
-        p.setX(i, x);
-      }
-      p.needsUpdate = true;
-    }
+    // Dust in the air: specks on calm days, blowing streaks in a storm (never on the Moon: no wind to lift it).
+    // The GPU moves it; this only eases the amount toward the weather.
+    this.motes.update(dt, reduced, this.moteColor);
     this.storming = Math.max(0, this.storming - dt * 0.35);
 
     // Life around the base.
@@ -1251,6 +1592,7 @@ export class Diorama {
 
     this.sparks.update(dt);
     this.puffs.update(dt);
+    this.updateGlows();
   }
 
   /** A radio pulse reached the dish: a flash and a little burst of light. */
@@ -1269,7 +1611,7 @@ export class Diorama {
   }
 
   dustLevel() {
-    return (this.dust.material as THREE.PointsMaterial).opacity;
+    return this.motes.opacity;
   }
 
   // ------------------------------------------------------------------ tapping parts of the base

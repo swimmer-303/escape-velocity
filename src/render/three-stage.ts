@@ -7,8 +7,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Diorama, FOCUS_LABELS, LAUNCH_TIMELINE } from './diorama';
-import { SNAP, makePostMaterial, makeSkyMaterial } from './retro';
+import { SNAP, makePostMaterial } from './retro';
 import { POINT_SCALE } from './fx';
+import { makeWorldSky, MarsMoons, detectQuality, SLOW_FRAME, WATCH_FROM, WATCH_TO, type Quality } from './atmosphere';
+import { moonSunDirection, EARTH_DIR } from './moon';
 import { CameraMove, framePose, overviewPose, isTap, OVERVIEW_TARGET, OVERVIEW_POSITION, OVERVIEW_MIN_DISTANCE, FOCUS_MIN_DISTANCE } from './focus';
 import type { Cosmetics, FocusKey, Stage, StageCue, StageScene } from './stage';
 
@@ -20,6 +22,54 @@ const _introSph = new THREE.Spherical();
 const _introOff = new THREE.Vector3();
 const INTRO_FROM_TARGET = new THREE.Vector3(0, 2.4, 0);
 const introEase = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+// The light and sky (set every frame while a sol plays, so all of it is made once, here).
+const _sun = new THREE.Vector3();
+const _c = new THREE.Color();
+const _earthLight = new THREE.Vector3();
+const _toMoon = new THREE.Vector3();
+const col = (hex: string) => new THREE.Color(hex);
+const MARS = {
+  zenDay: col('#b27c54'),
+  horDay: col('#e8bf8e'),
+  horIce: col('#e3c4a4'),
+  zenDusk: col('#43394a'),
+  horDusk: col('#ad7a62'),
+  zenNight: col('#05050d'),
+  horNight: col('#151327'),
+  zenStorm: col('#5e301a'),
+  horStorm: col('#94512b'),
+  sun: col('#fff6e2'),
+  sunDusk: col('#eef3ff'),
+  glow: col('#fff0d2'),
+  key: col('#ffe6c2'),
+  keyDusk: col('#ffb98e'),
+  skyDay: col('#f2d0a4'),
+  skyNight: col('#44549a'),
+  skyStorm: col('#b9774a'),
+  groundDay: col('#6b2e16'),
+  groundNight: col('#1c1220'),
+  fill: col('#86a2dc'),
+  fillNight: col('#5868a8'),
+  mote: col('#ecc590'),
+  moteStorm: col('#b46e3d'),
+  postDust: col('#c98a52'),
+  postStorm: col('#8a3f1e'),
+};
+const MOON = {
+  zenith: col('#000000'),
+  horizon: col('#030308'),
+  sun: col('#ffffff'),
+  sky: col('#1d2232'),
+  skyNight: col('#141a2c'),
+  ground: col('#2a2a2e'),
+  earthshine: col('#a4bcff'),
+};
+/** The Sun's disc on Mars (it looks about two-thirds as wide as from Earth; drawn bigger so it shows up). */
+const MARS_SUN_SIZE = Math.cos(THREE.MathUtils.degToRad(0.75));
+/** On the Moon: about as wide as from Earth, drawn a little bigger. */
+const MOON_SUN_SIZE = Math.cos(THREE.MathUtils.degToRad(0.85));
+/** Up to this many frame times are sampled to decide if the device is slow. */
+const WATCH_MAX = 240;
 
 export class ThreeStage implements Stage {
   private el?: HTMLElement;
@@ -32,6 +82,13 @@ export class ThreeStage implements Stage {
   private postScene = new THREE.Scene();
   private postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private sky!: THREE.ShaderMaterial;
+  private marsMoons = new MarsMoons();
+  private quality: Quality = 'high';
+  /** Frame times for the slow-device check (see loop). */
+  private watch = { t: 0, n: 0, done: false, dt: new Float32Array(WATCH_MAX) };
+  /** The gentle up-and-down "breathing" of the idle camera, applied this frame (taken off again before the next). */
+  private breath = 0;
+  private frameNo = 0;
   private diorama!: Diorama;
   private clock = new THREE.Clock();
   private raf = 0;
@@ -85,7 +142,8 @@ export class ThreeStage implements Stage {
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power', alpha: false });
     this.renderer.setPixelRatio(1);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.BasicShadowMap;
+    // One small shadow map with softened edges (the 'low' tier turns shadows off; see setQuality).
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     // The Workshop's blueprint fills in from the bottom up (a clipping plane).
     this.renderer.localClippingEnabled = true;
     this.renderer.domElement.setAttribute('aria-hidden', 'true');
@@ -108,14 +166,20 @@ export class ThreeStage implements Stage {
     this.post = makePostMaterial(this.target);
     this.postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.post));
 
-    this.sky = makeSkyMaterial();
-    const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(180, 24, 12), this.sky);
+    this.sky = makeWorldSky();
+    const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16), this.sky);
     skyMesh.frustumCulled = false;
-    this.scene.add(skyMesh);
-    this.scene.fog = new THREE.Fog('#d9a066', 40, 150);
+    skyMesh.renderOrder = -2;
+    this.scene.add(skyMesh, this.marsMoons.group);
+    // Haze that thickens with distance (squared exponential: near things stay crisp, far ridges fade in layers).
+    this.scene.fog = new THREE.FogExp2('#e8bf8e', 0.0078);
 
     this.diorama = new Diorama();
     this.scene.add(this.diorama.group);
+    const sc = this.diorama.sunLight.shadow.camera;
+    sc.far = 140; // the light sits 60 units out along the Sun's direction (long, low shadows reach far)
+    this.diorama.sunLight.shadow.autoUpdate = false;
+    this.setQuality(detectQuality());
     if (this.looks) this.diorama.setCosmetics(this.looks);
 
     this.camera.position.copy(OVERVIEW_POSITION);
@@ -186,8 +250,8 @@ export class ThreeStage implements Stage {
     const siteChanged = (scene.site ?? 'mars') !== (this.sceneInfo?.site ?? 'mars') || (scene.landing ?? 'gale') !== (this.sceneInfo?.landing ?? 'gale');
     this.sceneInfo = scene;
     this.diorama?.setScene(scene);
-    // A new world needs a new sky and new light right away.
-    if (siteChanged && this.sky) this.setTimeOfDay(this.dayT);
+    // A new world (or new weather) needs a new sky and new light right away.
+    if (this.sky) this.setTimeOfDay(this.dayT);
     if (!this.diorama) return;
     this.refreshLookMenu();
     // Back to the whole base if the world changed or the part we were looking at is gone.
@@ -198,63 +262,116 @@ export class ThreeStage implements Stage {
     this.dayT = t;
     if (!this.sky) return;
     this.diorama.setDayTime(t);
-    // Sun travels east to west during the first half of the sol, then it's night.
+    // Called every frame while a sol plays: everything below reuses preallocated objects.
+    if (this.sceneInfo?.site === 'moon') this.lookMoon(t);
+    else this.lookMars(t);
+  }
+
+  /**
+   * Mars: a butterscotch sky (dust in the air scatters red light), a soft Sun with a wide warm glow, and a blue glow
+   * around the Sun at dawn and dusk. Haze the color of the horizon, so the real crater rim and Mount Sharp fade into
+   * the sky in layers. A warm key light from the Sun and a cool fill from the other side. Dust storms darken and
+   * redden everything, swallow the distance and blow dust past. Nights have stars, Phobos and Deimos, and the base's
+   * lamps throwing pools of light.
+   */
+  private lookMars(t: number) {
     const day = t < 0.5;
     const a = (day ? t / 0.5 : 1) * Math.PI;
-    const sunDir = new THREE.Vector3(Math.cos(a) * 0.9, Math.sin(a) * 0.85 + (day ? 0.02 : -0.3), -0.35).normalize();
+    const sunDir = _sun.set(Math.cos(a) * 0.9, Math.sin(a) * 0.85 + (day ? 0.02 : -0.3), -0.35).normalize();
     const elev = Math.max(0, sunDir.y);
-    const dusk = day ? Math.max(0, 1 - Math.min(t, 0.5 - t) / 0.07) : 0;
+    const dusk = day ? Math.max(0, 1 - Math.min(t, 0.5 - t) / 0.09) : 0;
     const night = day ? 0 : Math.min(1, Math.min(t - 0.5, 1 - t) / 0.05);
+    const weather = this.sceneInfo?.weather;
+    const dust = weather === 'storm' ? 1 : weather === 'dusty' ? 0.45 : 0;
+    const ice = this.sceneInfo?.landing === 'arcadia';
     const u = this.sky.uniforms;
-    const fog = this.scene.fog as THREE.Fog;
+    const dim = 1 - 0.85 * night;
+
+    const zen = (u.uZenith.value as THREE.Color).copy(MARS.zenDay).lerp(MARS.zenDusk, dusk * 0.75).lerp(MARS.zenNight, night);
+    const hor = (u.uHorizon.value as THREE.Color).copy(ice ? MARS.horIce : MARS.horDay).lerp(MARS.horDusk, dusk * 0.7).lerp(MARS.horNight, night);
+    zen.lerp(_c.copy(MARS.zenStorm).multiplyScalar(dim), dust * 0.85);
+    hor.lerp(_c.copy(MARS.horStorm).multiplyScalar(dim), dust * 0.85);
     (u.uSunDir.value as THREE.Vector3).copy(sunDir);
-    this.diorama.sunLight.position.copy(sunDir).multiplyScalar(40);
-    this.diorama.setNight(night);
-
-    if (this.sceneInfo?.site === 'moon') {
-      // No air: a black sky with stars all day, a hard white Sun, no blue sunset, no haze or dust,
-      // and only a little fill light, so shadows are dark and sharp.
-      (u.uZenith.value as THREE.Color).set('#000000');
-      (u.uHorizon.value as THREE.Color).set('#06060a');
-      (u.uSunGlow.value as THREE.Color).set('#4a4a4a');
-      u.uBlue.value = 0;
-      u.uNight.value = night;
-      u.uStars.value = 1;
-      u.uSunDisc.value = day ? 1 : 0;
-      fog.color.set('#000000');
-      fog.near = 300;
-      fog.far = 600;
-      this.diorama.sunLight.intensity = day ? 0.9 + elev * 2.6 : 0;
-      this.diorama.sunLight.color.set('#ffffff');
-      this.diorama.ambient.intensity = 0.12 + (1 - night) * 0.28;
-      this.diorama.ambient.color.set(night > 0.5 ? '#3a4766' : '#c9ccd6');
-      this.post.uniforms.uDust.value = 0;
-      return;
-    }
-
-    const dust = this.sceneInfo?.weather === 'storm' ? 0.65 : this.sceneInfo?.weather === 'dusty' ? 0.35 : 0;
-
-    const zenithDay = new THREE.Color('#b98a5d');
-    const horizonDay = new THREE.Color('#e9bd8c');
-    const zenithNight = new THREE.Color('#0b0a18');
-    const horizonNight = new THREE.Color('#1d1836');
-    (u.uZenith.value as THREE.Color).copy(zenithDay).lerp(new THREE.Color('#3a3a5a'), dusk * 0.6).lerp(zenithNight, night);
-    (u.uHorizon.value as THREE.Color).copy(horizonDay).lerp(new THREE.Color('#c28b6a'), dusk * 0.5).lerp(horizonNight, night);
-    (u.uSunGlow.value as THREE.Color).set('#f6e7c8');
-    u.uBlue.value = dusk;
-    u.uNight.value = night;
+    (u.uSunColor.value as THREE.Color).copy(MARS.sun).lerp(MARS.sunDusk, dusk);
+    (u.uGlow.value as THREE.Color).copy(MARS.glow);
+    u.uGlowAmt.value = 1 - dust * 0.7;
+    u.uBlue.value = dusk * (1 - dust);
+    u.uNight.value = night * (1 - dust * 0.9);
     u.uStars.value = 0;
-    u.uSunDisc.value = 0;
+    u.uHardSun.value = 0;
+    u.uSunSize.value = MARS_SUN_SIZE;
 
-    fog.color.copy(u.uHorizon.value as THREE.Color).lerp(new THREE.Color('#c98a52'), dust);
-    fog.near = 40 - dust * 34;
-    fog.far = 150 - dust * 110;
+    const fog = this.scene.fog as THREE.FogExp2;
+    fog.color.copy(hor);
+    fog.density = 0.0078 + dust * 0.026;
 
-    this.diorama.sunLight.intensity = day ? (0.4 + elev * 2.2) * (1 - dust * 0.6) : 0;
-    this.diorama.sunLight.color.set(dusk > 0.3 ? '#9fb6e8' : '#fff1d6');
-    this.diorama.ambient.intensity = 0.25 + (1 - night) * 0.85 * (1 - dust * 0.3);
-    this.diorama.ambient.color.set(night > 0.5 ? '#4a4f7a' : '#f2d2a8');
-    this.post.uniforms.uDust.value = dust * 0.45;
+    const L = this.diorama;
+    L.sunLight.position.copy(sunDir).multiplyScalar(60);
+    L.sunLight.intensity = day ? (0.35 + elev * 2.3) * (1 - dust * 0.75) * Math.min(1, elev * 12 + 0.25) : 0;
+    L.sunLight.color.copy(MARS.key).lerp(MARS.keyDusk, dusk);
+    L.ambient.color.copy(MARS.skyDay).lerp(MARS.skyNight, night).lerp(MARS.skyStorm, dust * 0.6 * dim);
+    L.ambient.groundColor.copy(MARS.groundDay).lerp(MARS.groundNight, night);
+    L.ambient.intensity = (0.78 + night * 0.12) * (1 - dust * 0.25);
+    L.fillLight.position.set(-sunDir.x * 30, 18, -sunDir.z * 30 + 10);
+    L.fillLight.color.copy(MARS.fill).lerp(MARS.fillNight, night);
+    L.fillLight.intensity = (0.3 + dusk * 0.25 + night * 0.25) * (1 - dust * 0.6);
+    L.setNight(night);
+    L.gloom = Math.max(night, dust * 0.55, dusk * 0.45);
+    L.moteColor.copy(MARS.mote).lerp(MARS.moteStorm, dust).multiplyScalar(1 - 0.7 * night);
+
+    this.post.uniforms.uDust.value = dust * 0.42;
+    (this.post.uniforms.uDustColor.value as THREE.Color).copy(MARS.postDust).lerp(MARS.postStorm, dust);
+    this.marsMoons.update(t, night, dust < 0.5);
+  }
+
+  /**
+   * The Moon: no air, so no haze, no glow around the Sun and no blue sunset: a black sky with crisp stars all day,
+   * and a hard white Sun. Near the south pole the Sun stays low, so light comes in at a low angle and shadows are
+   * long and black. The Earth hangs low over the horizon, lit by the Sun (so it shows phases); during the long lunar
+   * night it is close to full, and its light (earthshine) faintly lights the base.
+   */
+  private lookMoon(t: number) {
+    const sunDir = moonSunDirection(t, _sun);
+    const day = t < 0.5;
+    const night = day ? 0 : Math.min(1, Math.min(t - 0.5, 1 - t) / 0.05);
+    const up = THREE.MathUtils.smoothstep(sunDir.y, -0.01, 0.03);
+    const u = this.sky.uniforms;
+    (u.uZenith.value as THREE.Color).copy(MOON.zenith);
+    (u.uHorizon.value as THREE.Color).copy(MOON.horizon);
+    (u.uSunDir.value as THREE.Vector3).copy(sunDir);
+    (u.uSunColor.value as THREE.Color).copy(MOON.sun);
+    u.uGlowAmt.value = 0;
+    u.uBlue.value = 0;
+    u.uNight.value = night;
+    u.uStars.value = 1;
+    u.uHardSun.value = 1;
+    u.uSunSize.value = MOON_SUN_SIZE;
+
+    // No haze on the Moon: there is no air to scatter light, so far hills are as crisp as near ones.
+    const fog = this.scene.fog as THREE.FogExp2;
+    fog.color.copy(MOON.horizon);
+    fog.density = 0;
+
+    // The Earth's phase: lit from the Sun's side; through the long night it swings round to nearly full.
+    const earthLight = _earthLight.copy(sunDir).lerp(_toMoon.copy(EARTH_DIR).negate().setY(0.15), night).normalize();
+    const lit = (1 + earthLight.dot(_toMoon.copy(EARTH_DIR).negate())) / 2;
+    this.diorama.setEarthLight(earthLight, lit);
+
+    const L = this.diorama;
+    L.sunLight.position.copy(sunDir).multiplyScalar(60);
+    L.sunLight.intensity = 3.6 * up;
+    L.sunLight.color.copy(MOON.sun);
+    L.ambient.color.copy(MOON.sky).lerp(MOON.skyNight, night);
+    L.ambient.groundColor.copy(MOON.ground);
+    L.ambient.intensity = 0.3 - night * 0.08;
+    // Earthshine: sunlight bounced off the Earth, from the Earth's side of the sky (strongest when the Earth is full).
+    L.fillLight.position.copy(EARTH_DIR).multiplyScalar(30).setY(8);
+    L.fillLight.color.copy(MOON.earthshine);
+    L.fillLight.intensity = lit * (0.06 + 0.62 * night);
+    L.setNight(night);
+    L.gloom = Math.max(night, 0.3);
+    this.post.uniforms.uDust.value = 0;
+    this.marsMoons.update(t, 0, false);
   }
 
   storm(intensity: number) {
@@ -340,6 +457,30 @@ export class ThreeStage implements Stage {
     });
   }
 
+  /**
+   * The quality tier. 'high': a shadow map and plenty of dust in the air. 'low' (weak devices, such as many school
+   * Chromebooks): no shadow map (soft blob shadows instead) and much less dust. Everything else looks the same.
+   */
+  setQuality(q: Quality) {
+    const changed = q !== this.quality;
+    this.quality = q;
+    this.renderer.shadowMap.enabled = q === 'high';
+    this.diorama?.setQuality(q);
+    if (changed) {
+      // Every material has to be rebuilt without (or with) shadows.
+      this.scene.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(m)) m.forEach((x) => (x.needsUpdate = true));
+        else if (m) m.needsUpdate = true;
+      });
+    }
+  }
+
+  /** 'high' or 'low' (see setQuality). */
+  get qualityTier(): Quality {
+    return this.quality;
+  }
+
   setReducedMotion(on: boolean) {
     this.reduced = on;
     if (on && this.intro) this.flyIn(0);
@@ -351,6 +492,14 @@ export class ThreeStage implements Stage {
     this.raf = requestAnimationFrame(this.loop);
     const dt = Math.min(0.1, this.clock.getDelta());
     const time = this.clock.elapsedTime;
+    this.watchFrame(dt);
+    // The shadow map is redrawn every other frame (moving shadows at 30 per second look the same in this style).
+    this.diorama.sunLight.shadow.needsUpdate = (this.frameNo++ & 1) === 0;
+    // Take last frame's breathing back out, so the controls and camera moves work from the true position.
+    if (this.breath) {
+      this.camera.position.y -= this.breath;
+      this.breath = 0;
+    }
     this.diorama.tick(dt, time, this.reduced);
 
     if (this.launching) this.stepLaunch(dt);
@@ -358,7 +507,16 @@ export class ThreeStage implements Stage {
     else if (this.move.active) {
       this.move.step(dt, this.camera, this.controls.target);
       if (!this.move.active) this.arrived();
-    } else this.controls.update();
+    } else {
+      this.controls.update();
+      // A gentle, slow rise and fall while the camera idles (never with reduced motion).
+      if (!this.reduced) {
+        this.breath = Math.sin(time * 0.45) * 0.08 + Math.sin(time * 0.17 + 1.3) * 0.05;
+        this.camera.position.y += this.breath;
+      }
+    }
+    // The dust in the air is centered on whatever the camera looks at.
+    this.diorama.motes.center.copy(this.controls.target);
     // Back in the orbit view (or zoomed out from a module by hand): the usual closest zoom again.
     if (!this.focused && this.controls.minDistance < OVERVIEW_MIN_DISTANCE && this.camera.position.distanceTo(this.controls.target) >= OVERVIEW_MIN_DISTANCE)
       this.controls.minDistance = OVERVIEW_MIN_DISTANCE;
@@ -377,6 +535,26 @@ export class ThreeStage implements Stage {
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.postScene, this.postCam);
   };
+
+  /**
+   * The slow-device check: a few seconds in (past shader compiles and loading), sample frame times for a few
+   * seconds; if the median frame is slower than SLOW_FRAME, drop to the 'low' tier for good. Only ever goes down,
+   * and only once.
+   */
+  private watchFrame(dt: number) {
+    const w = this.watch;
+    if (w.done || this.quality === 'low') return;
+    w.t += dt;
+    if (w.t < WATCH_FROM) return;
+    if (w.t < WATCH_TO && w.n < WATCH_MAX) {
+      w.dt[w.n++] = dt;
+      return;
+    }
+    w.done = true;
+    // Too few frames in three seconds is itself a sign of a slow device.
+    const sample = w.dt.subarray(0, w.n).sort();
+    if (w.n < 40 || sample[w.n >> 1] > SLOW_FRAME) this.setQuality('low');
+  }
 
   private stepLaunch(dt: number) {
     const L = this.launching!;

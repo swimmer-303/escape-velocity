@@ -117,6 +117,87 @@ export function buildEarth(): THREE.Mesh {
   return earth;
 }
 
+/**
+ * The outpost's Earth: the same blue-and-white ball, but lit by the Sun's real direction in the scene, so it shows
+ * phases (a thin crescent when the Sun is beside it, full when the Sun is behind you), with a thin bright rim of air.
+ * From one spot on the Moon's near side the Earth stays in about the same part of the sky all the time (the Moon
+ * always keeps the same face toward it), only wobbling a little; near the south pole that spot is low on the horizon.
+ * Call setSun(direction toward the Sun) whenever the Sun moves.
+ */
+export function buildLitEarth(): { mesh: THREE.Mesh; setSun: (dir: THREE.Vector3) => void } {
+  const geo = new THREE.IcosahedronGeometry(EARTH_RADIUS, 2);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const ocean = new THREE.Color('#2a63c9');
+  const land = new THREE.Color('#6f8f4a');
+  const cloud = new THREE.Color('#f4f6ff');
+  const n = new THREE.Vector3();
+  const colors: number[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    n.fromBufferAttribute(pos, i).normalize();
+    const swirl = Math.sin(n.x * 7 + Math.sin(n.y * 5) * 2) * Math.cos(n.z * 6 - n.y * 3);
+    const continent = Math.sin(n.x * 3 + 1) * Math.sin(n.z * 4 - 0.5) + n.y * 0.3;
+    const c = swirl > 0.45 || Math.abs(n.y) > 0.88 ? cloud : continent > 0.45 ? land : ocean;
+    colors.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  const sun = new THREE.Vector3(0.75, 0.35, 0.55).normalize();
+  const material = new THREE.ShaderMaterial({
+    vertexColors: true,
+    fog: false,
+    uniforms: { uSun: { value: sun } },
+    vertexShader: /* glsl */ `
+      varying vec3 vColor; varying vec3 vN; varying vec3 vView;
+      void main() {
+        vColor = color;
+        vN = normalize(position);
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        vView = normalize(cameraPosition - w.xyz);
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uSun;
+      varying vec3 vColor; varying vec3 vN; varying vec3 vView;
+      void main() {
+        vec3 n = normalize(vN);
+        float lit = smoothstep(-0.08, 0.3, dot(n, uSun));
+        vec3 c = vColor * (0.05 + 1.05 * lit);
+        // A thin glowing rim of atmosphere on the sunlit side.
+        float rim = pow(1.0 - max(dot(n, normalize(vView)), 0.0), 3.0);
+        c += vec3(0.35, 0.55, 1.0) * rim * (0.15 + 0.85 * lit);
+        gl_FragColor = vec4(c, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const earth = new THREE.Mesh(geo, material);
+  earth.name = 'earth';
+  earth.position.copy(EARTH_POS);
+  earth.castShadow = false;
+  earth.receiveShadow = false;
+  earth.renderOrder = -1;
+  return { mesh: earth, setSun: (dir) => sun.copy(dir).normalize() };
+}
+
+/** How high the Sun climbs in the outpost's sky on the Moon, in degrees (see moonSunDirection). */
+export const MOON_SUN_MAX_DEG = 9;
+
+/**
+ * Where the Sun is in the Moon outpost's sky at time of day `t` (0 = sunrise, 0.5 = sunset), written into `out`.
+ * Near the lunar south pole the Sun never climbs high: it creeps sideways around the horizon, so light comes in at a
+ * low angle and shadows are very long. (At the pole itself it stays within about 1.5 degrees of the horizon; it is
+ * lifted to MOON_SUN_MAX_DEG here so the base stays readable.) By day it swings across the side of the sky beside the
+ * Earth; at night it is below the horizon.
+ */
+export function moonSunDirection(t: number, out: THREE.Vector3): THREE.Vector3 {
+  const day = t < 0.5;
+  const u = day ? t / 0.5 : (t - 0.5) / 0.5;
+  const az = day ? EARTH_AZ + Math.PI / 2 + (u - 0.5) * 2.2 : EARTH_AZ + Math.PI / 2 + 1.1 + u * (2 * Math.PI - 2.2);
+  const elev = THREE.MathUtils.degToRad(day ? 1 + Math.sin(u * Math.PI) * (MOON_SUN_MAX_DEG - 1) : -4 - Math.sin(u * Math.PI) * 10);
+  return out.set(Math.cos(az) * Math.cos(elev), Math.sin(elev), Math.sin(az) * Math.cos(elev));
+}
+
+/** Direction from the outpost toward the Earth. */
+export const EARTH_DIR = EARTH_POS.clone().normalize();
+
 /** The made-up craters (centers, radii and depths in diorama units), for things that sit inside them (Rover Expeditions). */
 export function moonCraters(): Array<{ x: number; z: number; r: number; depth: number }> {
   return CRATERS.map((c) => ({ ...c }));
