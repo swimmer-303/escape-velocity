@@ -112,6 +112,29 @@ describe('Outpost Architect in the real game', () => {
     expect(again.textContent).toMatch(/1 of 12 blueprints/);
   });
 
+  it('keeps keyboard focus when a part is picked: it moves to the pad, so arrows and Enter work at once', async () => {
+    new App(new CssStage());
+    (await waitFor(() => document.querySelector<HTMLButtonElement>('[data-tile="builder"]'))).click();
+    const layer = await waitFor(() => document.querySelector<HTMLElement>('.ev-builder[role="dialog"]'));
+    btn(await waitFor(() => layer.querySelector('.evb-start')), /^Free build$/)!.click();
+    layer.querySelector<HTMLButtonElement>('.evb-cat:nth-child(2)')!.click(); // Life
+    const part = layer.querySelector<HTMLButtonElement>('.evb-part[data-part="habitat"]')!;
+    part.focus();
+    part.click(); // what Enter on a focused button does
+    const pad = layer.querySelector<HTMLElement>('.evb-stage')!;
+    expect(document.activeElement).toBe(pad);
+    expect(layer.querySelector(':scope > .sr-only[role="status"]')!.textContent).toMatch(/Habitat in hand.*arrow keys/i);
+    // Keys now reach the builder from the pad: arrows move, Enter places.
+    key(document.activeElement!, 'ArrowRight');
+    key(document.activeElement!, 'Enter');
+    expect(layer.querySelectorAll('.evb-cell[style]').length).toBe(4);
+    // The part stays in hand after placing: Escape puts it back, and focus stays inside the builder.
+    key(document.activeElement!, 'Escape');
+    expect(document.querySelector('.ev-builder')).not.toBeNull();
+    expect(layer.contains(document.activeElement)).toBe(true);
+    currentBuilder()!.close();
+  });
+
   it('opens a shared ?base= link with that base, and ignores a broken one', async () => {
     new App(new CssStage());
     await waitFor(() => document.querySelector('[data-tile="builder"]'));

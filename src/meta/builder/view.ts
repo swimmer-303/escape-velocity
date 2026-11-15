@@ -387,6 +387,7 @@ export class BuilderView {
 
   /** Recompute the readout and redraw everything that depends on the pad. */
   private refresh() {
+    const had = document.activeElement as HTMLElement | null;
     this.r = readout(this.layout);
     if (this.selected !== null && !this.layout.parts.some((p) => p.uid === this.selected)) this.selected = null;
     this.renderReadout();
@@ -396,6 +397,9 @@ export class BuilderView {
     this.undoBtn.disabled = !this.editor.canUndo || this.testing;
     this.redoBtn.disabled = !this.editor.canRedo || this.testing;
     this.paintGhost();
+    // A site button that was just redrawn: keep focus on the site now chosen. Anything else redrawn: the pad.
+    if (had && !had.isConnected && had.classList.contains('evb-site')) this.siteBox.querySelector<HTMLElement>('.evb-site.on')?.focus({ preventScroll: true });
+    this.keepFocus();
   }
 
   private say(text: string) {
@@ -421,7 +425,26 @@ export class BuilderView {
     this.renderPalette();
     this.renderTools();
     this.paintGhost();
-    this.say(`${PARTS[part].name} in hand. ${PARTS[part].blurb}`);
+    // The palette was just redrawn, so the button that had focus is gone. Go to the pad: the arrow keys move the
+    // part straight away, Enter puts it down and Escape puts it back.
+    this.focusPad();
+    this.say(`${PARTS[part].name} in hand. ${PARTS[part].blurb} You are on the build pad: arrow keys move it, Enter places it, R turns it, Escape puts it back.`);
+  }
+
+  /** Focus the build pad without scrolling the page (keys work from there). */
+  private focusPad() {
+    if (this.closed) return;
+    try {
+      this.stage.focus({ preventScroll: true });
+    } catch {
+      this.stage.focus();
+    }
+  }
+
+  /** After a redraw: if focus fell out of the builder (its button was replaced), bring it back to the pad. */
+  private keepFocus() {
+    const a = document.activeElement;
+    if (!this.closed && (!a || a === document.body || !a.isConnected) && this.overlay.hidden) this.focusPad();
   }
 
   rotate() {
@@ -485,6 +508,7 @@ export class BuilderView {
     this.renderPalette();
     this.renderTools();
     this.paintGhost();
+    this.keepFocus();
   }
 
   undo() {
@@ -541,6 +565,9 @@ export class BuilderView {
   }
 
   private renderPalette() {
+    // Redrawing replaces the buttons: remember which part (or group) had focus so it can get it back.
+    const had = document.activeElement as HTMLElement | null;
+    const hadPart = had && this.palette.contains(had) ? had.getAttribute('data-part') : null;
     const tabs = h(
       'div',
       { class: 'evb-cats', role: 'tablist', 'aria-label': 'Part groups' },
@@ -586,6 +613,7 @@ export class BuilderView {
     });
     this.paletteList.replaceChildren(...items);
     this.palette.replaceChildren(tabs, this.paletteList);
+    if (hadPart) this.paletteList.querySelector<HTMLElement>(`[data-part="${hadPart}"]`)?.focus({ preventScroll: true });
   }
 
   private renderTools() {
