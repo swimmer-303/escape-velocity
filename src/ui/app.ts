@@ -1350,7 +1350,7 @@ export class App {
             { class: 'first-crew', 'aria-label': 'Your crew' },
             roster.members.map((mem, i) => h('li', null, crewPortrait(roster, i), h('span', null, mem.name))),
           ),
-          h('div', { class: 'actions end' }, h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Back'), h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
+          h('div', { class: 'actions end sticky' }, h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Back'), h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
         ],
         { label: `${spec.name} introduction` },
       );
@@ -1419,7 +1419,7 @@ export class App {
             })
           : null,
         this.mode === 'daily' && this.daily ? dailyIntroCard(this.daily, () => this.showTodaysBest(() => this.showExpeditionIntro())) : null,
-        h('div', { class: 'actions end' }, h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Back'), h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
+        h('div', { class: 'actions end sticky' }, h('button', { class: 'btn', onclick: () => this.showTitle() }, 'Back'), h('button', { class: 'btn primary', 'data-autofocus': true, onclick: () => this.landCrew() }, 'Land the crew', h('span', { class: 'arrow' }))),
       ],
       { label: `${spec.name} introduction` },
     );

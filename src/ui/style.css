@@ -229,6 +229,15 @@ a { color: var(--cyan); }
 .modal p { margin: 0 0 10px; }
 .modal .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .modal .actions.end { justify-content: flex-end; }
+/* A long intro (crew bios, class code) is taller than a 768 px laptop screen: its Back / Land the crew row stays pinned to
+   the bottom of the dialog instead of sitting below the fold where a first-time player never finds it. The side shadows
+   fill the dialog's padding so scrolled text never shows beside the row. */
+.modal > .actions.sticky {
+  position: sticky; bottom: -20px; z-index: 2; margin: 16px 0 -20px; padding: 12px 0 20px;
+  background: var(--panel); border-top: 2px dashed var(--line);
+  box-shadow: -20px 0 0 var(--panel), 20px 0 0 var(--panel);
+}
+html.ev-large-text .modal > .actions.sticky { bottom: -16px; margin-bottom: -16px; padding-bottom: 16px; }
 .kicker { font-family: var(--font-px); font-size: 13px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
 .card {
   background: var(--panel-2); border: 3px solid #000; box-shadow: inset 0 0 0 2px var(--line); padding: 10px 12px; margin: 10px 0;
