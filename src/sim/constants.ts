@@ -115,8 +115,13 @@ export const ARCADIA = {
   sunCellsLost: 1,
   /** GAME VALUE: colder nights, so each mission has this many more cold snaps (each needs 1 more heater cell). */
   extraColdSnaps: 2,
-  /** GAME VALUE: water from the ice for the greenhouse: each greenhouse cell grows this many times as much food. */
-  greenhouseBoost: 2,
+  /**
+   * GAME VALUE: water from the ice for the greenhouse: each greenhouse cell grows this many times as much food (and
+   * air). Was 2 until Nov 2026: on Commander, that did not pay for the lost sunshine and the extra cold snaps, so a
+   * first crew had no power to spare for radiation protection or for building, and later crews inherited the bare
+   * starting array (see the Arcadia Commander checks in landing.test.ts). The sunshine and cold costs stay.
+   */
+  greenhouseBoost: 3 as number,
 } as const;
 
 /**
