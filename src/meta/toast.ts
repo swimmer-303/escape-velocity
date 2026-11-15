@@ -24,6 +24,7 @@ export function toast(title: string, body = '', opts: { tone?: ToastTone; ms?: n
   const el = document.createElement('div');
   el.className = `ev-toast ${opts.tone && opts.tone !== 'amber' ? opts.tone : ''} wait`;
   el.dataset.ms = String(opts.ms ?? DEFAULT_MS);
+  el.dataset.key = `${opts.tone ?? 'amber'}|${title}|${body}`;
   if (opts.icon) {
     opts.icon.classList.add('ev-toast-icon');
     el.append(opts.icon);
@@ -34,6 +35,9 @@ export function toast(title: string, body = '', opts: { tone?: ToastTone; ms?: n
   text.append(b);
   if (body) text.append(' ', body);
   el.append(text);
+  // The same message already showing or waiting (a locked part tapped three times): merge, don't stack.
+  const same = [...box.querySelectorAll<HTMLElement>(':scope > .ev-toast')].find((t) => t.dataset.key === el.dataset.key);
+  if (same) return same;
   box.append(el);
   const waiting = [...box.querySelectorAll<HTMLElement>(':scope > .ev-toast.wait')];
   for (const old of waiting.slice(0, Math.max(0, waiting.length - MAX_WAITING))) old.remove();

@@ -43,6 +43,15 @@ describe('toast', () => {
     expect(shown()).toEqual(['B']);
   });
 
+  it('merges the same message instead of stacking it', () => {
+    const a = toast('Locked part', 'Finish the blueprint first.', { tone: 'cyan' });
+    const b = toast('Locked part', 'Finish the blueprint first.', { tone: 'cyan' });
+    expect(b).toBe(a);
+    expect(document.querySelectorAll('.ev-toast')).toHaveLength(1);
+    toast('Locked part', 'Something else.', { tone: 'cyan' });
+    expect(document.querySelectorAll('.ev-toast')).toHaveLength(2);
+  });
+
   it('drops the oldest waiting toast when too many pile up', () => {
     for (let i = 0; i < MAX_SHOWN + MAX_WAITING + 2; i++) toast(`T${i}`);
     expect(shown()).toEqual(['T0', 'T1']);
