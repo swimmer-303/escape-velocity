@@ -74,10 +74,17 @@ export function solarReadout(lab: LabSettings): { cells: number; normal: number;
   return { cells, normal, text };
 }
 
+/** Mars, with the orbit and dust dials together leaving almost no power: say what that means before the kid runs it. */
+function lowPowerNote(lab: LabSettings): string {
+  if (!isMarsLab(lab) || solarReadout(lab).cells > 2) return '';
+  return ' Almost no power: the crew can barely make air, so expect them to go home early. A planet-wide dust storm in 2018 ended NASA\'s Opportunity rover the same way.';
+}
+
 export function worldReadout(lab: LabSettings): string {
   if (lab.world === 'moon') return `Solar power: ${realCells(lab)} cells a day, 0 in the lunar night. No air, so no dust storms.`;
-  if (lab.world === 'arcadia') return `${solarReadout(lab).text}. Far north: less sun, colder nights, but ice for the greenhouse.`;
-  return `${solarReadout(lab).text}. Curiosity's crater, near the equator.`;
+  const all = changedDials(lab).some((d) => d === 'orbit' || d === 'dust') ? ' with all your dials' : '';
+  if (lab.world === 'arcadia') return `${solarReadout(lab).text}${all}. Far north: less sun, colder nights, but ice for the greenhouse.${lowPowerNote(lab)}`;
+  return `${solarReadout(lab).text}${all}. Curiosity's crater, near the equator.${lowPowerNote(lab)}`;
 }
 
 export function sunReadout(lab: LabSettings): string {
@@ -93,13 +100,19 @@ export function orbitReadout(lab: LabSettings): string {
   if (!isMarsLab(lab)) return 'Off on the Moon: it is always about as far from the Sun as Earth is.';
   const pct = Math.round(orbitSunFactor(lab.orbit) * 100);
   const storms = lab.orbit === 'perihelion' ? ' Dust storms: bigger (dust storm season).' : lab.orbit === 'aphelion' ? ' Dust storms: smaller (calm season).' : '';
-  return `Sunlight: ${Math.round(orbitIrradiance(lab.orbit))} W per square meter, ${pct}% of average. ${solarReadout(lab).text}.${storms}`;
+  // This dial's own effect (normal dust), then the total if the dust dial is changed too, so "closest to the Sun" never
+  // reads as "0 cells" just because a planet-wide storm is also set.
+  const alone = solarReadout({ ...lab, dust: 'hazy' });
+  const both = lab.dust === 'hazy' ? '' : ` With your dust setting too: ${solarReadout(lab).cells} cells.`;
+  return `Sunlight: ${Math.round(orbitIrradiance(lab.orbit))} W per square meter, ${pct}% of average. ${alone.text}.${both}${storms}`;
 }
 
 export function dustReadout(lab: LabSettings): string {
   if (!isMarsLab(lab)) return 'Off on the Moon: no air, so no dust in the sky.';
   const pct = Math.round(dustPowerFactor(lab.dust) * 100);
-  return `Tau ${DUST_TAU[lab.dust]}: ${pct}% of a normal day's sunlight reaches the panels. ${solarReadout(lab).text}.`;
+  const alone = solarReadout({ ...lab, orbit: 'average' });
+  const both = lab.orbit === 'average' ? '' : ` With your orbit setting too: ${solarReadout(lab).cells} cells.`;
+  return `Tau ${DUST_TAU[lab.dust]}: ${pct}% of a normal day's sunlight reaches the panels. ${alone.text}.${both}`;
 }
 
 export function delayReadout(lab: LabSettings, todayMin: number): string {
