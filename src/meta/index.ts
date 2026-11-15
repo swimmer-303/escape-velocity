@@ -4,4 +4,5 @@ import './rank';
 import './cards';
 import './flight';
 import './hangar';
+import './season';
 import './rover';

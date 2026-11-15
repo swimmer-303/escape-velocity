@@ -16,6 +16,8 @@ interface Base {
   level: number;
   /** A true, kid-sized science fact, shown when it is equipped. */
   fact?: string;
+  /** Also unlocked by the Season Pass (see addUnlockSource): shown on the padlock, e.g. 'Season 1 tier 10'. */
+  season?: string;
 }
 export type HangarItem =
   | (Base & { slot: 'suit'; look: Cosmetics['suit'] })
@@ -120,7 +122,7 @@ export function itemsIn(slot: Slot): HangarItem[] {
 }
 
 export function isUnlocked(item: HangarItem, level: number): boolean {
-  return item.level <= level;
+  return item.level <= level || unlockedElsewhere(item.id);
 }
 
 /** A name that stands on its own: 'Cyan suit', 'Checkers rocket paint', 'Bolt the rover pet', 'Pink base lights'. */
@@ -140,3 +142,40 @@ export function nextUnlock(level: number): HangarItem | null {
 export function cosmeticsOf(eq: Equipped): Cosmetics {
   return { suit: eq.suit.look, rocket: eq.rocket.look, pet: eq.pet.look, lights: eq.lights.look };
 }
+
+// ------------------------------------------------------------------ unlocks from other features (append-only)
+// The Season Pass (src/meta/season) unlocks a few items by tier. A source returns the item ids it has unlocked.
+const unlockSources: Array<() => string[]> = [];
+export function addUnlockSource(fn: () => string[]): void {
+  unlockSources.push(fn);
+}
+function unlockedElsewhere(id: string): boolean {
+  for (const fn of unlockSources) {
+    try {
+      if (fn().includes(id)) return true;
+    } catch {
+      /* a broken source unlocks nothing */
+    }
+  }
+  return false;
+}
+
+// Season 1: Solar Maximum items. Earned at big Season Pass tiers; they also unlock at level 50, so nobody who
+// missed the season is locked out forever. Looks use only options the 3D stage already draws.
+// Aurora fact source: NASA, "What NASA Is Learning From the Biggest Geomagnetic Storm in 20 Years" (May 9, 2025):
+// "As energetic particles from the Sun struck the Martian atmosphere, NASA's MAVEN orbiter watched auroras engulf
+// the Red Planet from May 14 to 20." https://science.nasa.gov/science-research/heliophysics/what-nasa-is-learning-from-the-biggest-geomagnetic-storm-in-20-years
+ITEMS.push(
+  {
+    ...lights('aurora', 'Aurora', 50, '#5dffa8'),
+    season: 'Season 1 tier 10',
+    fact: "Auroras glow when particles from the Sun hit a planet's air. In May 2024, NASA's MAVEN orbiter watched auroras cover Mars.",
+  } as HangarItem,
+  { ...suit('solar-flare', 'Solar Flare', 50, '#ff7a1a', '#ffe066', { glow: true }), season: 'Season 1 tier 20' } as HangarItem,
+  { ...pet('blaze', 'Blaze', 50, { body: '#ff9a3c', trim: '#7a1f17', eyes: '#fff3b0', glow: true }), season: 'Season 1 tier 30' } as HangarItem,
+  {
+    ...rocket('solar-max', 'Solar Max', 50, { pattern: 'gradient', colors: ['#fff3b0', '#ffd34d', '#ff9a3c', '#ff5a2a', '#7a1f17'], fins: '#ff5a2a', nose: '#fff3b0' }),
+    season: 'Season 1 tier 40',
+  } as HangarItem,
+);
+for (const i of ITEMS.slice(-4)) BY_ID.set(i.id, i);

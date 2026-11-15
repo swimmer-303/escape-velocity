@@ -6,7 +6,7 @@
 import './rank.css';
 import { h, clear, prefersReducedMotion } from '../../ui/dom';
 import { toast } from '../toast';
-import { allLevelRewards, metaContext, rewardsAtLevel, type LevelReward } from '../hooks';
+import { allLevelRewards, metaContext, onGame, rewardsAtLevel, type LevelReward } from '../hooks';
 import { MAX_LEVEL, RANKS, nextRank, progressFor, rankFor, rankLastLevel, type LevelProgress, type Rank } from './curve';
 import { badge, checkSvg } from './badge';
 import { ALL_DONE_BONUS, type MissionSlot } from './daily';
@@ -40,6 +40,19 @@ function checkIcon(done = true, size = 22): HTMLElement {
   return span;
 }
 
+// A Moon base counts Earth days, never sols: pop-ups shown during Moon play say "days" instead.
+let playingMoon = false;
+onGame('sol', (p) => {
+  playingMoon = p.after.config.site === 'moon';
+});
+onGame('mission-end', (p) => {
+  playingMoon = p.mission.config.site === 'moon';
+});
+export function siteWords(text: string, moon = playingMoon): string {
+  if (!moon) return text;
+  return text.replace(/\b(S|s)ols\b/g, (_m, c: string) => (c === 'S' ? 'Days' : 'days')).replace(/\b(S|s)ol\b/g, (_m, c: string) => (c === 'S' ? 'Day' : 'day'));
+}
+
 /** Show the waiting pop-ups now: the XP total, then finished missions, then a level-up. */
 export function flushToasts(): void {
   if (batchTimer) clearTimeout(batchTimer);
@@ -48,7 +61,7 @@ export function flushToasts(): void {
   batch = null;
   if (!b) return;
   const tier = rankFor(progressFor(rankState().xp).level).tier;
-  if (b.total > 0 && b.top) toast(`+${b.total} XP`, b.top.reason, { icon: badge(tier, 24) });
+  if (b.total > 0 && b.top) toast(`+${b.total} XP`, siteWords(b.top.reason), { icon: badge(tier, 24) });
   for (const f of b.after) f();
   if (b.level) {
     const r = rankFor(b.level);
@@ -67,7 +80,7 @@ onRank((n) => {
       }
       break;
     case 'mission':
-      currentBatch().after.push(() => toast('Daily mission done!', `${n.def.title}. +${n.def.xp} XP`, { tone: 'good', icon: checkIcon(), ms: 4500 }));
+      currentBatch().after.push(() => toast('Daily mission done!', siteWords(`${n.def.title}. +${n.def.xp} XP`), { tone: 'good', icon: checkIcon(), ms: 4500 }));
       break;
     case 'all-done':
       currentBatch().after.push(() => toast('All 3 daily missions done!', `+${n.xp} bonus XP. New missions tomorrow.`, { tone: 'cyan', ms: 5000 }));
