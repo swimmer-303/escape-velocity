@@ -188,15 +188,22 @@ export function newsBetween(before: Array<Placed<Row>>, after: Array<Placed<Row>
   for (const a of after) {
     if (a.id === 'you') continue;
     const b = at(before, a.id);
-    if (b.status === 'playing' && a.status === 'won') news.push({ kind: 'launch', racer: a.racer, sols: a.sols });
+    if (b.status === 'playing' && a.status === 'won') {
+      news.push({ kind: 'launch', racer: a.racer, sols: a.sols });
+      continue;
+    }
     if (b.status === 'playing' && a.status === 'lost') {
       const last = a.racer.state?.log[a.racer.state.log.length - 1];
       const storm = last?.storm ? 'solar' : last && last.weather !== 'clear' ? 'dust' : null;
       news.push({ kind: 'home', racer: a.racer, reason: a.loseReason ?? 'window', storm });
       continue;
     }
-    if (b.place < meB.place && a.place > meA.place) news.push({ kind: 'overtake', racer: a.racer });
-    else if (b.place > meB.place && a.place < meA.place) news.push({ kind: 'passed', racer: a.racer });
+    // Passing only counts while you are both still racing (your own launch ends the race for you: the podium says the rest).
+    if (meA.status !== 'playing' || a.status !== 'playing') continue;
+    // A tie on fuel is not a pass: someone has to be strictly ahead.
+    const gap = Math.floor(meA.fuel) - Math.floor(a.fuel);
+    if (b.place < meB.place && a.place > meA.place && gap > 0) news.push({ kind: 'overtake', racer: a.racer });
+    else if (b.place > meB.place && a.place < meA.place && gap < 0) news.push({ kind: 'passed', racer: a.racer });
   }
   return news;
 }

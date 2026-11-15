@@ -5,7 +5,7 @@
 /* Wide screens: a panel floating at the top right of the 3D view, under the HUD and the "Look at" menu. */
 .race-hud {
   --lg: var(--amber);
-  position: fixed; right: 12px; top: calc(var(--hud-h, 110px) + 60px); z-index: 6; width: 260px; pointer-events: none;
+  position: fixed; right: 12px; top: calc(var(--hud-h, 110px) + 60px); z-index: 6; width: 290px; pointer-events: none;
   background: #15122bee; border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--shadow); padding: 6px 8px 8px; color: var(--ink);
 }
 .rh-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--font-px); font-size: 12px; text-transform: uppercase; }

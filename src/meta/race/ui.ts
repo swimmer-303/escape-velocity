@@ -110,6 +110,7 @@ export function lobbyContent(o: LobbyOpts): Child {
       h('b', null, 'same base with the same real storms'),
       '. First crew to fill the rocket and launch with everyone safe wins! Ties go to fewer sols, then less radiation, then more air and food left.',
     ),
+    h('p', { class: 'title-foot' }, "Races use the real NASA DONKI storm records stored in the game (the last month, plus May 2024), so every racer, and every friend you challenge, meets the same storms."),
     lg.difficulty === 'commander' ? h('div', { class: 'card danger' }, h('b', null, `${lg.name} races are on Commander difficulty: `), 'more and bigger storms. Watch your radiation!') : null,
     h('h3', null, 'Your rivals'),
     h('div', { class: 'race-rivals' }, rivals.map(rivalCard)),

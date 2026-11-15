@@ -72,6 +72,8 @@ describe('Rival Race in the game', () => {
   it('plays a whole race: lobby, live standings, podium, XP, league progress and a challenge link', async () => {
     const xp: Array<{ amount: number; reason: string }> = [];
     const stop = onGame('xp', (p) => xp.push(p));
+    // A feature that throws is caught (and logged) by the hooks: make sure ours never does.
+    const errors = vi.spyOn(console, 'error');
     const app = new App(new CssStage());
     const internals = app as unknown as { mission: MissionState; phase: string };
 
@@ -102,6 +104,7 @@ describe('Rival Race in the game', () => {
       checks++;
     });
     stop();
+    expect(errors.mock.calls.filter((c) => String(c[0]).startsWith('[meta]'))).toEqual([]);
     expect(internals.mission.status).not.toBe('playing');
     expect(internals.mission.config.seed).toBe(race.seed);
     expect(checks).toBeGreaterThan(3);
