@@ -9,6 +9,10 @@ import { CssStage, type Stage } from '../render/stage';
 import { runColdOpen } from './coldopen';
 import { GameAudio } from './audio';
 import { crossings, PlaceCombo, countUp } from './juice';
+import { balanced } from '../sim/strategies';
+import { MODULE_LABEL } from './budget';
+import { MODULE_IDS, type MissionState } from '../sim/types';
+import { onGame } from '../meta/hooks';
 import '../meta';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -115,6 +119,67 @@ describe('the lobby', () => {
     expect(document.querySelector('.cold-open')).toBeNull();
     expect(document.documentElement.classList.contains('ev-cold')).toBe(false);
   });
+});
+
+describe('a whole quick mission with the game feel', () => {
+  it('shows perfect sols, then a score, a grade, a personal best and modes to try next', async () => {
+    localStorage.setItem('ev-tutorial-done', '1');
+    const app = new App(new CssStage());
+    const internals = app as unknown as { mission: MissionState };
+    const xp: string[] = [];
+    const stop = onGame('xp', (p) => xp.push(p.reason));
+    let perfect = 0;
+    button(/Quick mission/)!.click();
+    (await waitFor(() => button(/Start quick mission/))).click();
+    for (let guard = 0; guard < 300 && !button(/Play again/); guard++) {
+      if (document.querySelector('.crates .crate') && !button(/Plan the day/)) {
+        document.querySelector<HTMLButtonElement>('.crates .crate')!.click();
+        continue;
+      }
+      const skipFlight = document.querySelector('.ev-flight-host, #modal-root .ev-flight') ? button(/^Skip/) : null;
+      if (skipFlight) {
+        skipFlight.click();
+        await sleep(10);
+        continue;
+      }
+      const plan = button(/Plan the day/);
+      if (plan) {
+        plan.click();
+        const { alloc } = balanced(internals.mission);
+        for (const id of MODULE_IDS) for (let k = 0; k < alloc[id]; k++) document.querySelector<HTMLButtonElement>(`button[aria-label="Add a cell to ${MODULE_LABEL[id]}"]`)?.click();
+        // Every cell placed: the Run button is ready (it pulses).
+        expect(document.querySelector('.dock .btn.go.ready')).not.toBeNull();
+        (await waitFor(() => button(/^Run sol/))).click();
+        (await waitFor(() => button(/^Skip$/))).click();
+        await waitFor(() => document.querySelector('.sol-tally'));
+        if (document.querySelector('.streak-banner')) perfect++;
+        continue;
+      }
+      const next = button(/Start sol|Launch!|See what happened|Land the crew/);
+      if (next) {
+        next.click();
+        await sleep(0);
+        continue;
+      }
+      // The launch mini-game, if it is up.
+      const skip = button(/^Skip/);
+      if (skip) skip.click();
+      await sleep(20);
+    }
+    stop();
+    const panel = document.querySelector('.score-panel')!;
+    expect(panel).not.toBeNull();
+    expect(panel.querySelector('.grade')!.textContent).toMatch(/^[SABC]$/);
+    expect(panel.querySelector('.score-pb')!.textContent).toBe('New personal best!');
+    expect(JSON.parse(localStorage.getItem('ev-best-v1')!)['quick-mars']).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.end-next [data-tile]').length).toBe(2);
+    // Play again sits right under the score, before the full story of the mission.
+    const again = button(/Play again/)!;
+    expect(again.compareDocumentPosition(document.querySelector('.mchart, h3')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // A balanced player has perfect sols; two in a row earn a little streak XP.
+    expect(perfect).toBeGreaterThan(0);
+    if (xp.some((r) => /streak/.test(r))) expect(xp.filter((r) => /streak/.test(r)).every((r) => /^Perfect sol streak x\d+$/.test(r))).toBe(true);
+  }, 30000);
 });
 
 describe('the cold open', () => {

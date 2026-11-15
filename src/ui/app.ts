@@ -250,14 +250,14 @@ export class App {
     }
     // A Mission Control join link (?room=CODE) goes straight to the class room;
     // a teacher dashboard link (?dashboard=CODE&key=KEY) opens the class board instead of the game.
+    // The game's own modes are lobby tiles, sorted in with the meta features' tiles (see lobby.ts).
+    this.registerLobbyTiles();
     const room = roomParam(location.search);
     const dash = dashboardParams(location.search);
     if (dash) this.openDashboard(dash);
     else if (room) this.openRoom(room);
     else if (isShortDemoUrl(location)) this.startShortDemo();
     else {
-      // The game's own modes are lobby tiles, sorted in with the meta features' tiles (see lobby.ts).
-      this.registerLobbyTiles();
       this.showTitle();
       // ?demo: the attract mode for an event table or a screen recording.
       if (new URLSearchParams(location.search).has('demo')) void this.startDemo();
