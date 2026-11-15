@@ -96,7 +96,7 @@ describe('the end-screen score', () => {
   it('adds up launching, fuel, safety, upgrades and time to spare', () => {
     const m = mission();
     const s = scoreMission({ ...m, status: 'won', fuel: 100, dose: 0, builtThisExpedition: ['panel'], log: [] }, 10, 'Days');
-    expect(s.parts.map((p) => p.label)).toEqual(['Launched home', 'Rocket fuel', 'Crew safety', 'Upgrades built', 'Days to spare']);
+    expect(s.parts.map((p) => p.label)).toEqual(['Launched home', 'Rocket fuel', 'Low radiation', 'Upgrades built', 'Days to spare']);
     expect(s.score).toBe(1000 + 500 + 1000 + 250 + 1000);
     const lost = scoreMission({ ...m, status: 'lost', fuel: 30, dose: m.doseBudget }, 10);
     expect(lost.score).toBe(150);

@@ -63,7 +63,7 @@ export const GRADE_WORDS: Record<Grade, string> = {
 };
 
 /**
- * Score: launching home, the fuel made, keeping the dose low, upgrades built, and launching early.
+ * Score: launching home, the fuel made, keeping the dose low ("Low radiation": a crew that ran out of air was not safe), upgrades built, and launching early.
  * Grade (from the stars on the end screen): S = all 3 stars with a very low dose, A = 2 or 3 stars with a launch,
  * B = launched, C = came home early.
  */
@@ -73,7 +73,7 @@ export function scoreMission(m: MissionState, windowSol: number, turns = 'Sols')
   const parts: ScorePart[] = [
     { label: 'Launched home', points: won ? 1000 : 0 },
     { label: 'Rocket fuel', points: Math.round(Math.min(100, Math.max(0, m.fuel)) * 5) },
-    { label: 'Crew safety', points: Math.round(Math.max(0, 1 - m.dose / Math.max(1e-6, m.doseBudget)) * 1000) },
+    { label: 'Low radiation', points: Math.round(Math.max(0, 1 - m.dose / Math.max(1e-6, m.doseBudget)) * 1000) },
     { label: 'Upgrades built', points: 250 * m.builtThisExpedition.length },
     { label: `${turns} to spare`, points: won ? Math.max(0, windowSol - m.log.length) * 100 : 0 },
   ];
