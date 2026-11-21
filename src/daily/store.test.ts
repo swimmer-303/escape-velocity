@@ -9,7 +9,8 @@ import { createMission } from '../sim/sim';
 import { builder, playOut, pureGreed, type Strategy } from '../sim/strategies';
 import { TEST_POOL } from '../sim/fixtures.test-util';
 import type { SpaceWeatherEvent } from '../sim/types';
-import { DailyStore, DAILY_RATE } from './store';
+import { DailyStore, DAILY_FILE, DAILY_RATE } from './store';
+import { fileSlot } from '../server/file-slot';
 import type { DayEvents } from './pool';
 import { dailyMissionConfig, movesFromLog } from './replay';
 import { ANONYMOUS, DAILY_LIMITS, type DailyConfig, type DailyMove } from './protocol';
@@ -29,7 +30,7 @@ function livePool(tag: string): SpaceWeatherEvent[] {
 
 function makeStore(events: (n: number) => DayEvents = (n) => ({ pool: livePool(`v${n}`), data: { status: 'live', fetchedAt: '2026-11-14T16:58:00.000Z', startDate: '2026-10-15', endDate: '2026-11-14' } })) {
   const store = new DailyStore({
-    dir,
+    slot: fileSlot(dir, DAILY_FILE),
     now: () => clock,
     saveDelayMs: 5,
     events: async () => events(++calls),
@@ -98,7 +99,7 @@ describe('freezing the pool', () => {
   });
 
   it('falls back to the bundled snapshot if the data source fails', async () => {
-    const store = new DailyStore({ dir, now: () => clock, events: () => Promise.reject(new Error('NASA down')) });
+    const store = new DailyStore({ slot: fileSlot(dir, DAILY_FILE), now: () => clock, events: () => Promise.reject(new Error('NASA down')) });
     stores.push(store);
     const cfg = await store.config();
     expect(cfg.poolSource).toBe('archive');

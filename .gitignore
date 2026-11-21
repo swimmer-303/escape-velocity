@@ -5,7 +5,11 @@ dist
 .env.local
 *.log
 .env*
-dist-server
+dist-worker
 
 # Agent worktrees (local only)
 .claude/worktrees/
+
+# Cloudflare (wrangler) local state
+.wrangler
+.dev.vars*

@@ -1,5 +1,5 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Integration test: the real droplet server (deploy/server.ts) in-process on a random port, with
+// Integration test: the API on the Node test server (deploy/server.ts) in-process on a random port, with
 // daily.json in a temp folder. Gets today's challenge, sends real and tampered games over HTTP,
 // reads the board, checks the limits, and restarts the server to prove the day's pool is kept.
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
@@ -108,7 +108,7 @@ describe('daily challenge over HTTP', () => {
     expect((await fetch(`${base}/api/daily/2026-11-14/submit`)).status).toBe(405);
   });
 
-  it('rate-limits each address (Caddy passes the real one in X-Forwarded-For)', async () => {
+  it('rate-limits each address (a local proxy passes the real one in X-Forwarded-For)', async () => {
     const lose = play(cfg, pureGreed);
     let last = 0;
     for (let i = 0; i < 61; i++) {
@@ -118,7 +118,7 @@ describe('daily challenge over HTTP', () => {
     expect((await post('/api/daily/2026-11-14/submit', { playerId: 'rate-player-other0', moves: lose }, { 'x-forwarded-for': '203.0.113.10' })).status).toBe(200);
   });
 
-  it('keeps the frozen pool and the board across a restart (daily.json in STATE_DIR)', async () => {
+  it('keeps the frozen pool and the board across a restart (daily.json in the state folder)', async () => {
     await stop();
     expect(existsSync(join(dir, 'daily.json'))).toBe(true);
     await start();

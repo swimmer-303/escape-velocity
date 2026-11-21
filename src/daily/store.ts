@@ -1,17 +1,16 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Daily challenge boards, kept by the droplet's Node server (deploy/server.ts).
+// Daily challenge boards, kept by our server (Cloudflare: deploy/worker.ts; tests: deploy/server.ts).
 // - Freezes each day's pool of real DONKI events at the day's first request (live if our proxy has it,
 //   else the bundled snapshot), so everyone meets the same storms, and saves it so a restart keeps it.
 // - Scores a game only by replaying its moves (src/daily/replay.ts): the browser never sends a score.
 // - Stores, per player per day, only a nickname (or none) and the best score, under a hash of the
 //   browser's random player id. No addresses, no times, nothing else. Keeps 14 days.
-// Saved as one JSON file, `daily.json` in STATE_DIR, written atomically (temp file + rename), debounced.
-// The clock, the NASA data source and the folder are passed in, so tests can control them.
+// Saved as one JSON text, `daily.json`, to a save slot (Durable Object storage on Cloudflare, a file in
+// the Node test server), replaced all at once, debounced.
+// The clock, the NASA data source and the save slot are passed in, so tests can control them.
 
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { mkdir, rename, unlink, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import type { SaveSlot } from '../server/slot';
 import { RateLimiter } from '../room/store';
 import { checkName } from '../room/names';
 import { NAME_PROBLEM } from '../room/protocol';
@@ -49,8 +48,8 @@ export interface DayRecord {
 }
 
 export interface DailyStoreOptions {
-  /** Folder for daily.json (STATE_DIR on the droplet). Created if missing. */
-  dir: string;
+  /** Where daily.json is saved. */
+  slot: SaveSlot;
   /** The real events to freeze for a new day (our cached NASA DONKI proxy, else the bundled snapshot). */
   events: () => Promise<DayEvents>;
   /** One-way light time for a day, minutes (default: Earth to Mars at noon in Charlotte). */
@@ -67,7 +66,7 @@ export const DAILY_RATE = {
   read: { max: 300, windowMs: 60 * 1000 },
 } as const;
 
-const FILE = 'daily.json';
+export const DAILY_FILE = 'daily.json';
 const fail = (status: number, error: string, message: string): Fail => ({ ok: false, status, error, message });
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const TOO_FAST = fail(429, 'rate-limited', 'Too many tries. Wait a minute and try again.');
@@ -110,8 +109,6 @@ export class DailyStore {
   private loaded = false;
   private dirty = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private writing: Promise<void> = Promise.resolve();
-  private seq = 0;
   private warned = false;
   private now: () => number;
   private rate = {
@@ -123,36 +120,30 @@ export class DailyStore {
     this.now = opts.now ?? Date.now;
   }
 
-  get file(): string {
-    return join(this.opts.dir, FILE);
-  }
-
   /** Today in Charlotte, NC (YYYY-MM-DD). */
   today(): string {
     return easternDate(new Date(this.now()));
   }
 
-  /** Read daily.json (once, on first use). No file is a fresh start; a damaged one is set aside, not overwritten. */
+  /** Read daily.json (once, on first use). Nothing saved is a fresh start; a damaged save is set aside, not overwritten. */
   load(): this {
     if (this.loaded) return this;
     this.loaded = true;
-    let text: string;
+    const slot = this.opts.slot;
+    let text: string | null;
     try {
-      text = readFileSync(this.file, 'utf8');
+      text = slot.read();
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') console.error(`daily: could not read ${this.file}: ${(e as Error).message}`);
+      console.error(`daily: could not read ${slot.name}: ${(e as Error).message}`);
       return this;
     }
+    if (text === null) return this;
     try {
       const data = JSON.parse(text) as { version?: number; days?: Record<string, unknown> };
       for (const [date, rec] of Object.entries(data?.days ?? {})) if (isDayRecord(date, rec)) this.days.set(date, rec);
     } catch (e) {
-      console.error(`daily: ${this.file} is damaged, starting fresh: ${(e as Error).message}`);
-      try {
-        renameSync(this.file, `${this.file}.damaged-${this.now()}`);
-      } catch {
-        /* leave it */
-      }
+      console.error(`daily: ${slot.name} is damaged, starting fresh: ${(e as Error).message}`);
+      slot.setAside(this.now());
     }
     this.prune();
     return this;
@@ -287,54 +278,27 @@ export class DailyStore {
     this.timer.unref?.();
   }
 
-  /** Write daily.json now (after any write already under way). */
+  /** Save daily.json now (if anything changed). */
   flush(): Promise<void> {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-    this.writing = this.writing.then(() => this.writeNow());
-    return this.writing;
+    this.flushSync();
+    return Promise.resolve();
   }
 
-  private async writeNow() {
-    if (!this.dirty) return;
-    this.dirty = false;
-    const text = this.serialize();
-    const tmp = `${this.file}.${process.pid}.${++this.seq}.tmp`;
-    try {
-      await mkdir(this.opts.dir, { recursive: true });
-      await writeFile(tmp, text, 'utf8');
-      await rename(tmp, this.file);
-      this.warned = false;
-    } catch (e) {
-      this.dirty = true;
-      if (!this.warned) console.error(`daily: could not save ${this.file} (boards stay in memory): ${(e as Error).message}`);
-      this.warned = true;
-      await unlink(tmp).catch(() => undefined);
-    }
-  }
-
-  /** Write daily.json right now, synchronously (when the process is stopping). */
+  /** Save daily.json right now, synchronously. */
   flushSync() {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }
     if (!this.dirty) return;
-    const tmp = `${this.file}.${process.pid}.${++this.seq}.tmp`;
+    const slot = this.opts.slot;
     try {
-      mkdirSync(this.opts.dir, { recursive: true });
-      writeFileSync(tmp, this.serialize(), 'utf8');
-      renameSync(tmp, this.file);
+      slot.write(this.serialize());
       this.dirty = false;
+      this.warned = false;
     } catch (e) {
-      console.error(`daily: could not save ${this.file}: ${(e as Error).message}`);
-      try {
-        unlinkSync(tmp);
-      } catch {
-        /* nothing to clean up */
-      }
+      if (!this.warned) console.error(`daily: could not save ${slot.name} (boards stay in memory): ${(e as Error).message}`);
+      this.warned = true;
     }
   }
 

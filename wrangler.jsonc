@@ -1,0 +1,30 @@
+// Written with AI assistance (Claude Code). See README "Use of AI tools".
+// Cloudflare Workers (free plan): the game as static assets, and the API (deploy/worker.ts) in one
+// Durable Object. The Worker code is deploy/worker.ts, bundled by Vite into dist-worker/ first
+// (npm run build:worker). `npm run deploy` builds and deploys; GitHub Actions does it on every push to main.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "escape-velocity",
+  "main": "dist-worker/worker.js",
+  "compatibility_date": "2026-11-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // The game is one page (plus /teacher/): unknown paths get index.html, like before.
+    "not_found_handling": "single-page-application",
+    // Only the API runs code; everything else is a file.
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "API", "class_name": "ApiObject" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ApiObject"] }],
+  // The domain's DNS is on Cloudflare (proxied): this route sends every request for it to the Worker,
+  // so nothing reaches the old server the DNS record still names. www redirects here (deploy/www/).
+  "routes": [{ "pattern": "playescapevelocity.com/*", "zone_name": "playescapevelocity.com" }],
+  "observability": { "enabled": true }
+}

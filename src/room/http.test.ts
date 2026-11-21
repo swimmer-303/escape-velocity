@@ -1,5 +1,5 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Integration test: the real droplet server (deploy/server.ts) in-process on a random port.
+// Integration test: the API on the Node test server (deploy/server.ts) in-process on a random port.
 // A teacher makes a room, 4 students join, cells are placed through POSTs, a live
 // Server-Sent Events stream is read, and the sol that the teacher runs shows up in the stream.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';

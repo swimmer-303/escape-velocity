@@ -3,7 +3,7 @@
 // A teacher registers a class code and gets a secret key for the dashboard. Students who play
 // with that code send a small result after each crew: a random player id, an optional nickname,
 // and game numbers only. No accounts, no free text, nothing else about the student.
-// Imported by the game (src/ui) and by the droplet's server (src/class/http.ts, store.ts).
+// Imported by the game (src/ui) and by our server (src/class/http.ts, store.ts).
 
 import type { Difficulty, Site } from '../sim/constants';
 import type { StarId } from '../sim/campaign';

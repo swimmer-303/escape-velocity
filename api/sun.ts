@@ -1,6 +1,6 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // The newest picture of the Sun from NASA's Solar Dynamics Observatory (SDO), AIA 171 camera,
-// for GET /api/sun (deploy/server.ts serves it and caches it for 10 minutes).
+// for GET /api/sun (src/server/api.ts serves it and caches it for 10 minutes).
 // NASA's "latest" file carries no observation time we can read (only Last-Modified, when it was posted).
 // SDO's browse archive names each picture with the time it was taken, in UTC
 // (e.g. browse/2026/11/14/20261114_154746_512_0171.jpg), and the newest one is the same file as "latest".

@@ -1,15 +1,14 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Every registered class and its students' results, on the droplet's server.
-// Kept in memory and saved as JSON in STATE_DIR/classes.json (temp file + rename, a couple of
-// seconds after a change, and right away when the server stops). A class and all its results
+// Every registered class and its students' results, on our server (Cloudflare: deploy/worker.ts).
+// Kept in memory and saved as JSON to a save slot (`classes.json`: Durable Object storage on
+// Cloudflare, a file in the Node test server), a couple of seconds after a change. A class and all its results
 // are deleted 7 days after its last report. What is kept per student: a random player id, an
 // optional nickname, and game numbers. Never an IP address, never anything typed except the name.
 // The teacher key is stored only as a SHA-256 hash.
-// Server-only (Node): the game in the browser never imports this file.
+// Server-only: the game in the browser never imports this file.
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import type { SaveSlot } from '../server/slot';
 import { checkClassCode, isClassCode, normalizeClassCode } from '../sim/classcode';
 import { UPGRADE_IDS } from '../sim/upgrades';
 import type { LoseReason } from '../sim/types';
@@ -76,8 +75,8 @@ interface SaveFile {
 }
 
 export interface ClassStoreOptions {
-  /** Where classes.json lives. null = memory only (nothing saved). */
-  dir: string | null;
+  /** Where classes.json is saved. null = memory only (nothing saved). */
+  slot: SaveSlot | null;
   now?: () => number;
   /** Wait this long after a change before saving, ms. */
   saveDelayMs?: number;
@@ -115,7 +114,7 @@ function uniqueName(name: string, taken: Set<string>): string {
 export class ClassStore {
   readonly classes = new Map<string, StoredClass>();
   private now: () => number;
-  private file: string | null;
+  private slot: SaveSlot | null;
   private saveDelayMs: number;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
@@ -132,7 +131,7 @@ export class ClassStore {
 
   constructor(opts: ClassStoreOptions) {
     this.now = opts.now ?? Date.now;
-    this.file = opts.dir ? join(opts.dir, CLASS_FILE) : null;
+    this.slot = opts.slot;
     this.saveDelayMs = opts.saveDelayMs ?? 2000;
     this.log = opts.log ?? ((m) => console.warn(m));
   }
@@ -141,20 +140,22 @@ export class ClassStore {
 
   /** Read classes.json (if there is one), dropping anything expired or damaged. */
   load(): this {
-    if (!this.file) return this;
-    let raw: string;
+    if (!this.slot) return this;
+    let raw: string | null;
     try {
-      raw = readFileSync(this.file, 'utf8');
-    } catch {
-      return this; // first run: no file yet
+      raw = this.slot.read();
+    } catch (e) {
+      this.log(`class board: could not read ${this.slot.name} (${String(e)}); starting empty.`);
+      return this;
     }
+    if (raw === null) return this; // first run: nothing saved yet
     try {
       const data = JSON.parse(raw) as Partial<SaveFile>;
       if (data?.version !== 1 || !Array.isArray(data.classes)) throw new Error('not a class board file');
       const now = this.now();
       for (const c of data.classes) if (looksLikeClass(c) && !this.isExpired(c, now)) this.classes.set(c.code, c);
     } catch (e) {
-      this.log(`class board: could not read ${this.file} (${String(e)}); starting empty.`);
+      this.log(`class board: could not read ${this.slot.name} (${String(e)}); starting empty.`);
     }
     return this;
   }
@@ -183,7 +184,7 @@ export class ClassStore {
   private changed(c?: StoredClass) {
     if (c) c.v++;
     this.dirty = true;
-    if (!this.file || this.saveTimer) return;
+    if (!this.slot || this.saveTimer) return;
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
       this.saveNow();
@@ -191,28 +192,20 @@ export class ClassStore {
     this.saveTimer.unref?.();
   }
 
-  /** Write classes.json atomically: a temp file in the same folder, then rename over the old one. */
+  /** Save classes.json (the slot replaces it all at once). */
   private saveNow() {
-    if (!this.file) {
+    if (!this.slot) {
       this.dirty = false;
       return;
     }
     const data: SaveFile = { version: 1, savedAt: this.now(), classes: [...this.classes.values()] };
-    const tmp = `${this.file}.${process.pid}.tmp`;
     try {
-      mkdirSync(join(this.file, '..'), { recursive: true, mode: 0o700 });
-      writeFileSync(tmp, JSON.stringify(data), { mode: 0o600 });
-      renameSync(tmp, this.file);
+      this.slot.write(JSON.stringify(data));
       this.dirty = false;
       this.warned = false;
     } catch (e) {
-      try {
-        rmSync(tmp, { force: true });
-      } catch {
-        /* ignore */
-      }
       // Keep going in memory; say so once (not on every change).
-      if (!this.warned) this.log(`class board: could not save ${this.file} (${String(e)}). Results are kept in memory only.`);
+      if (!this.warned) this.log(`class board: could not save ${this.slot.name} (${String(e)}). Results are kept in memory only.`);
       this.warned = true;
     }
   }

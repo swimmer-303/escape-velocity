@@ -9,7 +9,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { App } from '../app';
 import { CssStage } from '../../render/stage';
-import { DailyStore } from '../../daily/store';
+import { DailyStore, DAILY_FILE } from '../../daily/store';
+import { fileSlot } from '../../server/file-slot';
 import { archiveEvents } from '../../daily/pool';
 import { createMission } from '../../sim/sim';
 import { builder, playOut } from '../../sim/strategies';
@@ -58,7 +59,7 @@ function freshPage() {
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'ev-daily-ui-'));
-  store = new DailyStore({ dir, now: () => NOW, events: async () => archiveEvents(), saveDelayMs: 5 });
+  store = new DailyStore({ slot: fileSlot(dir, DAILY_FILE), now: () => NOW, events: async () => archiveEvents(), saveDelayMs: 5 });
   calls = [];
   freshPage();
   vi.stubGlobal('fetch', fakeFetch);

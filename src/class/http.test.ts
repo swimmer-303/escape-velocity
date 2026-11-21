@@ -1,6 +1,6 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Integration test: the real droplet server (deploy/server.ts) in-process on a random port, with
-// a temp STATE_DIR. A teacher registers a class, students send results, the dashboard reads them,
+// Integration test: the API on the Node test server (deploy/server.ts) in-process on a random port, with
+// a temp state folder. A teacher registers a class, students send results, the dashboard reads them,
 // and the class board is still there after the server restarts.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Server } from 'node:http';

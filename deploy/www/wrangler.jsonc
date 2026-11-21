@@ -1,0 +1,11 @@
+// Written with AI assistance (Claude Code). See README "Use of AI tools".
+// The www redirect (redirect.ts). Deploy by hand: npx wrangler deploy -c deploy/www/wrangler.jsonc
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "escape-velocity-www",
+  "main": "redirect.ts",
+  "compatibility_date": "2026-11-18",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "www.playescapevelocity.com/*", "zone_name": "playescapevelocity.com" }]
+}

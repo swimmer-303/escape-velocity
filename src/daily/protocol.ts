@@ -4,7 +4,7 @@
 // Charlotte, NC). The server freezes the pool of real NASA DONKI events at the day's first request,
 // so every player meets exactly the same storms. Scores are never taken from the browser: it sends
 // its moves, and the server replays the mission with the frozen pool and scores it itself.
-// Imported by the game (src/ui/daily) and by the droplet's server (src/daily/http.ts).
+// Imported by the game (src/ui/daily) and by our server (src/daily/http.ts).
 
 import type { Site } from '../sim/constants';
 import type { CrateId, SpaceWeatherEvent } from '../sim/types';

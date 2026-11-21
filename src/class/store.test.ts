@@ -1,11 +1,12 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
 // The class board store: registering, checking results, nicknames through the blocklist,
-// limits, expiry after 7 days, and saving to / loading from a temp STATE_DIR.
+// limits, expiry after 7 days, and saving to / loading from a temp folder.
 import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ClassStore, CLASS_FILE, CLASS_RATE } from './store';
+import { fileSlot } from '../server/file-slot';
 import { checkReport } from './validate';
 import { summarize } from './summary';
 import { CLASS_LIMITS, dashboardParams, type DashboardView, type ReportRequest } from './protocol';
@@ -46,8 +47,11 @@ function result(over: Partial<ReportRequest> = {}): ReportRequest {
   };
 }
 
+/** classes.json in this folder (null: memory only). */
+const slotIn = (dir: string | null) => (dir ? fileSlot(dir, CLASS_FILE) : null);
+
 function store(now = { t: T0 }, dir: string | null = null) {
-  return { s: new ClassStore({ dir, now: () => now.t, log: () => undefined }), now };
+  return { s: new ClassStore({ slot: slotIn(dir), now: () => now.t, log: () => undefined }), now };
 }
 
 function registered(now = { t: T0 }, dir: string | null = null) {
@@ -306,12 +310,12 @@ describe('students who joined (started a crew, no result yet)', () => {
     const old = JSON.parse(readFileSync(file, 'utf8'));
     delete old.classes[0].joined;
     writeFileSync(file, JSON.stringify(old));
-    const s2 = new ClassStore({ dir, now: () => now.t, log: () => undefined }).load();
+    const s2 = new ClassStore({ slot: slotIn(dir), now: () => now.t, log: () => undefined }).load();
     expect(dash(s2, code, key).players).toHaveLength(1);
     expect(dash(s2, code, key).joined).toEqual([]);
     s2.join(code, 'ip', { playerId: pid(7), nickname: 'Max' });
     s2.flush();
-    const s3 = new ClassStore({ dir, now: () => now.t, log: () => undefined }).load();
+    const s3 = new ClassStore({ slot: slotIn(dir), now: () => now.t, log: () => undefined }).load();
     expect(dash(s3, code, key).joined).toEqual([{ num: 2, name: 'Max', seen: T0 }]);
   });
 });
@@ -336,7 +340,7 @@ describe('expiry and saving', () => {
     expect(quiet.s.classes.size).toBe(0);
   });
 
-  it('round-trips through classes.json in STATE_DIR (atomic write, private file)', () => {
+  it('round-trips through classes.json in a folder (atomic write, private file)', () => {
     const dir = tempDir();
     const now = { t: T0 };
     const a = registered(now, dir);
@@ -350,19 +354,19 @@ describe('expiry and saving', () => {
     expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(readdirSync(dir)).toEqual([CLASS_FILE]); // the temp file was renamed away
 
-    const b = new ClassStore({ dir, now: () => now.t, log: () => undefined }).load();
+    const b = new ClassStore({ slot: slotIn(dir), now: () => now.t, log: () => undefined }).load();
     expect(dash(b, a.code, a.key)).toEqual(dash(a.s, a.code, a.key));
     // Player numbers carry on after a restart.
     expect(b.report(a.code, 'ip', { ...result({ playerId: pid(42) }) })).toMatchObject({ ok: true, value: { num: 3 } });
 
     // Expired classes are dropped when loading.
     now.t += CLASS_LIMITS.expireMs + 1;
-    expect(new ClassStore({ dir, now: () => now.t, log: () => undefined }).load().classes.size).toBe(0);
+    expect(new ClassStore({ slot: slotIn(dir), now: () => now.t, log: () => undefined }).load().classes.size).toBe(0);
   });
 
   it('saves a little after a change (debounced), and survives a damaged or missing file', async () => {
     const dir = tempDir();
-    const s = new ClassStore({ dir, saveDelayMs: 20, log: () => undefined });
+    const s = new ClassStore({ slot: slotIn(dir), saveDelayMs: 20, log: () => undefined });
     expect(s.register('ip', { code: 'B4XN9' }).ok).toBe(true);
     expect(readdirSync(dir)).toEqual([]);
     await new Promise((r) => setTimeout(r, 80));
@@ -370,14 +374,14 @@ describe('expiry and saving', () => {
 
     writeFileSync(join(dir, CLASS_FILE), '{"version":1,"classes":[{"code":"oops"}, 7]}');
     const logs: string[] = [];
-    expect(new ClassStore({ dir, log: (m) => logs.push(m) }).load().classes.size).toBe(0);
+    expect(new ClassStore({ slot: slotIn(dir), log: (m) => logs.push(m) }).load().classes.size).toBe(0);
     writeFileSync(join(dir, CLASS_FILE), 'not json');
-    expect(new ClassStore({ dir, log: (m) => logs.push(m) }).load().classes.size).toBe(0);
+    expect(new ClassStore({ slot: slotIn(dir), log: (m) => logs.push(m) }).load().classes.size).toBe(0);
     expect(logs).toHaveLength(1);
-    expect(new ClassStore({ dir: join(dir, 'missing'), log: (m) => logs.push(m) }).load().classes.size).toBe(0);
+    expect(new ClassStore({ slot: slotIn(join(dir, 'missing')), log: (m) => logs.push(m) }).load().classes.size).toBe(0);
 
     // A folder we cannot write to: keeps working in memory, and says so once.
-    const ro = new ClassStore({ dir: join(dir, CLASS_FILE, 'not-a-dir'), saveDelayMs: 1, log: (m) => logs.push(m) });
+    const ro = new ClassStore({ slot: slotIn(join(dir, CLASS_FILE, 'not-a-dir')), saveDelayMs: 1, log: (m) => logs.push(m) });
     expect(ro.register('ip', { code: 'B4XN9' }).ok).toBe(true);
     ro.flush();
     ro.flush();

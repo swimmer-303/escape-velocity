@@ -1,8 +1,8 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// GET /api/spaceweather?days=30 (run by deploy/server.ts on our droplet)
+// GET /api/spaceweather?days=30 (run by src/server/api.ts, on Cloudflare)
 // Fetches real solar flares (FLR), particle storms (SEP) and coronal mass ejections (CME, for the
 // Space weather radar) from NASA DONKI, normalizes and trims them to the fields the game uses, and marks
-// the answer cacheable; the server caches it for an hour so players never hit NASA rate limits.
+// the answer cacheable; our server caches it for an hour so players never hit NASA rate limits.
 // CMEs are optional: if that one request fails, the answer still has the flares and SEPs, and its
 // `included` list leaves out 'CME' so nobody mistakes "not fetched" for "no CMEs".
 // Uses the keyless CCMC DONKI host (ccmc.gsfc.nasa.gov); if NASA_API_KEY is set, api.nasa.gov is used as a backup.

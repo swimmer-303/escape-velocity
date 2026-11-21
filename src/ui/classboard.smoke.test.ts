@@ -54,7 +54,7 @@ function freshPage() {
 
 beforeEach(() => {
   freshPage();
-  store = new ClassStore({ dir: null });
+  store = new ClassStore({ slot: null });
   posts = [];
   vi.stubGlobal('fetch', fakeFetch);
   try {

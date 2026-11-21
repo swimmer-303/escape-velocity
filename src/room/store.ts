@@ -1,5 +1,7 @@
 // Written with AI assistance (Claude Code). See README "Use of AI tools".
-// Every open Mission Control room, in server memory only (nothing is written to disk).
+// Every open Mission Control room, in server memory. On Cloudflare (deploy/worker.ts) each room is
+// also saved a few seconds after it changes, so a restart (a deploy, or the server going to sleep)
+// brings it back; the Node test server keeps rooms in memory only.
 // Makes codes and secret tokens, enforces the limits (rooms, players, rate limits), expires idle
 // rooms, and pushes the public room state to every open live stream (Server-Sent Events).
 // The clock, the randomness and the NASA data source are passed in, so tests can control them.
@@ -24,6 +26,14 @@ interface Stream {
   openedAt: number;
 }
 
+/** Where rooms are saved between restarts (Durable Object storage on Cloudflare). */
+export interface RoomSaver {
+  /** Every saved room (read once, at startup). */
+  load(): Room[];
+  save(room: Room): void;
+  remove(code: string): void;
+}
+
 export interface RoomEvents {
   pool: SpaceWeatherEvent[];
   data: RoomView['data'];
@@ -38,6 +48,10 @@ export interface StoreOptions {
   lightTimeMin: () => number;
   /** Wait this long to bundle quick changes into one message, ms. */
   coalesceMs?: number;
+  /** Save rooms here (none: memory only). */
+  saver?: RoomSaver;
+  /** Wait this long after a change before saving a room, ms. */
+  saveDelayMs?: number;
 }
 
 export const RATE = {
@@ -97,6 +111,8 @@ export class RoomStore {
   private streams = new Map<string, Set<Stream>>();
   private pending = new Map<string, ReturnType<typeof setTimeout>>();
   private timers: Array<ReturnType<typeof setInterval>> = [];
+  private unsaved = new Set<string>();
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private now: () => number;
   private random: () => number;
   private rate = {
@@ -109,6 +125,63 @@ export class RoomStore {
   constructor(private opts: StoreOptions) {
     this.now = opts.now ?? Date.now;
     this.random = opts.random ?? secureRandom;
+    if (opts.saver) this.restore(opts.saver);
+  }
+
+  /** Bring back the saved rooms (dropping expired or damaged ones). */
+  private restore(saver: RoomSaver) {
+    let saved: Room[];
+    try {
+      saved = saver.load();
+    } catch (e) {
+      console.error(`rooms: could not read the saved rooms: ${(e as Error).message}`);
+      return;
+    }
+    const now = this.now();
+    for (const room of saved) {
+      const looksRight = !!room && isClassCode(room.code) && Array.isArray(room.players) && Array.isArray(room.eventPool) && typeof room.v === 'number';
+      if (!looksRight || room.closed || isExpired(room, now)) {
+        if (typeof room?.code === 'string') saver.remove(room.code);
+        continue;
+      }
+      // Nobody is connected to a room that was just brought back: screens reconnect on their own.
+      room.teacherConns = 0;
+      for (const p of room.players) p.conns = 0;
+      // The save can be a few seconds old. Move the version well past anything a screen has already
+      // seen, so every screen takes the next state instead of ignoring it as old news.
+      room.v += 1000;
+      this.rooms.set(room.code, room);
+    }
+  }
+
+  /** Save this room a few seconds from now (with any other rooms that changed meanwhile). */
+  private saveSoon(room: Room) {
+    if (!this.opts.saver || !this.rooms.has(room.code)) return;
+    this.unsaved.add(room.code);
+    if (this.saveTimer) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      this.saveNow();
+    }, this.opts.saveDelayMs ?? 5000);
+    this.saveTimer.unref?.();
+  }
+
+  /** Save every room that changed since the last save. */
+  saveNow() {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const saver = this.opts.saver;
+    if (!saver) return;
+    for (const code of this.unsaved) {
+      const room = this.rooms.get(code);
+      if (!room) continue;
+      try {
+        saver.save(room);
+      } catch (e) {
+        console.error(`rooms: could not save ${code}: ${(e as Error).message}`);
+      }
+    }
+    this.unsaved.clear();
   }
 
   /** Heartbeats every ~20 s and an expiry sweep every minute. Timers never keep the process alive. */
@@ -121,9 +194,12 @@ export class RoomStore {
     return this;
   }
 
+  /** Stop the timers and end every room for good (the Node test server shutting down). */
   stop() {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
     for (const t of this.pending.values()) clearTimeout(t);
     this.pending.clear();
     for (const room of [...this.rooms.values()]) this.closeRoom(room, 'ended');
@@ -162,6 +238,7 @@ export class RoomStore {
       data: events.data,
     });
     this.rooms.set(code, room);
+    this.saveSoon(room);
     return { ok: true, value: { code, teacherToken: room.teacherToken } };
   }
 
@@ -293,6 +370,7 @@ export class RoomStore {
 
   /** Bundle quick changes (a class tapping at once) into one message. */
   changed(room: Room) {
+    this.saveSoon(room);
     if (this.pending.has(room.code) || !this.rooms.has(room.code)) return;
     const t = setTimeout(() => {
       this.pending.delete(room.code);
@@ -343,6 +421,12 @@ export class RoomStore {
     if (t) clearTimeout(t);
     this.pending.delete(room.code);
     this.rooms.delete(room.code);
+    this.unsaved.delete(room.code);
+    try {
+      this.opts.saver?.remove(room.code);
+    } catch (e) {
+      console.error(`rooms: could not delete ${room.code}: ${(e as Error).message}`);
+    }
     const set = this.streams.get(room.code);
     this.streams.delete(room.code);
     for (const s of set ?? []) {

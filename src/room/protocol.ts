@@ -3,7 +3,7 @@
 // One shared Mars base for the whole class. The modules are split between up to 4 stations;
 // everyone sees the whole plan and the shared pool of power cells, but each student can only
 // move cells in their own station's modules. No free-text chat: only preset "pings".
-// Imported by the game (src/ui/room) and by the droplet's server (src/room/http.ts).
+// Imported by the game (src/ui/room) and by our server (src/room/http.ts).
 
 import type { Difficulty } from '../sim/constants';
 import type { ExpeditionResult } from '../sim/campaign';

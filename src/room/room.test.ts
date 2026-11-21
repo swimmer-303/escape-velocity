@@ -3,7 +3,7 @@
 // in-memory store (limits, rate limits, reconnecting, expiry, live messages).
 import { describe, it, expect } from 'vitest';
 import { act, autoAssign, canRun, createRoom, isExpired, join, setOnline, teacherAct, viewOf, type Player, type Room } from './room';
-import { RoomStore, RATE, type Sink } from './store';
+import { RoomStore, RATE, type RoomSaver, type Sink } from './store';
 import { checkName, isBlockedName } from './names';
 import { LIMITS, STATION_IDS, STATION_OF, type PlayerAction, type StationId } from './protocol';
 import { TEST_POOL } from '../sim/fixtures.test-util';
@@ -415,5 +415,64 @@ describe('room store', () => {
     expect(s.teacher(made.value.code, { teacherToken: 'guess', type: 'end' })).toMatchObject({ ok: false, status: 403 });
     expect(s.teacher(made.value.code, { teacherToken: made.value.teacherToken, type: 'end' }).ok).toBe(true);
     expect(s.rooms.size).toBe(0);
+  });
+});
+
+describe('saving rooms (Cloudflare)', () => {
+  /** A saver that keeps JSON text, like Durable Object storage does. */
+  function memorySaver() {
+    const saved = new Map<string, string>();
+    const saver: RoomSaver = {
+      load: () => [...saved.values()].map((t) => JSON.parse(t) as Room),
+      save: (room) => void saved.set(room.code, JSON.stringify(room)),
+      remove: (code) => void saved.delete(code),
+    };
+    return { saver, saved };
+  }
+  const withSaver = (saver: RoomSaver, now = { t: T0 }) =>
+    new RoomStore({ now: () => now.t, events: async () => ({ pool: TEST_POOL, data: DATA }), lightTimeMin: () => 12, coalesceMs: 0, saver, saveDelayMs: 10_000 });
+
+  it('brings rooms back after a restart: players, plan and tokens, with nobody connected and a newer version', async () => {
+    const { saver, saved } = memorySaver();
+    const a = withSaver(saver);
+    const made = await a.create('1.1.1.1', {});
+    if (!made.ok) throw new Error(made.message);
+    const { code, teacherToken } = made.value;
+    const ava = a.join(code, '1.1.1.1', { name: 'Ava' });
+    if (!ava.ok) throw new Error(ava.message);
+    const live = a.subscribe(code, { token: ava.value.token }, sinkLog().sink);
+    expect(live.ok).toBe(true);
+    expect(saved.size).toBe(0); // saved a little later, not on every change
+    a.saveNow();
+    expect(saved.size).toBe(1);
+    const before = a.get(code)!;
+
+    const b = withSaver(saver);
+    const back = b.get(code)!;
+    expect(back.teacherToken).toBe(teacherToken);
+    expect(back.players.map((p) => p.name)).toEqual(['Ava']);
+    expect(back.players[0].conns).toBe(0);
+    expect(back.v).toBeGreaterThan(before.v + 100);
+    // The same student rejoins with her token, and the teacher can run the room.
+    expect(b.join(code, '1.1.1.1', { token: ava.value.token })).toMatchObject({ ok: true, value: { rejoined: true } });
+    expect(b.teacher(code, { teacherToken, type: 'start' }).ok).toBe(true);
+  });
+
+  it('forgets ended, expired and damaged rooms', async () => {
+    const { saver, saved } = memorySaver();
+    const now = { t: T0 };
+    const a = withSaver(saver, now);
+    const one = await a.create('1.1.1.1', {});
+    const two = await a.create('1.1.1.2', {});
+    if (!one.ok || !two.ok) throw new Error('no room');
+    a.saveNow();
+    expect(saved.size).toBe(2);
+    expect(a.teacher(one.value.code, { teacherToken: one.value.teacherToken, type: 'end' }).ok).toBe(true);
+    expect([...saved.keys()]).toEqual([two.value.code]);
+    saved.set('JUNK1', '{"code":"JUNK1"}');
+    now.t += LIMITS.idleMs + 1;
+    const b = withSaver(saver, now);
+    expect(b.rooms.size).toBe(0);
+    expect(saved.size).toBe(0);
   });
 });
